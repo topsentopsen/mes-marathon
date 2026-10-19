@@ -1,4 +1,4 @@
-/* Sender-Chef: Retro-Look angelehnt an die Workbench-Farben (Blau, Weiß, Schwarz, Orange) */
+/* MES-Marathon (aus Sender-Chef abgeleitet): Retro-Look angelehnt an die Workbench-Farben (Blau, Weiß, Schwarz, Orange) */
 * { box-sizing: border-box; }
 html, body { margin: 0; background: #000; color: #fff; font-family: "Courier New", Courier, monospace; font-weight: bold; }
 #app { max-width: 980px; margin: 0 auto; padding: 6px; }
@@ -83,3 +83,17 @@ input#pname { font: inherit; background: #002a66; color: #fff; border: 1px solid
 table.xl td { font-size: 12px; }
 details { margin-top: 8px; } summary { cursor: pointer; color: #ffcc00; }
 .hud-item .moodbar { width: 44px; }
+
+/* v0.2: Fabrik, KPIs, Pyramide, Besuche */
+.warn { color: #ffcc00; }
+.floor-grp { display: inline-flex; flex-wrap: wrap; gap: 3px; align-items: center; background: #101820; border: 1px solid #0055aa; padding: 2px 4px; }
+.floor-grp .fl { color: #ffcc00; font-size: 11px; min-width: 92px; }
+#rooms { flex-direction: column; }
+#rooms button { font-size: 12px; padding: 2px 6px; }
+td.spark { font-family: monospace; letter-spacing: 1px; color: #9cf; }
+.pyr { display: flex; flex-direction: column; align-items: center; gap: 2px; margin: 8px 0; }
+.pyr .pl { text-align: center; font-size: 12px; padding: 3px 0; color: #000; border: 1px solid #000; }
+.pyr .l4 { background: #c080ff; } .pyr .l3 { background: #40e0ff; } .pyr .l2 { background: #80e080; } .pyr .l1 { background: #ffcc00; } .pyr .l0 { background: #ff8040; }
+.visit p { font-size: 15px; line-height: 1.35; }
+.vopts button { margin: 3px 2px; }
+.kpis { font-size: 13px; }

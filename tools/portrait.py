@@ -1,13 +1,14 @@
-# Pixel-Portrait der Spielfigur: ca. 40 Jahre, viel Grau im Haar, kein Bart, Hemd. 32x32, selbst gezeichnet.
+# Pixel-Portrait von Christian: ca. 40 Jahre, sehr viel graues Haar (volle Frisur, graue Schläfen), kein Bart, Hemd mit Kragen. 32x32, selbst gezeichnet (v0.2: vollere Haare, Lachfältchen).
 from PIL import Image
 PAL = {'.':(29,78,90),'o':(26,26,36),'H':(190,190,192),'h':(150,150,154),'d':(92,86,82),
  'S':(236,190,150),'s':(204,152,112),'e':(40,30,30),'w':(244,240,234),'b':(110,104,100),
  'm':(160,80,72),'B':(140,184,232),'C':(214,232,250),'D':(100,146,200),'K':(250,250,250),'n':(214,166,128)}
 ROWS = [
- "", "",
+ "",
  "oooooooooo",
- "ooHHHhHHHHHHoo",
- "oHHHHHHhHHHHdHHo",
+ "ooHHHHhHHHHHoo",
+ "oHHHhHHHHHHHHHHo",
+ "oHHHHHHhHHHHdHHHHo",
  "oHHhHHHHHHHHdHHHHo",
  "oHHHHdHHHHHHHhHHHo",
  "oHhHHHHHHhHHHHHdHo",
@@ -15,7 +16,7 @@ ROWS = [
  "oHSSSSSSSSSSSSSSHo",
  "oHSbbbSSSSSSbbbSHo",
  "sSSSSSSSSSSSSSSSSs",
- "sSSwwedSSSSdewwSSs".replace('d','S'),
+ "sSsSwweSSSSewwSsSs",
  "sSSSSSSSnSSSSSSSSs",
  "sSSSSSSSnnSSSSSSSs",
  "oSSSSSSsnnsSSSSSSo",

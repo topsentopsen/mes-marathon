@@ -1,4 +1,4 @@
-// MES-Marathon: prozedurale Musik und Jingles (Web Audio API). Eigene Kompositionen, keine fremden Melodien oder Samples.
+// MES-Marathon: prozedurale Musik, Jingles und Fabriklärm (Web Audio API). Eigene Kompositionen, keine fremden Melodien oder Samples.
 'use strict';
 (function (SC) {
   const KEY = 'mesmarathon-audio';
@@ -106,8 +106,11 @@
     spotOk: [[60, 0.08], [64, 0.08], [67, 0.14]],
     spotFail: [[62, 0.12], [55, 0.18]],
     win: [[60, 0.12], [64, 0.12], [67, 0.12], [72, 0.18], [67, 0.1], [72, 0.35]],
-    lose: [[64, 0.2], [62, 0.2], [60, 0.25], [57, 0.3], [53, 0.45]]
+    lose: [[64, 0.2], [62, 0.2], [60, 0.25], [57, 0.3], [53, 0.45]],
+    visit: [[72, 0.1], [67, 0.18]],
+    alarm: [[81, 0.08], [0, 0.05], [81, 0.08], [0, 0.05], [81, 0.12]]
   };
+  A.JINGLES = JINGLES;
 
   function load() {
     try {
@@ -198,6 +201,50 @@
     o.start(when); o.stop(when + 0.16);
   }
 
+  function thump(when, level) {
+    if (!A._ctx || A.muted) return;
+    const ctx = A._ctx, o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'square'; o.frequency.setValueAtTime(70, when); o.frequency.exponentialRampToValueAtTime(30, when + 0.09);
+    g.gain.setValueAtTime(0.05 * level, when); g.gain.exponentialRampToValueAtTime(0.0001, when + 0.12);
+    o.connect(g); g.connect(A._master); o.start(when); o.stop(when + 0.13);
+    noiseHit(when + 0.01, 0.05, 0.025 * level);
+  }
+  // Fabrik-Grundrauschen: gefiltertes Rauschen plus tiefes Brummen, Lautstärke je nach Raum
+  A._amb = 0;
+  function ensureAmbient() {
+    if (A._ambNodes || !A._ctx) return;
+    const ctx = A._ctx, len = ctx.sampleRate * 2, buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+    let last = 0; for (let i = 0; i < len; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = last * 3.5; }
+    const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420;
+    const g = ctx.createGain(); g.gain.value = 0;
+    const hum = ctx.createOscillator(); hum.type = 'sine'; hum.frequency.value = 55; const hg = ctx.createGain(); hg.gain.value = 0;
+    src.connect(lp); lp.connect(g); g.connect(A._master); hum.connect(hg); hg.connect(A._master);
+    src.start(); hum.start();
+    A._ambNodes = { g, hg };
+  }
+  A.ambient = function (level) {
+    A._amb = Math.max(0, Math.min(1, level || 0));
+    if (!A.ready || !A._ctx) return;
+    if (A.muted && A._amb > 0) return;
+    ensureAmbient();
+    const t = A._ctx.currentTime, n = A._ambNodes;
+    n.g.gain.cancelScheduledValues(t); n.g.gain.linearRampToValueAtTime(0.3 * A._amb, t + 0.4);
+    n.hg.gain.cancelScheduledValues(t); n.hg.gain.linearRampToValueAtTime(0.12 * A._amb, t + 0.4);
+  };
+  A.zone = function (room) {
+    const loud = { halle: 1, werkstatt: 0.9, schicht: 0.7, pforte: 0.6 }, quiet = { buero: 0.25, meeting: 0.2, chef: 0.15, controlling: 0.15, it: 0.25, leitstand: 0.3 };
+    A.ambient(A._track !== 'tower' ? 0 : room == null ? 0.5 : (loud[room] || quiet[room] || 0.45));
+  };
+  // Schichtwechsel-Sirene: Sägezahn auf und ab
+  A.siren = function () {
+    if (!A.ready || A.muted || !A._ctx) return;
+    const ctx = A._ctx, t = ctx.currentTime + 0.02, o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(440, t); o.frequency.linearRampToValueAtTime(680, t + 1.2); o.frequency.linearRampToValueAtTime(440, t + 2.4);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.07, t + 0.2); g.gain.setValueAtTime(0.07, t + 2.1); g.gain.linearRampToValueAtTime(0.0001, t + 2.4);
+    o.connect(g); g.connect(A._master); o.start(t); o.stop(t + 2.5);
+    A._duckUntil = t + 2.4;
+  };
   function expandNotes(arr) {
     const out = [];
     let step = 0;
@@ -223,6 +270,7 @@
       const when = A._nextNote;
       for (const x of lead) if (x.step === st && x.n) tone(x.n, when, x.len * stepSec * 0.92, 'square', 0.09);
       for (const x of bass) if (x.step === st && x.n) tone(x.n, when, x.len * stepSec * 0.95, 'triangle', 0.11);
+      if (A._amb > 0 && A._track === 'tower' && st % 8 === 4) thump(when, A._amb); // Presse in der Halle
       if (tr.perc && tr.perc.length) {
         const ch = tr.perc[st % tr.perc.length];
         if (ch === 'k') kick(when);
@@ -263,6 +311,7 @@
     if (A._track === id) return;
     killVoices();
     A._track = id;
+    if (A.zone) A.zone(id === 'tower' ? undefined : null);
     A._step = 0;
     A._nextNote = A._ctx.currentTime + 0.05;
     startScheduler();
@@ -276,6 +325,7 @@
   };
 
   A.jingle = function (id) {
+    if (id === 'siren') return A.siren();
     if (!A.ready || A.muted || !A._ctx) return;
     const seq = JINGLES[id];
     if (!seq) return;
@@ -294,7 +344,8 @@
     A.muted = !!m;
     setMasterGain();
     save();
-    if (A.muted) { stopScheduler(); killVoices(); }
+    if (A.muted) { stopScheduler(); killVoices(); if (A._ambNodes) { A._ambNodes.g.gain.value = 0; A._ambNodes.hg.gain.value = 0; } }
+    else if (A._amb > 0) A.ambient(A._amb);
     else if (A._track && A.ready) { A._nextNote = A._ctx.currentTime + 0.05; startScheduler(); }
   };
   A.isMuted = () => A.muted;

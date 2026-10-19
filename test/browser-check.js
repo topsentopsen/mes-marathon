@@ -1,38 +1,52 @@
-// Headless-Chrome-Prüfung: lädt das Spiel, spielt Aktionen und einen Feierabend, macht Screenshots.
+// Headless-Chrome-Prüfung: lädt das Spiel, klärt einen Besuch, spielt Aktionen und einen Feierabend, macht Screenshots.
 // Aufruf: NODE_PATH=/workspace/tmp-check/node_modules node test/browser-check.js [url]
 'use strict';
 const puppeteer = require('puppeteer-core');
 const url = process.argv[2] || 'file://' + require('path').resolve(__dirname, '..', 'index.html');
-const out = process.env.SHOTS || '/workspace/mes-shot';
+const out = process.env.SHOTS || '/workspace/mes-marathon';
 const wait = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
-  const browser = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome', headless: 'new', args: ['--no-sandbox'] });
+  const browser = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome', headless: 'new', args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
   const page = await browser.newPage();
-  await page.setViewport({ width: 1000, height: 900 });
+  await page.setViewport({ width: 1000, height: 1000 });
   const errs = [];
   page.on('pageerror', e => errs.push('pageerror: ' + e.message));
   page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
   page.on('requestfailed', r => errs.push('requestfailed: ' + r.url()));
+  page.on('response', r => { if (r.status() >= 400) errs.push('HTTP ' + r.status() + ' ' + r.url()); });
   await page.goto(url, { waitUntil: 'load' });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'load' }); await wait(600);
+  const title = await page.evaluate(() => ({ text: document.querySelector('#overlay').innerText, name: !!document.querySelector('#pname') }));
   await page.screenshot({ path: out + '-1-titel.png' });
   await page.click('button[data-o="new"]'); await wait(300);
+  // Besuch erzwingen: IT-Chefin mit der Pyramide
+  await page.evaluate(() => { const S = window.SC.S; const v = S.visits.find(x => x.id === 'itchefin'); S.visits = S.visits.filter(x => x !== v); S.pending = v; });
+  await wait(400);
+  await page.screenshot({ path: out + '-2-itchefin.png' });
+  const visitShown = await page.evaluate(() => !!document.querySelector('button[data-v]'));
+  await page.click('button[data-v="skip"]'); await wait(200);
+  await page.evaluate(() => { const S = window.SC.S; S.visits = []; S.stations.find(s => s.id === 'inpack').fault = { at: S.minute }; });
   await page.click('#rooms button[data-r="halle"]');
   await page.waitForFunction(() => window.SC.ui.room === 'halle', { timeout: 30000 });
-  await page.click('#room button[data-a="req"]'); await wait(200);
-  await page.screenshot({ path: out + '-2-halle.png' });
-  await page.click('#rooms button[data-r="buero"]');
-  await page.waitForFunction(() => window.SC.ui.room === 'buero', { timeout: 30000 });
-  await page.click('#room button[data-a="excel"]'); await wait(200);
-  await page.screenshot({ path: out + '-3-buero.png' });
-  await page.click('#room button[data-a="leave"]'); await wait(1500);
-  await page.screenshot({ path: out + '-4-haus.png' });
-  const st = await page.evaluate(() => { const s = window.SC.S; return { min: s.minute, req: s.modules[0].req, excel: s.excel, msgs: s.msgs.length }; });
+  await page.click('#room button[data-a="req"]'); await wait(300);
+  await page.screenshot({ path: out + '-3-hallen.png' });
+  await page.click('#room button[data-a="leave"]'); await wait(1200);
+  await page.screenshot({ path: out + '-4-fabrik.png' });
+  await page.click('#rooms button[data-r="leitstand"]');
+  await page.waitForFunction(() => window.SC.ui.room === 'leitstand', { timeout: 30000 });
+  await page.click('#room button[data-a="bericht"]'); await wait(300);
+  await page.screenshot({ path: out + '-5-leitstand.png' });
+  await page.evaluate(() => { window.SC.S.pending = { id: 'tesla', duo: true, t: 3 }; }); await wait(300);
+  await page.screenshot({ path: out + '-6-tesla.png' });
+  await page.click('button[data-v="abwimmeln"]'); await wait(200);
+  const st = await page.evaluate(() => { const s = window.SC.S; return { min: Math.round(s.minute), req: s.modules[0].req, budget: s.budget, msgs: s.msgs.length, hud: document.querySelector('#hud').innerText.replace(/\s+/g, ' ') }; });
   await page.evaluate(() => window.SC.debug.endDay()); await wait(300);
-  await page.screenshot({ path: out + '-5-bilanz.png' });
+  await page.screenshot({ path: out + '-7-bilanz.png' });
   await page.click('button[data-o="next"]'); await wait(300);
   const d2 = await page.evaluate(() => window.SC.S.day);
-  console.log(JSON.stringify({ st, d2, errs }, null, 1));
+  const text = await page.evaluate(() => document.body.innerText);
+  console.log(JSON.stringify({ title: title.text.slice(0, 160), nameField: title.name, visitShown, st, d2, errs }, null, 1));
+  if (errs.length || d2 !== 2 || !visitShown || title.name) process.exitCode = 1;
   await browser.close();
 })();

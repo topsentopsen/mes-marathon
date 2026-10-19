@@ -1,55 +1,114 @@
-// Balance-Bot: spielt viele Partien mit einfachen Strategien. Aufruf: node tools/bot.js [anzahl]
+// Balance-Bot: spielt viele Partien mit einfachen Strategien.
+// Aufruf: node tools/bot.js [anzahl] [--check]
 'use strict';
 const SC = require('../test/helper.js'); const sim = SC.sim;
 const WALK = 8; // Minuten je Raumwechsel (Laufen + Aufzug)
-function tryAct(S, room, id) { const a = sim.actions[room].find(x => x.id === id); if (a.check(S)) return false; if (S.at !== room) { sim.advance(S, WALK); S.at = room; if (a.check(S)) return false; } return sim.act(S, room, id).ok; }
+let FREE = Infinity; // Minuten bis zum nächsten gewünschten Meeting
+function tryAct(S, room, id) {
+  if (S.pending) return false;
+  const a = sim.actions[room].find(x => x.id === id); if (a.check(S)) return false;
+  if (room !== 'meeting' && a.cost * sim.slow(S) + (S.at !== room ? WALK : 0) > FREE) return false;
+  if (S.at !== room) { sim.advance(S, WALK); S.at = room; if (S.pending || a.check(S)) return false; }
+  return sim.act(S, room, id).ok;
+}
+function resolveVisit(S, P) {
+  const p = S.pending, opts = sim.visitOptions(S).map(o => o.id);
+  let c = opts[opts.length - 1];
+  if (p.id === 'itchefin') {
+    if (P.visit === 'skip') c = 'skip';
+    else { const right = p.opts.indexOf(SC.PYRAMID_Q[p.q].a); c = sim.rng(S) < P.pyr ? 'a' + right : 'a' + Math.floor(sim.rng(S) * 3); }
+  } else if (opts.length === 1) c = opts[0];
+  else if (P.visit === 'listen') c = opts[0];
+  else if (P.visit === 'smart') c = (p.id === 'italien' && S.energy < 60) || p.id === 'altwerk' ? opts[0] : opts[1];
+  else c = opts[1];
+  sim.choose(S, c);
+}
 function playDay(S, P) {
   S.at = 'pforte';
   let guard = 0;
-  while (S.phase === 'tag' && guard++ < 200) {
+  while (S.phase === 'tag' && guard++ < 300) {
+    if (S.pending) { resolveVisit(S, P); continue; }
     if (S.burnout || S.minute >= SC.LATEST) break;
-    if (S.minute >= (P.leave || SC.DAY_END)) { break; }
+    if (S.minute >= (P.leave || SC.DAY_END)) break;
     const m = sim.activeMeeting(S);
-    const goM = m && (P.meet === 'all' || (P.meet === 'chef' && m.kind !== 'kalle') || (P.meet === 'smart' && (m.kind !== 'kalle' || S.kalle < 55)));
-    if (goM) { if (S.at !== 'meeting') { sim.advance(S, WALK); S.at = 'meeting'; } if (tryAct(S, 'meeting', 'attend')) continue; }
+    const wants = mt => P.meet === 'all' || (mt.kind !== 'schicht' && P.meet !== 'none') || (P.meet === 'smart' && S.schicht < 55);
+    if (m && wants(m)) { if (S.at !== 'meeting') { sim.advance(S, WALK); S.at = 'meeting'; } if (tryAct(S, 'meeting', 'attend')) continue; if (S.pending) continue; }
     const nm = sim.nextMeeting(S);
-    if (nm && goMeetSoon(S, nm, P) && nm.start - S.minute < 60 && nm.start - S.minute > 0) { sim.advance(S, Math.min(nm.start - S.minute, 15)); continue; }
-    if (P.excel && !S.excel && S.minute > 14 * 60 && tryAct(S, 'buero', 'excel')) continue;
+    FREE = nm && wants(nm) && nm.start > S.minute ? nm.start + 5 - S.minute - WALK : Infinity;
+    const short = FREE < 75;
+    if (P.excel && !S.excel && (S.minute > 14 * 60 || short) && tryAct(S, 'buero', 'excel')) continue;
+    if (short && P.bericht && tryAct(S, 'leitstand', 'bericht')) continue;
+    if (short && P.report && S.excel && S.reported !== S.day && tryAct(S, 'chef', 'report')) continue;
     if (S.energy < 40 && S.coffee < 3 && tryAct(S, 'kantine', 'coffee')) continue;
     if (!S.lunch && S.minute >= 11.5 * 60 && tryAct(S, 'kantine', 'lunch')) continue;
+    if (P.tranche && S.trancheWeek !== sim.week(S) && tryAct(S, 'controlling', 'tranche')) continue;
+    if (P.kredit && S.budget < 10 && tryAct(S, 'controlling', 'vorschuss')) continue;
+    if (P.berater && S.budget > 30 && tryAct(S, 'controlling', 'berater')) continue;
     if (!S.server.up && tryAct(S, 'server', 'restart')) continue;
+    if (P.repair && !sim.targets.test(S) && sim.targets.testAny(S) && tryAct(S, 'werkstatt', P.repair === 'notbehelf' ? 'notbehelf' : 'repair')) continue;
+    if (P.repairAll && S.stations.some(st => st.fault) && tryAct(S, 'werkstatt', 'repair')) continue;
     if (S.printer.jam && sim.targets.print(S) && tryAct(S, 'drucker', 'fix')) continue;
+    if (P.schichtplan && S.minute < 12 * 60 && sim.targets.testAny(S) && tryAct(S, 'schicht', 'schichtplan')) continue;
     if (P.report && S.excel && S.reported !== S.day && tryAct(S, 'chef', 'report')) continue;
+    if (P.bericht && S.minute >= 13 * 60 && tryAct(S, 'leitstand', 'bericht')) continue;
+    if (S.sap.state === 'migration' && tryAct(S, 'buero', 'migrate')) continue;
     if (tryAct(S, 'chef', 'abnahme') || tryAct(S, 'drucker', 'print') || tryAct(S, 'server', 'deploy') || tryAct(S, 'halle', 'test') || tryAct(S, 'buero', 'impl') || tryAct(S, 'buero', 'spec') || tryAct(S, 'halle', 'req')) continue;
+    if (P.review && tryAct(S, 'it', 'review')) continue;
     if (P.care && tryAct(S, 'server', 'care')) continue;
-    if (tryAct(S, 'schicht', 'kalle')) continue;
+    if (P.repair && tryAct(S, 'werkstatt', P.repair === 'notbehelf' ? 'notbehelf' : 'repair')) continue;
+    if (FREE === Infinity && tryAct(S, 'schicht', 'gespraech')) continue;
+    if (nm && wants(nm) && FREE < Infinity && S.minute < nm.start - 15) { sim.advance(S, Math.max(1, Math.min(15, nm.start - 15 - S.minute))); continue; }
     sim.advance(S, 15);
   }
   if (S.phase === 'tag') sim.endDay(S);
   if (S.phase === 'wochenende') sim.weekend(S, P.we(S));
   if (S.phase !== 'ende') sim.startDay(S);
 }
-function goMeetSoon(S, m, P) { return P.meet === 'all' || m.kind !== 'kalle' || (P.meet === 'smart' && S.kalle < 55); }
+const BASE = { repairAll: true, excel: true, report: true, bericht: true, tranche: true, repair: 'repair', visit: 'smart', pyr: 0.8, care: false, review: true, meet: 'smart', schichtplan: true, we: S => (S.sap.cutover ? 1 : S.family > 55 ? 1 : 0) };
+const P = o => Object.assign({}, BASE, o);
 const POL = {
-  passiv: { meet: 'none', excel: false, we: () => 0, leave: 15 * 60 },
-  einfach: { meet: 'chef', excel: true, we: () => 0 },
-  gut: { meet: 'smart', excel: true, report: true, care: true, we: S => S.family > 55 ? 1 : 0 },
-  meetingfan: { meet: 'all', excel: true, report: true, we: () => 0 },
-  gut_ohneWE: { meet: 'smart', excel: true, report: true, care: true, we: () => 0 },
-  gut_ohneCare: { meet: 'smart', excel: true, report: true, we: S => S.family > 55 ? 1 : 0 },
-  einfachWE: { meet: 'chef', excel: true, we: S => S.family > 55 ? 1 : 0 },
-  workaholic: { meet: 'chef', excel: true, we: () => 2, leave: 19 * 60 + 30 }
+  passiv: { meet: 'none', excel: false, report: false, bericht: false, tranche: false, repair: false, review: false, schichtplan: false, visit: 'skip', leave: 15 * 60, we: () => 0 },
+  einfach: P({ repairAll: false, meet: 'chef', repair: 'notbehelf', schichtplan: false, bericht: false, review: false, we: () => 0 }),
+  gut: P({ care: true }),
+  meetingfan: P({ care: true, meet: 'all', schichtplan: false }),
+  meetingfan_plus: P({ care: true, meet: 'all' }),
+  ohneSchichtplan: P({ care: true, schichtplan: false }),
+  ablenkbar: P({ care: true, visit: 'listen' }),
+  berater: P({ care: true, berater: true, kredit: true }),
+  workaholic: P({ meet: 'chef', we: () => 2, leave: 19 * 60 + 30 }),
+  sparfuchs: P({ care: true, tranche: false })
 };
-const n = +process.argv[2] || 200;
-for (const [k, P] of Object.entries(POL)) {
-  const r = { win: 0, chef: 0, fam: 0, dead: 0, days: [], prog: [] };
-  for (let i = 0; i < n; i++) {
-    const S = sim.newGame(1000 + i * 7919);
-    let g = 0; while (S.phase !== 'ende' && g++ < 40) playDay(S, P);
-    const w = S.result.why;
-    if (S.result.win) { r.win++; r.days.push(S.day); } else if (/Werksleitung zieht/.test(w)) r.chef++; else if (/Imker/.test(w)) r.fam++; else r.dead++;
-    r.prog.push(sim.progress(S));
+function run(n) {
+  const rows = {};
+  for (const [k, pol] of Object.entries(POL)) {
+    const r = { win: 0, chef: 0, fam: 0, dead: 0, budget: 0, days: [], prog: [], bud: [], kpi: [], meet: [], useless: [], chaos: 0 };
+    for (let i = 0; i < n; i++) {
+      const S = sim.newGame(1000 + i * 7919);
+      let g = 0; while (S.phase !== 'ende' && g++ < 40) playDay(S, pol);
+      const w = S.result.why;
+      if (S.result.win) { r.win++; r.days.push(S.day); } else if (/Werkleitung zieht/.test(w)) r.chef++; else if (/Imker/.test(w)) r.fam++; else if (/Controlling/.test(w)) r.budget++; else r.dead++;
+      r.prog.push(sim.progress(S)); r.bud.push(S.budget); r.kpi.push(sim.kpiIndex(S)); r.meet.push(S.stats.meetings); r.useless.push(S.stats.useless); if (S.stats.chaosDays) r.chaos++;
+    }
+    const med = a => a.length ? a.slice().sort((x, y) => x - y)[Math.floor(a.length / 2)] : '-';
+    rows[k] = { win: Math.round(r.win / n * 100), winDay: med(r.days), chef: r.chef, fam: r.fam, termin: r.dead, budget: r.budget, prog: med(r.prog), bud: med(r.bud), kpi: med(r.kpi), meet: med(r.meet), useless: med(r.useless), chaos: Math.round(r.chaos / n * 100) };
   }
-  const med = a => a.length ? a.sort((x, y) => x - y)[Math.floor(a.length / 2)] : '-';
-  console.log(k.padEnd(11), 'Sieg', r.win, 'Siegtag', med(r.days), '| Chef raus', r.chef, '| Familie', r.fam, '| Termin', r.dead, '| Fortschritt Median', med(r.prog));
+  return rows;
 }
+if (require.main === module) {
+  const n = +process.argv[2] || 200;
+  const rows = run(n);
+  console.log('Strategie        Sieg%  Siegtag | Werkl. Familie Termin Budget | Fortschr. Budget KPI Meet(nutzlos) Chaos%');
+  for (const [k, x] of Object.entries(rows)) console.log(k.padEnd(16), String(x.win).padStart(5), String(x.winDay).padStart(8), '|', String(x.chef).padStart(6), String(x.fam).padStart(7), String(x.termin).padStart(6), String(x.budget).padStart(6), '|', String(x.prog).padStart(9), String(x.bud).padStart(6), String(x.kpi).padStart(3), (x.meet + '(' + x.useless + ')').padStart(13), String(x.chaos).padStart(6));
+  if (process.argv.includes('--check')) {
+    const R = rows, errs = [];
+    const best = Math.max(...Object.values(R).map(x => x.win));
+    if (R.meetingfan.win > R.gut.win - 15) errs.push('meetingfan nicht >= 15 PP unter gut');
+    if (R.meetingfan_plus.win > R.gut.win - 8) errs.push('meetingfan_plus nicht >= 8 PP unter gut');
+    if (R.gut.win !== best && R.berater.win !== best) errs.push('beste Strategie ist weder gut noch berater');
+    if (R.passiv.win > 5) errs.push('passiv gewinnt zu oft');
+    if (best > 75) errs.push('Spiel zu leicht (> 75 %)');
+    console.log(errs.length ? 'CHECK FEHLER: ' + errs.join('; ') : 'CHECK OK');
+    process.exitCode = errs.length ? 1 : 0;
+  }
+}
+module.exports = { run, POL, playDay };
