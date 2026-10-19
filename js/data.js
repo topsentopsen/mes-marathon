@@ -3,7 +3,7 @@
 'use strict';
 window.SC = window.SC || {};
 (function (SC) {
-  SC.VERSION = '0.6.0';
+  SC.VERSION = '0.7.0';
   SC.DAY_START = 7 * 60 + 30;   // 07:30 Frühschicht-Beginn im Büro
   SC.DAY_END = 17 * 60;         // 17:00 regulärer Feierabend
   SC.LATEST = 20 * 60;          // 20:00 der Pförtner schließt ab
@@ -340,6 +340,22 @@ window.SC = window.SC || {};
   ];
   SC.FAX_ELON = 'Du versuchst, das Elon-Abo des Tesla-Kollegen per Fax zu kündigen. Rückmeldung: »Empfänger unbekannt.« Das Abo läuft weiter, behauptet er jedenfalls.';
   SC.FAX_EGG = 'Werk Nord faxt eine Entschuldigung für alle Ausschreibungen, vergangene und künftige. Auf Folie 39. Folie 40 fehlt. Das Fax-Gerät wird ab heute im Archiv geführt.';
+  // v0.7 Abreißkalender im Schichtleiter-Büro (je Tag ein Blatt), Abschluss-Gag im Endbildschirm, Saison-Süßigkeit
+  SC.KALENDER = [
+    'Spruch des Tages: »Ein Meeting am Tag hält den Fortschritt fern.«',
+    'Spruch des Tages: »Wer plant, hat mehr Termine.«',
+    'Heute vor 7 Jahren: Kick-off des MES. Heute: Kick-off zum Kick-off.',
+    'Spruch des Tages: »Die Schicht ist das Ziel.« Darunter, handschriftlich: »Und Kuchen.«',
+    'Heute ist Tag der offenen Tür. Gemeint ist die Tür zum Besprechungsraum.',
+    'Spruch des Tages: »Gut geplant ist halb geschwänzt.« Jemand hat »geschwänzt« durchgestrichen.',
+    'Der Kalender ist von 2019. Der Schichtleiter sagt, die Wochentage stimmen wieder.',
+    'Spruch des Tages: »Zuhören ist auch Arbeit.« Gefaltet zu einem Hut.'
+  ];
+  SC.ABSCHLUSS = {
+    win: ['Der Pappkamerad lässt ausrichten: Er hat das alles schon gewusst.', 'Der Pförtner stempelt dich aus und sagt: »Viertes MES. Das erste, das bleibt.«', 'Der Schichtleiter lädt zum Abschluss-Meeting. Diesmal gehst du gern hin. Es gibt Kuchen.'],
+    lose: ['Der Pappkamerad übernimmt dein Büro. Keiner merkt den Unterschied, sagt die Werkleitung.', 'Der Pförtner: »Das MES hab ich schon dreimal gehen sehen. Jetzt viermal.«', 'Der Tesla-Kollege meint, Elon hätte das bestimmt anders gemacht. Er weiß nur nicht, wie.']
+  };
+  SC.SAISON = 'Am Kiosk gibt es schon Lebkuchen. Seit September. Niemand weiß, ob das zu früh oder zu spät ist.';
   SC.ELON_AKKU = 'Ich lade inzwischen dauernd Elon-Posts. Den Akku leider nicht.';
   SC.ELON_THEMA = [
     '»Und wie ist der Reifendruck?« Er redet zwei Minuten über Reifen. Elon kommt darin nur einmal vor.',

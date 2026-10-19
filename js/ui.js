@@ -78,6 +78,7 @@
     if (room === 'chef') h += '<p>Image im Konzern: <b>' + Math.round(s.image) + '</b>/100 · ' + (s.zusage ? '<span class="warn">Offene Zusage: ' + s.zusage.need + ' Modul(e) bis Tag ' + s.zusage.until + ' (geschafft: ' + (s.modules.filter(m => m.done).length - s.zusage.base) + ')</span>' : '<span class="dim">Keine offene Zusage. Zusagen bringen Prämie und Image, gebrochene kosten.</span>') + '</p>';
     if (room === 'schicht') h += '<div class="say">' + schichtSays(s) + '</div>';
     if (room === 'halle') h += stationTable(s);
+    if (room === 'schicht') h += '<div class="say">Abreißkalender an der Wand: ' + esc(sim().kalender(s)) + '</div>';
     if (room === 'werkstatt') h += '<div class="say">' + (s.stations.some(x => x.fault) ? 'Die Instandhaltung: »' + s.stations.filter(x => x.fault).map(x => sim().stName(x.id)).join(', ') + ' steht. Wie immer zuerst der Verpackungsautomat?«' : 'Die Instandhaltung: »Alles läuft. Das macht mich nervös.«') + (s.partsUntil >= s.day ? ' <span class="good">Ersatzteile im Lager (Reparatur 2 k€).</span>' : '') + '</div>';
     if (room === 'leitstand') h += kpiTable(s) + progHtml(s) + auditHtml(s);
     if (room === 'controlling') h += '<p>Budget: <b class="' + (s.budget < 0 ? 'bad' : '') + '">' + Math.round(s.budget) + ' k€</b> · ausgegeben: ' + Math.round(s.stats.budgetSpent) + ' k€ · Tranche diese Woche: ' + (s.trancheWeek === sim().week(s) ? '<span class="good">beantragt</span>' : '<span class="warn">offen</span>') + ' · Kredit: ' + (s.kredit ? '<span class="warn">' + s.kredit + ' k€</span>' : '0 k€') + ' von ' + sim().rahmen(s) + ' k€ Rahmen (8 % Zins freitags) · Image: <b>' + Math.round(s.image) + '</b>' + '</p><p class="small dim">Unter 0 k€: Budgetsperre. Unter −40 k€ stoppt das Controlling das Projekt.</p>' + marktHtml(s) + auktionHtml(s);
@@ -115,6 +116,7 @@
   function boxHtml(s, zettel) {
     const B = s.box, g = SC.NASCHER.find(x => x.id === B.gast);
     let h = '<h3>Süßigkeitenbox im Büro</h3><p>' + (B.n > 1 ? '🍬 ' + B.n + '/' + SC.TUNE.suess.stk + ' ' + esc(SC.SORTEN[B.sorte]) : B.n === 1 ? '<span class="warn">Nur noch das letzte Stück. Das nimmt niemand.</span>' : '<span class="warn">Leer.</span>') + (g ? ' · Stammgast heute früh: ' + esc(g.who) + ' (' + ({ gut: '<span class="good">zufrieden</span>', falsch: '<span class="warn">falsche Sorte</span>', leer: '<span class="bad">enttäuscht</span>' })[B.stand] + ')' : '') + '</p>';
+    if (zettel && sim().saison()) h += '<p class="small">' + esc(SC.SAISON) + '</p>';
     if (zettel) h += '<p class="small dim">Zettel am Kiosk, wer was mag: ' + SC.NASCHER.map(x => esc(x.who.replace(/^(Der|Die) /, '')) + ': ' + SC.SORTEN[x.mag]).join(' · ') + '. Einmal pro Woche Nachschub, das letzte Stück bleibt immer liegen.</p>';
     return h;
   }
@@ -206,7 +208,12 @@
   function endHtml(s) {
     return '<div class="end ' + (s.result.win ? 'good' : 'bad') + '"><h2>' + (s.result.win ? (s.result.pfad ? 'VORZEIGEWERK!' : s.result.titel ? 'GO-LIVE! WERK DES JAHRES!' : 'GO-LIVE!') : 'PROJEKT GESCHEITERT') + '</h2><p>' + esc(s.result.why) + '</p><p>Punkte: <b>' + s.result.score + '</b></p>' +
       '<p class="small">KPI-Index: ' + sim().kpiIndex(s) + ' % · Budget: ' + Math.round(s.budget) + ' k€ · Besuche: ' + s.stats.visits + ' · Pyramiden-Fragen richtig: ' + s.stats.pyrRight + '/' + (s.stats.pyrRight + s.stats.pyrWrong) + ' · Störungen: ' + s.stats.faults + '</p>' + highHtml(s) +
-      '<p class="small">Meetings besucht: ' + s.stats.meetings + ' (davon nutzlos: ' + s.stats.useless + ') · verpasst: ' + s.stats.missed + ' · Wochenendschichten: ' + s.stats.weekend + ' · Bugs: ' + s.stats.bugs + ' · Kaffee: ' + s.stats.coffee + ' · Überstunden: ' + s.stats.overtime + ' Min.</p></div>';
+      '<p class="small">Meetings besucht: ' + s.stats.meetings + ' (davon nutzlos: ' + s.stats.useless + ') · verpasst: ' + s.stats.missed + ' · Wochenendschichten: ' + s.stats.weekend + ' · Bugs: ' + s.stats.bugs + ' · Kaffee: ' + s.stats.coffee + ' · Überstunden: ' + Math.round(s.stats.overtime) + ' Min.</p>' + werkInZahlen(s) + '<p class="say">' + esc(sim().abschluss(s)) + '</p></div>';
+  }
+  // v0.7 »Dein Werk in Zahlen« (nur vorhandene Statistik)
+  function werkInZahlen(s) {
+    const st = s.stats, z = [['Kaffee', st.coffee], ['Elon-Erwähnungen', st.elon], ['Blicke auf den Pappkameraden', st.pappe], ['Faxe', st.fax], ['Aufzugknopf gedrückt', st.aufzug], ['Süßigkeitenbox aufgefüllt', st.suess], ['»Das hatten wir schon immer so«', st.immer], ['Kopfhörer aufgesetzt', st.kopf], ['Easter Eggs', st.eggs]].filter(x => x[1]);
+    return z.length ? '<h3>Dein Werk in Zahlen</h3><p class="small">' + z.map(x => esc(x[0]) + ': <b>' + x[1] + '</b>').join(' · ') + '</p>' : '';
   }
   function highHtml(s) {
     if (!s._hs) { s._hs = true; s._hl = sim().addScore(s); }
@@ -221,7 +228,9 @@
   }
 
   const unpause = () => { UI.paused = false; $('btn-pause').textContent = 'Pause'; };
+  UI.seenHint = () => { try { return !!localStorage.getItem('mesmarathon-hinweis'); } catch (e) { return true; } };
   UI.newGame = function (seed) {
+    try { localStorage.setItem('mesmarathon-hinweis', '1'); } catch (e) { /* */ }
     unpause(); SC.S = sim().newGame(seed || (Date.now() & 0x7fffffff)); shown = 0; UI._siren = 0;
     SC.building.reset(); closeOverlay(); aud('unlock'); aud('play', 'tower'); morning(); sim().save(SC.S);
   };
@@ -231,7 +240,7 @@
     overlay('<div class="title"><h1 class="logo">MES-MARATHON</h1><p class="dim">Ein Werk. Sieben Stationen. Fünf Module. Zwanzig Tage. Unendlich viele Meetings.</p>' +
       '<img src="img/portrait.png" alt="Christian" class="pt big"><p>Du bist <b>Christian</b>, ca. 40, MES-Projektleiter in ' + SC.PLANT + '. Seit Jahren führst du das MES ein. Diesmal wirklich.</p>' +
       (sim().oldSave && sim().oldSave() ? '<p class="small warn">Dein Spielstand stammt aus Version ' + esc(sim().oldSave()) + ' und passt nicht zu ' + SC.VERSION + '. Bitte neu starten.</p>' : '') +
-      '<p><button data-o="new">Neues Spiel</button> ' + (sv && sv.phase !== 'ende' ? '<button data-o="cont">Weiterspielen (Tag ' + sv.day + ')</button> ' : '') + '<button data-o="help">Anleitung</button></p>' +
+      (!sv && !sim().highscores().length && !UI.seenHint() ? '<p class="small">Erstes Mal hier? Die Anleitung erklärt alles. Kurz: Module durch die Pipeline bringen, Meetings klug wählen, ab 17:00 wird es teuer. Tasten: Leertaste, +, M, K.</p>' : '') + '<p><button data-o="new">Neues Spiel</button> ' + (sv && sv.phase !== 'ende' ? '<button data-o="cont">Weiterspielen (Tag ' + sv.day + ')</button> ' : '') + '<button data-o="help">Anleitung</button></p>' +
       '<p class="small dim">Inspiriert von Mad TV (1991). Eigenes Fanprojekt, alle Figuren frei erfunden. Version ' + SC.VERSION + '</p>' + (sim().highscores().length ? '<p class="small">Bestenliste: ' + sim().highscores().map((x, i) => (i + 1) + '. ' + x.score).join(' · ') + '</p>' : '') + '</div>');
   };
   function help() {
@@ -247,6 +256,7 @@
       '<li><b>Großereignisse:</b> Tag 6 kommt ein neues SAP (Stammdaten migrieren, Cutover Freitag). Tag 13 kauft die Firma die Konkurrenz (Systemfusion als sechstes Modul, Go-Live Tag 22).</li>' +
       '<li><b>Neu in 0.3:</b> Werk Nord und Werk Süd greifen ein (Abwerbung, Gerüchte beim Vorstand). Gegenmaßnahmen kosten Geld, Ignorieren kostet Image. Das Image im Konzern beeinflusst Tranche, Kreditrahmen und das Tempo der Rivalen. In der Werkleitung kannst du Zusagen machen (Module bis zu einer Frist): gehalten gibt Prämie, gebrochen kostet. Dazu Pflichttermine: Kaffeeautomat zum SAP-Cutover, die IT-Chefin mit Industrie 5.0 als Kreis, ein Morse-Rätsel am Verpackungsautomaten und die Kostümparty ab Tag 14 (Feierabend erst nach der Party). Wer dem italienischen Kollegen dreimal in Folge zuhört, bekommt Tiramisu.</li>' +
       '<li><b>Neu in 0.4:</b> Markt im Controlling (drei Angebote am Tag, ein Geschäft: Berater-Paket, Ersatzteile, Agentur-Kampagne, Pressemitteilung, Toner, Wartungsvertrag oder eine alte Lizenz verkaufen). Im Leitstand Montag oder Dienstag eine Prognose für den KPI-Index am Freitag abgeben (Treffer: Werkleitung und Image). Der Wassermelonen-Bericht meldet »alles grün«, bis das Audit nachschaut. Während der SAP-Migration gibt es die SAP-Hotline. Go-Live mit KPI-Index ab 90 % und Image ab 75: Titel »Werk des Jahres«. Jede Etage hat ein Fenster in die Produktion.</li>' +
+      '<li><b>Neu in 0.7:</b> Im Schichtleiter-Büro hängt ein Abreißkalender, am Ende zeigt »Dein Werk in Zahlen«, was du so getrieben hast. Im Herbst gibt es am Kiosk Lebkuchen.</li>' +
       '<li><b>Neu in 0.6:</b> Die Aktionsknöpfe zeigen, wann du fertig bist (⚠: nach Feierabend), in den Hallen auch die Wartezeit der Schichtübergabe. Wer nach 17:00 noch etwas anfängt, ist müde und braucht länger. Tasten: Leertaste Pause, + Tempo, M Ton, K Kopfhörer. Im Büro wartet ein Pappkamerad, im Druckerraum ein Fax-Gerät, und der Aufzug (Klick auf die Kabine) hat ein Geheimnis. Fällt der Dienstag aus, hängt die Ausschreibung am Mittwoch aus.</li>' +
       '<li><b>Neu in 0.5:</b> Dienstags hängt im Controlling eine Ausschreibung aus (Ersatzteile, Beraterkontingent oder Wartungspaket). Gebote bis Mittwoch 15:00, im Controlling oder per Mail aus dem Büro. Werk Nord bietet verdeckt, gezahlt wird nur beim Zuschlag. Zweiter Weg zum Sieg: das Konzernaudit »Vorzeigewerk« (Freitag ab Tag 15, sehr hohes Image und KPI-Index, mindestens 3 Module). Der Knopf 🎧 setzt Kopfhörer auf: Tesla-Kollege, Ahnungslose und Altwerk halten sich dann kurz. Im Serverraum wohnt jetzt ein digitaler Zwilling, und das Archiv hat Fundstücke. Christian bringt immer Süßigkeiten mit: Die Box im Büro füllst du einmal pro Woche am Kiosk der Kantine auf (Schoko-Mix, Gummibärchen oder Lakritz). Jeden Tag schaut ein Stammgast vorbei. Passt die Sorte, hilft er dir (zum Beispiel eine Reparatur oder ein Testlauf 10 Min. kürzer), sonst wird gemeckert. Das letzte Stück nimmt niemand. Und der Tesla-Kollege erzählt dir jetzt dauernd, was »Elon« angeblich alles anders machen würde (Elon-Zähler oben). Thema wechseln geht meistens.</li>' +
       '<li><b>Flurfunk (neu in 0.3):</b> Brandschutzübungen, Beamer-Kabel, Überraschungsgerichte und mehr. Die Werkleitung streut Buzzwords: fünf verschiedene sind ein Bingo (Punkte). Werksdurchsagen, die Werkszeitung am Abend und ein paar Easter Eggs.</li>' +

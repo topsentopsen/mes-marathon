@@ -9,6 +9,7 @@
   // v0.4: dritter Zufallsstrom für Markt, Hotline und Prognose-Audit (S.rs und S.rf bleiben je Seed gleich)
   function rngM(S) { S.rm = (S.rm * 1103515245 + 12345) & 0x7fffffff; return S.rm / 0x7fffffff; }
   // v0.5: vierter, zustandsloser Strom für Ausschreibung und neue Gags (hängt nur von Seed und Salz ab, kein Feld in S)
+  // Salzbereiche von rngA: Ausschreibung < 1000, Süßigkeitenbox 9000 bis 9999, Elon 20000 bis 20999, v0.7-Gags ab 31000 (Kalender 31000+, Abschluss 31100+)
   function rngA(S, salt) { const x = (((S.seed ^ Math.imul(salt, 0x85ebca6b)) & 0x7fffffff) || 13) >>> 0; return ((x * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff; }
   const ri = (S, a, b) => a + Math.floor(rng(S) * (b - a + 1));
   const pick = (S, arr) => arr[Math.floor(rng(S) * arr.length)];
@@ -517,6 +518,10 @@
     ]
   };
 
+  // v0.7 Abreißkalender und Abschluss-Gag (ohne Spielwirkung)
+  const kalender = S => SC.KALENDER[Math.floor(rngA(S, 31000 + (S.day % 100)) * SC.KALENDER.length)];
+  const abschluss = S => { const L = SC.ABSCHLUSS[S.result && S.result.win ? 'win' : 'lose']; return L[Math.floor(rngA(S, 31100 + (S.day % 100)) * L.length)]; };
+  const saison = d => { const m = (d || new Date()).getMonth(); return m >= 9 && m <= 11; };
   // v0.6 Aufzugknopf (Klick auf den Schacht): zählt, beim 7. Mal Easter Egg
   function aufzug(S) { S.stats.aufzug++; const n = S.stats.aufzug; if (n >= 7 && !S.eggs.aufzug) { egg(S, 'aufzug', SC.AUFZUG_EGG); return null; } return SC.AUFZUG[(n - 1) % SC.AUFZUG.length]; }
   // v0.6 Wartezeit bis zur Schichtübergabe (für die Anzeige auf den Knöpfen)
@@ -561,7 +566,7 @@
     if (id === 'repair' && isDone(S, 'trace')) cost -= 15;
     if (id === 'bericht' && isDone(S, 'bde')) cost = 15;
     if (S.lunch && S.minute < 15 * 60 && cost > 20) cost = Math.round(cost * 0.9);
-    const r = cost > 0 ? boxRabatt(S, room, id) : 0; if (r) cost = Math.max(5, cost - r);
+    const r0 = cost > 0 ? boxRabatt(S, room, id) : 0, cBox = cost; if (r0) cost = Math.max(5, cost - r0); const r = cBox - cost;
     // v0.6 Spätzuschlag: wer nach Feierabend noch etwas anfängt, ist langsamer (Party-Minuten zählen nicht)
     const late = T().ueber.spaet !== 1 && S.minute >= SC.DAY_END + (S.partyMin || 0);
     if (cost > 0 && late) cost = Math.round(cost * T().ueber.spaet);
@@ -803,7 +808,7 @@
     const rest = 55 - Math.round(over / T().ueber.rest);
     S.energy = clamp(S.energy + rest, 15, 100);
     let fri = weekday(S) === 4;
-    if (S.burnout) { S.burnout = false; S.chef -= 8; S.family -= 4; S.energy = 70; R.lines.push(['bad', 'Am Schreibtisch eingeschlafen, Kopf auf der Tastatur. Ein Tag krank: Werkleitung −8.']); S.day++; if (T().cost.daily) spend(S, T().cost.daily); if (weekday(S) === 4 && S.kredit > 0) { const z = Math.max(1, Math.round(S.kredit * T().kredit.zins)); spend(S, z); R.lines.push(['bad', 'Kreditzinsen (Saldo ' + S.kredit + ' k€): −' + z + ' k€']); } if (S.auktion && !S.auktion.res && S.day >= S.auktion.closeDay) closeAuktion(S, R); if (weekday(S) === 4) { fri = true; wochenRueckblick(S, R); S.chef = clamp(S.chef, 0, 100); S.image = clamp(S.image, 0, 100); auditFreitag(S, R); } }
+    if (S.burnout) { S.burnout = false; S.chef -= 8; S.family -= 4; S.energy = 70; R.lines.push(['bad', 'Am Schreibtisch eingeschlafen, Kopf auf der Tastatur. Ein Tag krank: Werkleitung −8.' + (weekday(S) === 3 ? ' Der Freitag fällt aus, das Wochenende kommt danach trotzdem.' : '')]); if (S.ev.kaffee === S.day) S.ev.kaffeeKrank = S.day + 1; S.day++; if (T().cost.daily) spend(S, T().cost.daily); if (weekday(S) === 4 && S.kredit > 0) { const z = Math.max(1, Math.round(S.kredit * T().kredit.zins)); spend(S, z); R.lines.push(['bad', 'Kreditzinsen (Saldo ' + S.kredit + ' k€): −' + z + ' k€']); } if (S.auktion && !S.auktion.res && S.day >= S.auktion.closeDay) closeAuktion(S, R); if (weekday(S) === 4) { fri = true; wochenRueckblick(S, R); S.chef = clamp(S.chef, 0, 100); S.image = clamp(S.image, 0, 100); auditFreitag(S, R); } }
     S.chef = clamp(S.chef, 0, 100); S.family = clamp(S.family, 0, 100); S.schicht = clamp(S.schicht, 0, 100);
     R.progress = me; R.rivals = S.rivals.map(r => ({ name: r.name, prog: r.prog })); R.budget = S.budget; R.kpiIndex = kpiIndex(S);
     R.friday = fri;
@@ -829,6 +834,8 @@
     return Math.max(0, Math.round(progress(S) * 10 + (S.result && S.result.win ? (S.result.pfad ? T().audit.score : (S.deadline - S.day) * 150 + 1000) : 0) + S.family * 5 + S.chef * 5 + kpiIndex(S) * 5 + Math.max(0, S.budget) / 2 + (S.stats.bingo ? T().bingoScore : 0) + S.stats.eggs * 25 + S.image * 3 - S.kredit / 2 + (S.titel ? T().titel.score : 0)));
   }
   // Wochenendschicht: shifts = 0, 1 oder 2 Tage
+  // v0.7: der Kaffeeautomat bleibt auch dann am Wochenende kaputt, wenn der Freitag nach einem Burnout ausfiel
+  const kaffeeKaputt = S => S.ev.kaffee === S.day || S.ev.kaffeeKrank === S.day;
   function weekend(S, shifts) {
     const out = [];
     // Cutover am Wochenende: die Schicht migriert zuerst die fehlenden Stammdaten
@@ -838,9 +845,9 @@
       const use = Math.min(4, sapRest); sapRest -= use;
       autoWork(S, 4 - use);
       spend(S, T().cost.weekend);
-      S.family -= T().weekendFam; S.energy -= 12 + (S.ev.kaffee === S.day ? 4 : 0); S.chef += 3;
+      S.family -= T().weekendFam; S.energy -= 12 + (kaffeeKaputt(S) ? 4 : 0); S.chef += 3;
     }
-    if (shifts > 0 && S.ev.kaffee === S.day) out.push('Der Kaffeeautomat ist auch am Wochenende kaputt: zusätzlich Energie −' + 4 * shifts + '.');
+    if (shifts > 0 && kaffeeKaputt(S)) out.push('Der Kaffeeautomat ist auch am Wochenende kaputt: zusätzlich Energie −' + 4 * shifts + '.');
     if (shifts === 0) { S.family += 8; S.energy = 100; out.push('Wochenende frei: Familie +8, voll erholt.'); }
     else out.push('Wochenendschicht (' + shifts + (shifts > 1 ? ' Tage' : ' Tag') + '): viel geschafft, Familie −' + T().weekendFam * shifts + ', Werkleitung +' + 3 * shifts + ', Budget −' + T().cost.weekend * shifts + ' k€ (Zuschläge).');
     if (S.sap.cutover && S.sap.state === 'migration') {
@@ -872,6 +879,6 @@
   }
   function highscores() { try { return JSON.parse(localStorage.getItem('mesmarathon-highscore') || '[]'); } catch (e) { return []; } }
 
-  SC.sim = { newGame, act, actCost, elonHeute, aufzug, handoverWait, advance, events, endDay, weekend, startDay, progress, nextMeeting, activeMeeting, actions: A, targets, hm, weekday, week, save, load, slow,
+  SC.sim = { newGame, act, actCost, elonHeute, aufzug, handoverWait, kalender, abschluss, saison, advance, events, endDay, weekend, startDay, progress, nextMeeting, activeMeeting, actions: A, targets, hm, weekday, week, save, load, slow,
     choose, visitOptions, visitText, oldSave, archiv, kopfhoerer, kopfWhy, nordRatio, rngA, closeAuktion, auktionOpen, bidPrice, auditOk, rngF, rngM, prognoseBand, rahmen, kpiScore, kpiIndex, kpiPath, kpiTarget, autoWork, addScore, highscores, stationOf, stName, rng };
 })(window.SC);
