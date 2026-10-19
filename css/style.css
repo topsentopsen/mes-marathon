@@ -33,7 +33,7 @@ td.best { background: rgba(255, 204, 0, 0.18) !important; }
 .moodbar { display: inline-block; width: 60px; height: 9px; background: #400; border: 1px solid #000; vertical-align: middle; }
 .moodbar span { display: block; height: 100%; background: linear-gradient(90deg, #ff2020, #ffcc00, #40ff40); }
 .moodbar.big { width: 200px; height: 14px; }
-.good { color: #6f6; } .bad { color: #f66; } .dim { color: #8ab; } .small { font-size: 11px; }
+.good { color: #6f6; } .bad { color: #f66; } li.info { color: #fd6; font-style: italic; } .dim { color: #8ab; } .small { font-size: 11px; }
 .big { font-size: 18px; }
 .say { color: #fff; background: #002a66; border-left: 4px solid #ff8800; padding: 6px 10px; }
 select { font: inherit; font-size: 12px; background: #002a66; color: #fff; border: 1px solid #fff; max-width: 100%; width: 100%; }

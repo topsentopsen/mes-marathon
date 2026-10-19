@@ -16,6 +16,8 @@
   ];
   let npcs = NPC0.map(n => Object.assign({ wait: 0, home: n.f, hx: n.x }, n));
   const smoke = [];
+  // v0.3: Sprechblasen (rein kosmetisch, Math.random ist hier erlaubt, die Spiellogik bleibt unberührt)
+  const bub = { n: null, t: '', ttl: 0, next: 4 };
   let tick = 0;
   const floorY = f => GROUND - f * FH;
 
@@ -184,8 +186,29 @@
     text(String(Math.round(lift.pos) === 0 ? 'EG' : Math.round(lift.pos)), EX, floorY(0) - 46, '#ff4040', 7);
   }
 
+  function updateBubble(dt) {
+    if (SC.S && SC.S.pending) { bub.n = null; return; }
+    if (bub.ttl > 0) { bub.ttl -= dt; if (bub.ttl <= 0) bub.n = null; return; }
+    bub.next -= dt; if (bub.next > 0) return;
+    bub.next = 6 + Math.random() * 8;
+    const here = npcs.filter(n => n.f === P.f && SC.BUBBLES && SC.BUBBLES[n.role]);
+    const pool = here.length && Math.random() < 0.7 ? here : npcs.filter(n => SC.BUBBLES && SC.BUBBLES[n.role]);
+    if (!pool.length) return;
+    const n = pool[Math.floor(Math.random() * pool.length)], L = SC.BUBBLES[n.role];
+    bub.n = n; bub.t = L[Math.floor(Math.random() * L.length)]; bub.ttl = 3;
+  }
+  function drawBubble() {
+    const n = bub.n; if (!n || !bub.t) return;
+    ctx.font = 'bold 6px monospace';
+    const w = Math.ceil(ctx.measureText(bub.t).width) + 6, h = 10;
+    const x = Math.round(Math.max(BX0 + 2, Math.min(BX1 - w - 2, n.x - w / 2))), y = Math.round(floorY(n.f) - 38);
+    rect(x - 1, y - 1, w + 2, h + 2, '#000'); rect(x, y, w, h, '#fffbe8');
+    rect(Math.round(n.x) - 1, y + h, 3, 2, '#fffbe8'); rect(Math.round(n.x), y + h + 2, 1, 2, '#fffbe8');
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillStyle = '#202020'; ctx.fillText(bub.t, x + 3, y + 2);
+  }
   function updateNpcs(dt) {
     tick++;
+    updateBubble(dt);
     npcs.forEach(n => {
       if (n.idle) { n.moving = false; return; }
       if (n.target !== undefined) { const d = n.target - n.x; if (Math.abs(d) < 2) { n.moving = false; n.dir = P.x > n.x ? 1 : -1; return; } n.x += Math.sign(d) * 50 * dt; n.dir = Math.sign(d); n.moving = true; n.anim = (n.anim || 0) + dt * 8; return; }
@@ -209,6 +232,7 @@
     summon(id) {
       const p = SC.S && SC.S.pending;
       const roles = id === 'tesla' ? (p && p.duo ? ['tesla', 'nix'] : ['tesla']) : id === 'italien' ? ['italien'] : id === 'itchefin' ? ['itchefin'] : [];
+      if (id === 'flur' && p && SC.FLUR[p.k] && SC.FLUR[p.k].role) roles.push(SC.FLUR[p.k].role);
       roles.forEach((r, i) => { const n = npcs.find(q => q.role === r); if (!n) return; n.f = P.f; n.idle = false; const side = P.x > 300 ? -1 : 1; n.x = P.x + side * 60; n.target = P.x + side * (14 + i * 10); });
     },
     dismiss() { npcs = NPC0.map(n => Object.assign({ wait: 0, home: n.f, hx: n.x }, n)); },
@@ -246,6 +270,7 @@
       drawSky(min);
       drawBuilding(min);
       npcs.forEach(n => drawMan(n.x, floorY(n.f), n.col, n.anim || 0, n.moving, n.dir, false, n.role));
+      drawBubble();
       if (P.visible) {
         const y = P.inLift ? floorY(lift.pos) : floorY(P.f);
         drawMan(P.x, y, SC.PLAYER.col, P.anim, P.moving, P.dir, true);
@@ -260,6 +285,9 @@
       for (const d of SC.FLOORS[f].doors) if (lx >= d.x - 26 && lx <= d.x + 26 && ly >= bot - 44 && ly <= bot) return { f, d };
       return null;
     },
+    // Easter Egg: Klick auf den Schornstein
+    chimney(lx, ly) { const CX = BX1 - 34; return lx >= CX - 2 && lx <= CX + 14 && ly >= 0 && ly <= floorY(5) - 6; },
+    bubble: () => (bub.n ? { role: bub.n.role, t: bub.t } : null),
     floorAt(ly) { const f = Math.floor((GROUND - ly) / FH); return f >= 0 && f <= 4 ? f : null; },
     setHover(h) { hover = h; },
     toLogical(ev) { const r = cv.getBoundingClientRect(); return [(ev.clientX - r.left) * W / r.width, (ev.clientY - r.top) * H / r.height]; },

@@ -3,7 +3,7 @@
 'use strict';
 window.SC = window.SC || {};
 (function (SC) {
-  SC.VERSION = '0.2.0';
+  SC.VERSION = '0.3.0';
   SC.DAY_START = 7 * 60 + 30;   // 07:30 Frühschicht-Beginn im Büro
   SC.DAY_END = 17 * 60;         // 17:00 regulärer Feierabend
   SC.LATEST = 20 * 60;          // 20:00 der Pförtner schließt ab
@@ -63,6 +63,7 @@ window.SC = window.SC || {};
     cost: { test: 2, repair: 3, care: 2, toner: 1, weekend: 8, sap: 10, fusion: 12, daily: 1 },
     fault: { inpack: 0.40, auspack: 0.15, other: 0.04 },
     visit: { tesla: 0.55, duo: 0.6, italienHour: 0.30, italienMax: 3, itEven: 0.85, itOdd: 0.25, ahnungslos: 0.5, altwerk: 0.5, glueck: 0.08 },
+    flur: 0.35, bingoScore: 50,
     meet: { gain: 8, step: 2, cap: 80, quotaMin: 90, quotaPen: 1, spiral: 0.35, spiral2: 0.5, testFactor: 0.75, reqDouble: 0.35 }
   };
   SC.KPI = {
@@ -163,5 +164,78 @@ window.SC = window.SC || {};
     'Verpackungsautomat: Die Kartons kommen jetzt hochkant raus. Niemand weiß warum.',
     'Verpackungsautomat: Display zeigt »Bitte warten«. Seit 40 Minuten.',
     'Verpackungsautomat: Er piept. Nicht wegen eines Fehlers, sagt er. Einfach so.'
+  ];
+
+  // v0.3 »Flurfunk«: Sprechblasen der Figuren im Gebäude (rein kosmetisch, höchstens 40 Zeichen)
+  SC.BUBBLES = {
+    schicht: ['Hast du kurz?', 'Kleines Meeting gleich?', 'Ich lad dich mal ein.', 'Wichtig. Glaub ich.', 'Nur fünf Minuten!', 'Termin folgt!'],
+    tesla: ['0 auf 100 in 3,1!', 'Reichweite, Christian!', 'Update über Nacht!', 'Der parkt allein ein.', 'Hast du das Video gesehen?'],
+    nix: ['Genau.', 'Bin gleich bei dir.', 'Erst mal Kaffee.', 'Viel los heute, ne?', 'Ich warte auf Rückmeldung.'],
+    italien: ['Mamma mia, die Pasta!', 'Heute Bruschetta!', 'Espresso? Espresso.', 'In Italien ist jetzt Pause.', 'Meine Nonna sagt ...'],
+    itchefin: ['Ebene 3!', 'Denk an die Pyramide!', 'Feld, Steuerung, ...', 'Wo ist das MES? Na?', 'Ich hab Folien dabei.']
+  };
+  // Flurfunk: kleine Zufallsereignisse mit zwei Optionen (lang/kurz). Effekte bewusst klein.
+  SC.FLUR = [
+    { id: 'brandschutz', who: 'Der Brandschutzbeauftragte', text: 'Brandschutzübung! Alle raus auf den Parkplatz. Der Pförtner zählt durch und kommt jedes Mal auf eine andere Zahl.',
+      opts: [{ label: 'Brav mitgehen (15 Min.)', min: 15, energy: 4, schicht: 2, msg: 'Frische Luft am Sammelplatz. Die Schicht sieht dich dort und findet das solidarisch (+2).' },
+        { label: 'Tür zu, weiterarbeiten (2 Min.)', min: 2, energy: -2, msg: 'Der Brandschutzbeauftragte notiert: »Büro, 2. OG: verbrannt.« Nur auf dem Papier.' }] },
+    { id: 'beamer', who: 'Ein Kollege ohne Ahnung', text: 'Der Beamer im Besprechungsraum geht nicht. Hast du ein HDMI-Kabel? Oder VGA? Oder das andere?',
+      opts: [{ label: 'Adapter suchen helfen (12 Min.)', min: 12, energy: 0, schicht: 2, msg: 'Im Moderationskoffer liegen 14 Adapter. Keiner passt. Der fünfzehnte schon. Der Schichtleiter ist dir dankbar (+2).' },
+        { label: '»Ich hab nur USB-C.« (2 Min.)', min: 2, energy: -1, msg: 'Er nickt verständnisvoll. Er weiß nicht, was USB-C ist.' }] },
+    { id: 'ueberraschung', who: 'Die Kantinenkraft', role: null, text: 'Gericht des Tages: »Überraschung«. Die Kantinenkraft zwinkert. Sie zwinkert sonst nie.',
+      opts: [{ label: 'Probieren (10 Min.)', min: 10, energy: 5, msg: 'Es ist Currywurst. Die Überraschung ist die Soße: Mango. Energie +5.' },
+        { label: 'Lieber nicht (1 Min.)', min: 1, energy: -1, msg: 'Du wirst nie erfahren, was es war. Die Kantinenkraft auch nicht.' }] },
+    { id: 'entkalkt', who: 'Die Instandhaltung', text: 'Die Kaffeemaschine wurde entkalkt. Der Kaffee schmeckt jetzt nach nichts. Die Instandhaltung: »Das ist der Geschmack von Sauberkeit.«',
+      opts: [{ label: 'Trotzdem trinken (8 Min.)', min: 8, energy: 4, msg: 'Schmeckt nach nichts, wirkt aber. Energie +4.' },
+        { label: 'Wasser aus dem Büro (2 Min.)', min: 2, energy: -1, msg: 'Wasser. Das MES-Projekt wird dadurch nicht schneller, aber du hydrierst.' }] },
+    { id: 'ausflug', who: 'Die Personalabteilung', text: 'Umfrage zum Betriebsausflug: Kanu, Kletterwald oder Führung durchs eigene Werk? Bisher haben alle »egal« angekreuzt.',
+      opts: [{ label: 'Ausführlich ausfüllen (10 Min.)', min: 10, energy: 2, msg: 'Du kreuzt »Kanu« an und schreibst eine Begründung. Es wird die Werksführung. Wie jedes Jahr.' },
+        { label: '»Egal« ankreuzen (1 Min.)', min: 1, energy: -1, msg: 'Ergebnis der Umfrage: 100 % »egal«. Die Personalabteilung wertet das als Zustimmung.' }] },
+    { id: 'stapler', who: 'Der Tesla-Kollege', role: 'tesla', text: 'Der Tesla-Kollege zeigt dir ein Video vom Parkplatz: Ein Gabelstapler parkt rückwärts ein. Ganz allein. Fast.',
+      opts: [{ label: 'Video anschauen (8 Min.)', min: 8, energy: 4, msg: 'Der Stapler parkt ein. Dann die Mülltonne aus. Ihr lacht beide. Energie +4.' },
+        { label: '»Schick es mir.« (1 Min.)', min: 1, energy: -1, msg: 'Er schickt es dir. Und drei weitere. Und eine Sprachnachricht.' }] },
+    { id: 'torte', who: 'Die IT-Chefin', role: 'itchefin', text: 'Die IT-Chefin hat die Automatisierungspyramide als Torte bestellt. Für den Geburtstag der Werkleitung. Sie sucht jemanden zum Probe-Essen von Ebene 2.',
+      opts: [{ label: 'Probe-Essen (10 Min.)', min: 10, energy: 6, msg: 'Ebene 2 (Leitebene) ist Marzipan. Ebene 3 (MES) ist noch nicht fertig. Natürlich. Energie +6.' },
+        { label: '»Ich bin auf Diät.« (1 Min.)', min: 1, energy: -1, msg: '»Schade. Dann bekommst du Ebene 0, das ist nur der Teller.«' }] },
+    { id: 'meetingmeeting', who: 'Der Schichtleiter', role: 'schicht', text: 'Der Schichtleiter sammelt Unterschriften: Er will ein Meeting über die Abschaffung unnötiger Meetings ansetzen.',
+      opts: [{ label: 'Unterschreiben (5 Min.)', min: 5, energy: 0, schicht: 3, msg: 'Er strahlt. Das Meeting dazu ist nächste Woche, Dauer 90 Minuten. Schichtleiter +3.' },
+        { label: 'Freundlich ablehnen (1 Min.)', min: 1, energy: 0, schicht: -2, msg: '»Verstehe. Dann besprechen wir das im Meeting.« Schichtleiter −2.' }] },
+    { id: 'passwort', who: 'Die IT (Rundmail)', text: 'Pflicht für alle: Passwort ändern. Mindestens 16 Zeichen, ein Sonderzeichen, ein Emoji und keins der letzten 40.',
+      opts: [{ label: 'Sofort ändern (8 Min.)', min: 8, energy: -1, msg: 'Geschafft. Du hast es auf einen Zettel geschrieben, den du unter die Tastatur legst. Sicherheit!' },
+        { label: '»Morgen erinnern« (1 Min.)', min: 1, energy: 0, msg: 'Morgen erinnert es dich. Und übermorgen. Und in jedem Meeting am Beamer.' }] },
+    { id: 'app', who: 'Der Azubi', text: 'Der Azubi fragt, ob er die Excel-Liste »mal schnell« in eine App umziehen darf. Mit Dark Mode.',
+      opts: [{ label: 'Geduldig erklären, warum nicht (10 Min.)', min: 10, energy: 1, msg: 'Du erklärst den SVERWEIS. Er schaut dich an wie ein Museumsstück. Aber er hört zu.' },
+        { label: '»Frag die Werkleitung.« (1 Min.)', min: 1, energy: -1, msg: 'Die Werkleitung findet die Idee gut und beauftragt dich. Für 2031.' }] }
+  ];
+  // Buzzword-Bingo der Werkleitung (Running Gag, nur Punkte)
+  SC.BUZZ = ['Synergie', 'agil', 'Quick Win', 'Rollout', 'Low-Hanging Fruit', 'Leuchtturmprojekt', 'Mehrwert', 'Digitalisierung'];
+  SC.BINGO_NEED = 5;
+  // Werksdurchsagen (einmal am Tag) und Schlagzeilen der Werkszeitung (Abendbilanz)
+  SC.DURCHSAGEN = [
+    'Der Fahrer des roten Gabelstaplers mit dem Kennzeichen »Bitte nicht berühren« möge sich an der Pforte melden.',
+    'Die Kantine ist heute bis auf Weiteres geöffnet. Wir bitten um Verständnis.',
+    'Der Notausgang West ist ab sofort wieder ein Notausgang. Bitte die Paletten entfernen.',
+    'Herzlichen Glückwunsch an die Extrusion: drei Tage ohne Etikettenstau! Der Rekord liegt bei vier.',
+    'Das Meeting zur Reduzierung von Durchsagen beginnt in fünf Minuten im Besprechungsraum.',
+    'Wer hat den Tacker aus der Werkleitung? Er wird vermisst. Bitte keine Fragen stellen, einfach zurückbringen.',
+    'Probealarm der Sirene. Bitte nicht in Panik verfallen. Der echte Schichtwechsel ist erst um 14:00.',
+    'Parkplatz P3 wird heute neu markiert. Bitte nicht auf den frischen Linien parken. Wie gestern.'
+  ];
+  SC.SCHLAGZEILEN = [
+    'Verpackungsautomat als »Mitarbeiter des Monats« nominiert. Er war am häufigsten im Gespräch.',
+    'Studie: Neun von zehn Meetings hätten eine Mail sein können. Die zehnte war eine Mail.',
+    'IT-Chefin lässt die Pyramide auf die Kantinentabletts drucken. Ebene 3 liegt unter dem Schnitzel.',
+    'Excel-Liste überschreitet 1.000 Zeilen. Die Werkleitung gratuliert per Excel-Liste.',
+    'Instandhaltung findet einen Kabelbinder von 1998. Er hält noch.',
+    'Tesla-Kollege fährt jetzt mit dem Rad. Er redet trotzdem über Reichweite.',
+    'Italienischer Kollege bringt Tiramisu mit. Die Werkleitung beruft eine Sondersitzung ein.',
+    'Drucker druckt 62 Seiten ohne Stau. Experten sind ratlos, der Drucker schweigt.',
+    'Schichtleiter plant den meetingfreien Freitag. Kick-off ist am Montag.',
+    'Werk Süd führt jetzt auch eine Excel-Liste. Sie hat 48 Spalten. Eine mehr als unsere.'
+  ];
+  SC.SCHORNSTEIN = [
+    'Der Schornstein raucht. Laut Werkleitung ist das »Digitalisierung, die man sieht«.',
+    'Aus dem Schornstein kommt heute eine Rauchwolke in Form einer Pyramide. Die IT-Chefin hat ein Foto gemacht.',
+    'Der Schornstein ist denkmalgeschützt. Das MES leider nicht.'
   ];
 })(window.SC);

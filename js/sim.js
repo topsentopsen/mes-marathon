@@ -3,6 +3,9 @@
 (function (SC) {
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   function rng(S) { S.rs = (S.rs * 1103515245 + 12345) & 0x7fffffff; return S.rs / 0x7fffffff; }
+  // Eigener Zufallsstrom für die v0.3-Gags (Flurfunk, Bingo, Durchsagen): die bestehenden Würfe aus S.rs bleiben je Seed gleich
+  function rngF(S) { S.rf = (S.rf * 1103515245 + 12345) & 0x7fffffff; return S.rf / 0x7fffffff; }
+  const pickF = (S, arr) => arr[Math.floor(rngF(S) * arr.length)];
   const ri = (S, a, b) => a + Math.floor(rng(S) * (b - a + 1));
   const pick = (S, arr) => arr[Math.floor(rng(S) * arr.length)];
   const hm = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(Math.floor(m % 60)).padStart(2, '0');
@@ -14,7 +17,7 @@
   }
   function newGame(seed) {
     const S = {
-      v: SC.VERSION, seed: seed >>> 0 || 1, rs: (seed >>> 0 || 1), day: 1, minute: SC.DAY_START, phase: 'tag',
+      v: SC.VERSION, seed: seed >>> 0 || 1, rs: (seed >>> 0 || 1), rf: (((seed >>> 0) ^ 0x5bd1e995) & 0x7fffffff) || 7, day: 1, minute: SC.DAY_START, phase: 'tag',
       name: SC.PLAYER.name, deadline: SC.DEADLINE,
       energy: 100, chef: 60, family: 70, schicht: 50,
       budget: T().budgetStart, debt: [], trancheWeek: -1, partsUntil: 0,
@@ -26,8 +29,8 @@
       uselessToday: 0, uselessMin: 0, uselessYesterday: 0, sirene: 0, testSlot: 0, itReview: 0,
       sap: { state: 'none', pk: 0, need: 4 }, fusion: false, chaosUntil: 0,
       rivals: SC.RIVALS.map(r => ({ name: r.name, prog: 0, live: false })),
-      msgs: [], result: null, dayLog: [],
-      stats: { meetings: 0, useless: 0, missed: 0, weekend: 0, overtime: 0, bugs: 0, coffee: 0, visits: 0, pyrRight: 0, pyrWrong: 0, faults: 0, repairs: 0, budgetSpent: 0, chaosDays: 0 }
+      msgs: [], result: null, dayLog: [], bingo: [], eggs: {}, durchsageAt: null,
+      stats: { meetings: 0, useless: 0, missed: 0, weekend: 0, overtime: 0, bugs: 0, coffee: 0, visits: 0, pyrRight: 0, pyrWrong: 0, faults: 0, repairs: 0, budgetSpent: 0, chaosDays: 0, flur: 0, bingo: 0, eggs: 0 }
     };
     planDay(S);
     return S;
@@ -95,6 +98,8 @@
       st.pend = rng(S) < p ? ri(S, 9 * 60, 15 * 60) : null;
     }
     planVisits(S, big);
+    // Werksdurchsage: einmal am Tag zu einer zufälligen Zeit
+    S.durchsageAt = 9 * 60 + Math.floor(rngF(S) * 7 * 60);
   }
 
   function planVisits(S, big) {
@@ -107,6 +112,8 @@
     if (rng(S) < v.ahnungslos) V.push({ at: ri(S, 8 * 60 + 30, 16 * 60), id: 'ahnungslos' });
     if (S.fusion && rng(S) < v.altwerk) V.push({ at: ri(S, 8 * 60 + 30, 16 * 60), id: 'altwerk' });
     for (const g of ['lieferant', 'azubi', 'audit']) if (rng(S) < v.glueck) V.push({ at: ri(S, 8 * 60, 16 * 60), id: g });
+    // Flurfunk (v0.3): an etwa einem Drittel der Tage ohne Großereignis, eigener Zufallsstrom
+    if (!big.length && rngF(S) < T().flur) V.push({ at: ri2(S, 9 * 60, 15 * 60 + 30), id: 'flur', k: Math.floor(rngF(S) * SC.FLUR.length), t: 0 });
     for (const x of V) if (x.t === undefined) x.t = Math.floor(rng(S) * 100);
     V.sort((a, b) => a.at - b.at);
     const out = big.slice();
@@ -122,6 +129,8 @@
     S.visits = out;
   }
 
+  function ri2(S, a, b) { return a + Math.floor(rngF(S) * (b - a + 1)); }
+  function egg(S, k, t) { if (S.eggs[k]) return; S.eggs[k] = S.day; S.stats.eggs++; say(S, 'Easter Egg! ' + t); }
   function advance(S, mins) { S.minute += mins; events(S); }
   function events(S) {
     for (const m of S.meetings) {
@@ -149,11 +158,21 @@
       S.itHour = hr;
       if (!S.visits.some(v => v.id === 'italien' && Math.floor(v.at / 60) === hr) && rng(S) < 0.7) { say(S, 'Der italienische Kollege im Vorbeigehen: »' + pick(S, SC.ITALIEN_KURZ) + '« (2 Min.)'); S.minute += 2; }
     }
+    if (S.phase === 'tag' && S.durchsageAt !== null && S.minute >= S.durchsageAt && !activeMeeting(S)) { S.durchsageAt = null; say(S, 'Werksdurchsage: »' + pickF(S, SC.DURCHSAGEN) + '«'); }
     if (S.sirene !== S.day && S.minute >= SIREN && S.minute < SC.LATEST) { S.sirene = S.day; say(S, 'Sirene: Schichtwechsel! In den Hallen ist bis 14:20 Übergabe.'); }
     if (!S.pending && S.visits.length && S.minute >= S.visits[0].at && !activeMeeting(S) && S.phase === 'tag') S.pending = S.visits.shift();
     S.chef = clamp(S.chef, 0, 100); S.schicht = clamp(S.schicht, 0, 100); S.family = clamp(S.family, 0, 100); S.energy = clamp(S.energy, 0, 100);
   }
 
+  // Buzzword-Bingo: jede Werkleitungsrunde liefert ein Buzzword, fünf verschiedene = BINGO (nur Punkte)
+  function bingo(S) {
+    const w = pickF(S, SC.BUZZ);
+    if (S.bingo.includes(w)) return;
+    S.bingo.push(w);
+    if (S.stats.bingo) return;
+    if (S.bingo.length >= SC.BINGO_NEED) { S.stats.bingo = 1; S.bingoDay = S.day; say(S, 'BINGO! Die Werkleitung sagt »' + w + '«. Fünf Buzzwords voll. Du rufst es nicht laut. Innerlich schon. (+' + T().bingoScore + ' Punkte)'); }
+    else say(S, 'Buzzword-Bingo: »' + w + '« (' + S.bingo.length + '/' + SC.BINGO_NEED + ')');
+  }
   function nextMeeting(S) { return S.meetings.find(m => m.state === 'open' && m.start + 10 >= S.minute) || null; }
   function activeMeeting(S) { return S.meetings.find(m => m.state === 'open' && S.minute >= m.start - 20 && S.minute <= m.start + 10) || null; }
 
@@ -266,7 +285,7 @@
         run: S => {
           const m = activeMeeting(S); S.minute = Math.max(S.minute, m.start); m.state = 'done'; S.stats.meetings++;
           S.minute += m.dur; S.energy -= Math.round(m.dur / 10);
-          if (m.kind === 'chef') { S.chef += 3; say(S, '»' + m.title + '« besucht. Die Werkleitung nickt dir zu.'); }
+          if (m.kind === 'chef') { S.chef += 3; say(S, '»' + m.title + '« besucht. Die Werkleitung nickt dir zu.'); bingo(S); }
           else if (m.kind === 'schicht') {
             const g = Math.max(0, T().meet.gain - T().meet.step * S.uselessToday);
             S.energy -= 1 + S.uselessToday; S.schicht += g; S.uselessToday++; S.uselessMin += m.dur; S.stats.useless++;
@@ -277,7 +296,8 @@
     kantine: [
       { id: 'coffee', label: 'Kaffee holen', cost: 10, energy: 0, check: () => null,
         run: S => { if (S.coffeeBlock === S.day) { S.minute += 15; say(S, 'Der Tesla-Kollege und der Kollege, der nichts arbeitet, blockieren die Kaffeemaschine. Diskussion: Kann ein Auto Kaffee kochen? (+15 Min.)', true); }
-          S.coffee++; S.stats.coffee++; const g = S.coffee <= 3 ? 14 : 4; S.energy += g; say(S, S.coffee <= 3 ? 'Kaffee. Energie +' + g + '.' : 'Schon der ' + S.coffee + '. Kaffee. Das Herz rast, die Wirkung nicht.'); } },
+          S.coffee++; S.stats.coffee++; const g = S.coffee <= 3 ? 14 : 4; S.energy += g; say(S, S.coffee <= 3 ? 'Kaffee. Energie +' + g + '.' : 'Schon der ' + S.coffee + '. Kaffee. Das Herz rast, die Wirkung nicht.');
+          if (S.coffee >= 7) egg(S, 'kaffee', 'Die Kaffeemaschine zeigt »Fehler 42: Benutzer zu wach«. Die Kantinenkraft hängt ein Foto von dir an die Pinnwand.'); } },
       { id: 'lunch', label: 'Mittagessen in der Werkskantine (11:30 bis 13:30)', cost: 30, energy: 0,
         check: S => S.lunch ? 'Schon gegessen.' : (S.minute < 11 * 60 + 30 || S.minute > 13 * 60 + 30) ? 'Die Ausgabe hat nur 11:30 bis 13:30 auf.' : null,
         run: S => { S.lunch = true; const b = S.lunchBonus ? 10 : 0; S.lunchBonus = false; S.energy += 25 + b; say(S, (b ? 'Nudeln nach dem Rezept des italienischen Kollegen. Die Kantinenkraft hat es tatsächlich probiert! Energie +35. ' : 'Currywurst mit Pommes, dazu Fabriklärm. Energie +25. ') + pick(S, SC.TIPS)); } }
@@ -304,7 +324,8 @@
         check: S => S.itReview === S.day ? 'Heute schon. Die Pyramide braucht Ruhe.' : (targets.req(S) || targets.spec(S)) ? null : 'Nichts zu reviewen.',
         run: S => { S.itReview = S.day; const m = onePaper(S); say(S, 'Die IT-Chefin zeichnet die Pyramide an das Whiteboard. Dann zeichnet sie sie noch mal, größer. ' + m.name + ' kommt voran (+1 Paket).'); } },
       { id: 'pyramide', label: 'Die Pyramide aus Pappe anschauen', cost: 5, energy: 0, check: () => null,
-        run: S => { say(S, 'Feld, Steuerung, Leitebene, MES, ERP. Das MES ist Ebene drei. Wie die Etage, auf der du gerade stehst. Zufall? Die IT-Chefin sagt: nein.'); } }
+        run: S => { S.eggs.pyrN = (S.eggs.pyrN || 0) + 1; say(S, 'Feld, Steuerung, Leitebene, MES, ERP. Das MES ist Ebene drei. Wie die Etage, auf der du gerade stehst. Zufall? Die IT-Chefin sagt: nein.');
+          if (S.eggs.pyrN >= 7) egg(S, 'pyramide', 'Auf der Rückseite der Pappe steht mit Bleistift: »Ebene 5: Cloud«. Jemand hat es durchgestrichen und »Nein.« daneben geschrieben.'); } }
     ],
     chef: [
       { id: 'report', label: 'Status anhand der Excel-Liste berichten', cost: 20, energy: 2, check: S => S.reported === S.day ? 'Heute schon berichtet.' : null,
@@ -334,7 +355,12 @@
     if (S.pending) return { ok: false, why: 'Erst die Unterbrechung klären.' };
     const a = (A[room] || []).find(x => x.id === id);
     if (!a) return { ok: false, why: 'Unbekannt.' };
-    const why = a.check(S); if (why) return { ok: false, why };
+    const why = a.check(S);
+    if (why) {
+      // Easter Egg: dreimal vor 15:00 ausstempeln wollen
+      if (room === 'pforte' && id === 'home') { S.eggs.pfN = (S.eggs.pfN || 0) + 1; if (S.eggs.pfN === 3) { egg(S, 'pfoertner', 'Der Pförtner schaut dich lange an. Dann sagt er: »Ich stehe hier seit 1987. Das MES hab ich schon dreimal kommen sehen. Und zweimal gehen.«'); return { ok: false, why: 'Der Pförtner: »Seit 1987, Christian.«' }; } }
+      return { ok: false, why };
+    }
     if (room === 'halle' && S.minute >= SIREN && S.minute < HANDOVER) { say(S, 'Schichtübergabe: Wartezeit bis 14:20.'); S.minute = HANDOVER; }
     let cost = Math.round(a.cost * slow(S));
     if (id === 'test') { if (S.testSlot === S.day) cost = Math.round(cost * 0.67); else if (eff(S) >= 70) cost = Math.round(cost * T().meet.testFactor); if (S.budget < 0) cost = Math.round(cost * 1.3); }
@@ -362,6 +388,7 @@
       case 'itchefin': return p.opts.map((l, i) => ({ id: 'a' + i, label: 'Ebene ' + l + ': ' + SC.PYR[l] })).concat([{ id: 'skip', label: 'Folie überspringen (10 Min.)' }]);
       case 'ahnungslos': return [{ id: 'erklaeren', label: 'Geduldig erklären (15 Min.)' }, { id: 'abkuerzen', label: '»Das MES ist wie Excel, nur anders.« (5 Min.)' }];
       case 'altwerk': return [{ id: 'mapping', label: 'Mapping zusammen anlegen (30 Min.)' }, { id: 'spaeter', label: 'Später (3 Min.)' }];
+      case 'flur': return SC.FLUR[p.k].opts.map((o, i) => ({ id: 'f' + i, label: o.label }));
       default: return [{ id: 'ok', label: p.id === 'sap' || p.id === 'uebernahme' ? 'Na dann. An die Arbeit.' : 'Freut mich!' }];
     }
   }
@@ -374,6 +401,7 @@
       case 'itchefin': return { who: 'Die IT-Chefin (mit der Automatisierungspyramide)', text: '»' + VT.itchefin[p.open % VT.itchefin.length] + ' ' + SC.PYRAMID_Q[p.q].q + '«', pyr: true };
       case 'ahnungslos': return { who: 'Ein Kollege ohne Ahnung', text: of(VT.ahnungslos) };
       case 'altwerk': return { who: 'Der Kollege vom Altwerk', text: of(VT.altwerk) };
+      case 'flur': return { who: 'Flurfunk · ' + SC.FLUR[p.k].who, text: SC.FLUR[p.k].text };
       case 'lieferant': return { who: 'Ein Lieferant', text: 'Ein Lieferant bringt Ersatzteile für den Verpackungsautomaten. Zum Sonderpreis, drei Tage lang.' };
       case 'azubi': return { who: 'Der Azubi', text: 'Der Azubi hat heimlich die Requirements abgetippt. Sauber. Mit Inhaltsverzeichnis.' };
       case 'audit': return { who: 'Das Qualitätsaudit', text: 'Das Qualitätsaudit lobt deine Testprotokolle bei der Werkleitung. Sogar die Excel-Liste.' };
@@ -409,6 +437,7 @@
         if (opt === 'mapping') { min = 30; const f = modById(S, 'fusion'); if (f && !f.done && f.req >= f.need.req && f.spec < f.need.spec) { f.spec++; say(S, 'Mapping angelegt: Systemfusion Spezifikation +1. »Artikelnummer_neu_2« heißt jetzt »Artikelnummer«.'); } else if (f && !f.done && f.req < f.need.req) { f.req++; say(S, 'Mapping angelegt: Systemfusion Requirements +1.'); } else { S.chef += 1; say(S, 'Gutes Gespräch. Die Werkleitung hört davon (+1).'); } }
         else { min = 3; say(S, '»Später« heißt beim Altwerk: morgen wieder.'); }
         break;
+      case 'flur': { const o = SC.FLUR[p.k].opts[+String(opt).slice(1)] || SC.FLUR[p.k].opts[1]; S.stats.flur++; min = o.min; S.energy += o.energy || 0; S.schicht += o.schicht || 0; say(S, o.msg, (o.energy || 0) < 0 || (o.schicht || 0) < 0); break; }
       case 'lieferant': S.partsUntil = S.day + 3; say(S, 'Ersatzteile im Lager: Reparaturen kosten drei Tage lang nur 2 k€.'); break;
       case 'azubi': { const m = onePaper(S); say(S, 'Danke, Azubi!' + (m ? ' ' + m.name + ' +1 Paket.' : '')); break; }
       case 'audit': S.chef += 3; say(S, 'Lob vom Audit: Werkleitung +3.'); break;
@@ -504,6 +533,8 @@
     if (S.chaosUntil >= S.day) { S.stats.chaosDays++; R.lines.push(['bad', 'SAP-Chaos: Niemand findet seine Materialnummer.']); }
     // Das Chaos hört erst auf, wenn die Stammdaten nachgearbeitet sind
     if (S.sap.state === 'nacharbeit' && S.chaosUntil <= S.day) { S.chaosUntil = S.day + 1; R.lines.push(['bad', 'SAP-Chaos geht weiter, bis die Stammdaten nachgearbeitet sind.']); }
+    if (S.bingoDay === S.day) R.lines.push(['info', 'Buzzword-Bingo gewonnen: ' + S.bingo.slice(0, SC.BINGO_NEED).join(', ') + ' (+' + T().bingoScore + ' Punkte)']);
+    R.lines.push(['info', 'Werkszeitung: ' + pickF(S, SC.SCHLAGZEILEN)]);
     S.schicht -= 3;
     if (S.schicht < 20) { S.chef -= 3; R.lines.push(['bad', 'Der Schichtleiter hat sich bei der Werkleitung über dich beschwert: Werkleitung −3']); }
     const rest = 55 - Math.round(over / 6);
@@ -529,7 +560,7 @@
     if (S.result) { S.result.score = score(S); S.phase = 'ende'; }
   }
   function score(S) {
-    return Math.max(0, Math.round(progress(S) * 10 + (S.result && S.result.win ? (S.deadline - S.day) * 150 + 1000 : 0) + S.family * 5 + S.chef * 5 + kpiIndex(S) * 5 + Math.max(0, S.budget) / 2));
+    return Math.max(0, Math.round(progress(S) * 10 + (S.result && S.result.win ? (S.deadline - S.day) * 150 + 1000 : 0) + S.family * 5 + S.chef * 5 + kpiIndex(S) * 5 + Math.max(0, S.budget) / 2 + (S.stats.bingo ? T().bingoScore : 0) + S.stats.eggs * 25));
   }
   // Wochenendschicht: shifts = 0, 1 oder 2 Tage
   function weekend(S, shifts) {
@@ -573,5 +604,5 @@
   function highscores() { try { return JSON.parse(localStorage.getItem('mesmarathon-highscore') || '[]'); } catch (e) { return []; } }
 
   SC.sim = { newGame, act, advance, events, endDay, weekend, startDay, progress, nextMeeting, activeMeeting, actions: A, targets, hm, weekday, week, save, load, slow,
-    choose, visitOptions, visitText, kpiScore, kpiIndex, kpiPath, kpiTarget, autoWork, addScore, highscores, stationOf, stName, rng };
+    choose, visitOptions, visitText, rngF, kpiScore, kpiIndex, kpiPath, kpiTarget, autoWork, addScore, highscores, stationOf, stName, rng };
 })(window.SC);

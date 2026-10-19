@@ -205,6 +205,7 @@
       '<li><b>KPIs</b> (OEE, Ausschuss, Durchsatz, Liefertreue) im Leitstand. Abgenommene Module verbessern sie, Stillstand drückt sie. KPI-Bericht täglich, Freitag Wochenrückblick.</li>' +
       '<li><b>Budget</b> im Controlling: Tranche einmal pro Woche, Vorschuss, Berater. Testläufe, Reparaturen, Toner und Wochenendschichten kosten. Unter −40 k€ ist Schluss.</li>' +
       '<li><b>Großereignisse:</b> Tag 6 kommt ein neues SAP (Stammdaten migrieren, Cutover Freitag). Tag 13 kauft die Firma die Konkurrenz (Systemfusion als sechstes Modul, Go-Live Tag 22).</li>' +
+      '<li><b>Flurfunk (neu in 0.3):</b> Brandschutzübungen, Beamer-Kabel, Überraschungsgerichte und mehr. Die Werkleitung streut Buzzwords: fünf verschiedene sind ein Bingo (Punkte). Werksdurchsagen, die Werkszeitung am Abend und ein paar Easter Eggs.</li>' +
       '<li><b>Excel-Liste</b> jeden Tag pflegen. Server und Drucker zicken. Kaffee und Mittagessen in der Kantine geben Energie.</li>' +
       '<li><b>Feierabend</b> über die Pforte ab 15:00. Überstunden bis 20:00 kosten Familie. Sirene um 14:00: Schichtwechsel.</li>' +
       '<li>Verloren: Werkleitung oder Familie auf null, Budget unter −40 k€ oder Go-Live-Termin verpasst.</li></ul><p class="small">Tasten: Leertaste Pause, + Tempo, Esc Raum verlassen, M Ton.</p><p><button data-o="back">Zurück</button></p>');
@@ -231,6 +232,7 @@
     cv.addEventListener('click', e => {
       if (!S() || S().phase !== 'tag') return;
       const [x, y] = SC.building.toLogical(e); const p = SC.building.pick(x, y);
+      if (!p && SC.building.chimney && SC.building.chimney(x, y)) { const S0 = S(); S0.eggs.chN = (S0.eggs.chN || 0) + 1; UI.toast(SC.SCHORNSTEIN[(S0.eggs.chN - 1) % SC.SCHORNSTEIN.length]); if (S0.eggs.chN === 5 && !S0.eggs.schornstein) { S0.eggs.schornstein = S0.day; S0.stats.eggs++; UI.toast('Easter Egg! Fünfmal den Schornstein angeklickt. Die Werkleitung macht dich zum Schornsteinbeauftragten. Ehrenamtlich.'); } return; }
       if (p) { if (p.d.deco) { UI.toast(p.d.msg); SC.building.goTo(p.f, p.d.x, null); } else UI.walkTo(p.d.room); return; }
       const f = SC.building.floorAt(y); if (f !== null && x > 70 && x < 410) SC.building.goTo(f, Math.round(x), null);
     });
