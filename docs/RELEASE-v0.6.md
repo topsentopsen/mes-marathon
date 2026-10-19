@@ -18,4 +18,4 @@ Stand 19.10.2026.
 Siehe `docs/BALANCE-v0.6.md`. fleissig 65 auf 35, gut1730 78 auf 74,5 (3000 Partien), gut unverändert. Offen: gut1730 weiter etwa 15 PP über gut.
 
 ## Tests
-96 Sim-Tests (neu: Gags, Spätzuschlag mit Party und Hotline, Wartezeit, Mittwochs-Ausschreibung, VERSION-Datei = SC.VERSION), Namenstest, Bot-Check, Browser-Check, Handspiel, Mobil-Audio.
+93 Sim-Tests (neu: Gags, Spätzuschlag mit Party und Hotline, Wartezeit, Mittwochs-Ausschreibung, VERSION-Datei = SC.VERSION), Namenstest, Bot-Check, Browser-Check, Handspiel, Mobil-Audio.
