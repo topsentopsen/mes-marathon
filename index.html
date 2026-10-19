@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MES-Marathon · Der Werks-Manager</title>
+<meta name="description" content="Retro-Bürospiel im Stil von Mad TV: Als MES-Ingenieur Spezifikationen, Testläufe, Meetings und Wochenendschichten überleben. Läuft im Browser.">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="img/portrait-32.png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <header id="hud">
+    <div class="hud-item" id="hud-day">Tag 1</div>
+    <div class="hud-item" id="hud-clock">07:30</div>
+    <div class="hud-item" id="hud-energy"></div>
+    <div class="hud-item" id="hud-chef"></div>
+    <div class="hud-item" id="hud-family"></div>
+    <div class="hud-item" id="hud-kalle"></div>
+    <div class="hud-item" id="hud-prog"></div>
+    <div class="hud-btns">
+      <button id="btn-pause">Pause</button>
+      <button id="btn-speed">Tempo 1x</button>
+      <button id="btn-sound" title="Ton an oder aus">Ton an</button>
+      <input type="range" id="vol" min="0" max="100" value="50" title="Lautstärke" aria-label="Lautstärke">
+      <button id="btn-menu">Menü</button>
+    </div>
+  </header>
+  <div id="calendar"></div>
+  <main id="stage">
+    <canvas id="cv" width="480" height="300"></canvas>
+    <section id="room" class="hidden"></section>
+  </main>
+  <nav id="rooms"></nav>
+  <footer id="ticker"></footer>
+  <p class="foot">MES-Marathon · inspiriert von Mad TV (1991) · eigenes Fanprojekt ohne Original-Inhalte · alle Figuren frei erfunden · Musik selbst erzeugt</p>
+</div>
+<div id="overlay" class="hidden"></div>
+<script src="js/data.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/building.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
