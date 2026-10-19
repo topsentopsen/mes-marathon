@@ -4,6 +4,12 @@ Retro-Managerspiel im Browser, inspiriert von **Mad TV** (1991) und abgeleitet a
 
 **Spielen:** https://topsentopsen.github.io/mes-marathon/
 
+## Neu in v0.5.0 »Ausschreibung«
+- Ausschreibung gegen Werk Nord (verdeckte Gebote bis Mittwoch 15:00), zweiter Weg zum Sieg: Konzernaudit »Vorzeigewerk«.
+- Christians Süßigkeitenbox im Büro (Stammgäste mit Vorlieben, Gemecker, das letzte Stück), Kopfhörer im HUD, digitaler Zwilling, Fundstücke im Archiv.
+- Ton-Knopf: Randfall beim schnellen Tippen behoben, auf dem Handy auch über Titel- und Abendbild bedienbar.
+- Details: `docs/RELEASE-v0.5.md`, Balance: `docs/BALANCE-v0.5.md`, Review und Gesamtprüfung: `docs/REVIEW-v0.5.md`, Ausblick: `docs/PLAN-v0.6.md`.
+
 ## Neu in v0.4.0 »Leitstand«
 - Jede Etage hat ein eigenes Fenster in die Produktion (Lichtschranke, Schaltschränke, Panorama, MES-Draufsicht, Laderampe). Türen unverändert.
 - Markt im Controlling (mit Agentur und Nachrichtenagentur), Prognose mit Freitagsauswertung, Wassermelonen-Bericht, SAP-Hotline, Tesla-Reichweite, Titel »Werk des Jahres«.
@@ -35,5 +41,5 @@ Vanilla JavaScript ohne Build, Canvas-Pixelgrafik, Musik und Fabriklärm per Web
 
 Eigenes Fanprojekt, keine Original-Inhalte von Mad TV. Alle Figuren, Werke und Firmen sind frei erfunden.
 
-## Balance (v0.4.0, `node tools/bot.js 300`)
-Siehe `docs/BALANCE-v0.4.md` (v0.3: `docs/BALANCE-v0.3.md`, v0.2: `docs/BALANCE-v0.2.md`). sparfuchs und ablenkbar liegen seit v0.4 wieder in ihren Zielbändern. Kurz: Meeting-Marathon ist weiterhin deutlich schwächer als planvolles Arbeiten. Am stärksten ist jetzt maßvoller Fleiß (Überstunden bis 18:00, Samstagsschicht), der aber fast ein Drittel der Partien über die Familie verliert.
+## Balance (v0.5.0, `node tools/bot.js 1000 --check`)
+Siehe `docs/BALANCE-v0.5.md` (ältere: `docs/BALANCE-v0.4.md`, `-v0.3`, `-v0.2`). Meeting-Marathon bleibt deutlich schwächer als planvolles Arbeiten (16 gegen 61 %). Das Vorzeigewerk ist ein eigener Weg (Vorzeigewerk-Jagd 57 %, davon 39 % über das Audit), aber nicht stärker als gut. Offen: Wer jeden Tag bis 17:30 bleibt, gewinnt 80 %.
