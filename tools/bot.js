@@ -36,7 +36,18 @@ function marktWahl(S, P) {
   const paper = !!(sim.targets.req(S) || sim.targets.spec(S));
   if (P.markt === 'spar') { const l = idx('lizenz'); if (l >= 0 && S.budget < 70) return l; return -1; }
   if (P.markt === 'klug') { const l = idx('lizenz'); if (l >= 0 && S.budget < 20) return l; const k = idx('paket'); if (k >= 0 && paper && O[k].price <= 15 && S.budget > 50) return k; return -1; }
+  // v0.5 image: Agentur-Kampagne und Pressemitteilung für das Konzernaudit, sonst wie klug
+  if (P.markt === 'image') { for (const id of ['kampagne', 'presse']) { const k = idx(id); if (k >= 0 && S.budget - O[k].price > 25) return k; } const l = idx('lizenz'); if (l >= 0 && S.budget < 20) return l; return -1; }
   if (P.markt === 'fan') { let best = -1; O.forEach((o, i) => { const it = SC.MARKT.find(x => x.id === o.id); if (it.sell || o.price > S.budget - 10 || (o.id === 'paket' && !paper)) return; if (best < 0 || o.price < O[best].price) best = i; }); return best; }
+  return -1;
+}
+// v0.5 Ausschreibung: nur sichtbare Werte (Los, Richtpreis, das zuletzt bekannte Nord-Gebot im Verhältnis zum Richtpreis)
+function auktionWahl(S, P) {
+  // nur, wenn Christian ohnehin im Büro oder im Controlling steht (kein Extra-Weg)
+  if (!P.auktion || !sim.auktionOpen(S) || S.auktion.bid !== null || (S.at !== 'buero' && S.at !== 'controlling')) return -1;
+  const F = SC.TUNE.auktion.bids;
+  if (P.auktion === 'mittel') return S.budget > 45 ? 1 : -1;
+  if (P.auktion === 'schlau') { if (S.budget < 35) return -1; if (S.nordLastR === null || S.nordLastR === undefined) return 1; const i = F.findIndex(f => f > S.nordLastR); return i < 0 ? 2 : i; }
   return -1;
 }
 function playDay(S, P) {
@@ -64,6 +75,8 @@ function playDay(S, P) {
     if (P.plan && S.at === 'leitstand' && sim.weekday(S) <= 1 && S.prog.week !== sim.week(S) && tryAct(S, 'leitstand', ['p_lo', 'p_mid', 'p_hi'][sim.prognoseBand(S)])) continue;
     if (P.melone && S.prog.melone !== sim.week(S) && tryAct(S, 'leitstand', 'melone')) continue;
     { const i = marktWahl(S, P); if (i >= 0 && tryAct(S, 'controlling', 'm' + i)) continue; }
+    { const i = auktionWahl(S, P); if (i >= 0 && tryAct(S, S.at === 'controlling' ? 'controlling' : 'buero', 'a' + i)) continue; }
+    if (P.kopf && S.kopf !== S.day && S.vDay === S.day && S.vN >= P.kopf && sim.kopfhoerer(S).ok) continue;
     if (P.zusage && !S.zusage && S.day >= 3 && tryAct(S, 'chef', 'z_' + P.zusage)) continue;
     if (P.berater && S.budget > 45 && tryAct(S, 'controlling', 'berater')) continue;
     if (!S.server.up && tryAct(S, 'server', 'restart')) continue;
@@ -95,7 +108,10 @@ const POL = {
   meetingfan: P({ care: true, meet: 'all', schichtplan: false }),
   meetingfan_plus: P({ care: true, meet: 'all' }),
   ohneSchichtplan: P({ care: true, schichtplan: false }),
-  ablenkbar: P({ care: true, visit: 'listen' }),
+  // v0.5: ablenkbar hört allen zu, setzt aber nach dem ersten Besuch des Tages die Kopfhörer auf (neues Werkzeug im HUD);
+  // ablenkbar_alt ist die unveränderte v0.4-Strategie ohne Kopfhörer (zum Vergleich)
+  ablenkbar: P({ care: true, visit: 'listen', kopf: 1 }),
+  ablenkbar_alt: P({ care: true, visit: 'listen' }),
   berater: P({ care: true, berater: true, kredit: true }),
   workaholic: P({ meet: 'chef', we: () => 2, leave: 19 * 60 + 30 }),
   fleissig: P({ care: true, we: S => (S.sap.cutover || S.family > 60 ? 1 : 0), leave: 18 * 60 }),
@@ -104,6 +120,11 @@ const POL = {
   marktfan: P({ care: true, markt: 'fan' }),
   ohnePlan: P({ care: true, plan: false, markt: false }),
   melone: P({ care: true, melone: true }),
+  // v0.5: Ausschreibung (bietet nach dem letzten bekannten Nord-Gebot), Konzernaudit-Jäger (Image über Markt)
+  bieter: P({ care: true, auktion: 'schlau' }),
+  // Referenz (v0.5 gefunden, gilt schon für v0.4): wie gut, aber jeden Tag bis 17:30 (maßvolle Überstunden)
+  gut1730: P({ care: true, leave: 17 * 60 + 30 }),
+  vorzeig: P({ care: true, markt: 'image', auktion: 'mittel' }),
   // Chaos-Pfad: migriert keine SAP-Stammdaten und nimmt beim Cutover frei (we: 0)
   ohneGegen: P({ care: true, gegen: false }),
   zusager: P({ care: true, zusage: 'mittel' }),
@@ -113,27 +134,28 @@ const POL = {
 function run(n) {
   const rows = {};
   for (const [k, pol] of Object.entries(POL)) {
-    const r = { win: 0, chef: 0, fam: 0, dead: 0, budget: 0, days: [], prog: [], bud: [], kpi: [], meet: [], useless: [], chaos: 0, titel: 0 };
+    const r = { pfad: 0, win: 0, chef: 0, fam: 0, dead: 0, budget: 0, days: [], prog: [], bud: [], kpi: [], meet: [], useless: [], chaos: 0, titel: 0 };
     for (let i = 0; i < n; i++) {
       const S = sim.newGame(1000 + i * 7919);
       let g = 0; while (S.phase !== 'ende' && g++ < 40) playDay(S, pol);
       const w = S.result.why;
       if (S.result.win) { r.win++; r.days.push(S.day); } else if (/Werkleitung zieht/.test(w)) r.chef++; else if (/Imker/.test(w)) r.fam++; else if (/Controlling/.test(w)) r.budget++; else r.dead++;
-      r.prog.push(sim.progress(S)); r.bud.push(S.budget); r.kpi.push(sim.kpiIndex(S)); r.meet.push(S.stats.meetings); r.useless.push(S.stats.useless); if (S.stats.chaosDays) r.chaos++; if (S.titel) r.titel++;
+      r.prog.push(sim.progress(S)); r.bud.push(S.budget); r.kpi.push(sim.kpiIndex(S)); r.meet.push(S.stats.meetings); r.useless.push(S.stats.useless); if (S.stats.chaosDays) r.chaos++; if (S.titel) r.titel++; if (S.result.pfad) r.pfad++;
     }
     const med = a => a.length ? a.slice().sort((x, y) => x - y)[Math.floor(a.length / 2)] : '-';
-    rows[k] = { win: Math.round(r.win / n * 100), winDay: med(r.days), chef: r.chef, fam: r.fam, termin: r.dead, budget: r.budget, prog: med(r.prog), bud: med(r.bud), kpi: med(r.kpi), meet: med(r.meet), useless: med(r.useless), chaos: Math.round(r.chaos / n * 100), titel: Math.round(r.titel / n * 100) };
+    rows[k] = { win: Math.round(r.win / n * 100), winDay: med(r.days), chef: r.chef, fam: r.fam, termin: r.dead, budget: r.budget, prog: med(r.prog), bud: med(r.bud), kpi: med(r.kpi), meet: med(r.meet), useless: med(r.useless), chaos: Math.round(r.chaos / n * 100), titel: Math.round(r.titel / n * 100), pfad: Math.round(r.pfad / n * 100) };
   }
   return rows;
 }
 if (require.main === module) {
   const n = +process.argv[2] || 200;
   const rows = run(n);
-  console.log('Strategie        Sieg%  Siegtag | Werkl. Familie Termin Budget | Fortschr. Budget KPI Meet(nutzlos) Chaos% Titel%');
-  for (const [k, x] of Object.entries(rows)) console.log(k.padEnd(16), String(x.win).padStart(5), String(x.winDay).padStart(8), '|', String(x.chef).padStart(6), String(x.fam).padStart(7), String(x.termin).padStart(6), String(x.budget).padStart(6), '|', String(x.prog).padStart(9), String(x.bud).padStart(6), String(x.kpi).padStart(3), (x.meet + '(' + x.useless + ')').padStart(13), String(x.chaos).padStart(6), String(x.titel).padStart(6));
+  console.log('Strategie        Sieg%  Siegtag | Werkl. Familie Termin Budget | Fortschr. Budget KPI Meet(nutzlos) Chaos% Titel% Vorzeig%');
+  for (const [k, x] of Object.entries(rows)) console.log(k.padEnd(16), String(x.win).padStart(5), String(x.winDay).padStart(8), '|', String(x.chef).padStart(6), String(x.fam).padStart(7), String(x.termin).padStart(6), String(x.budget).padStart(6), '|', String(x.prog).padStart(9), String(x.bud).padStart(6), String(x.kpi).padStart(3), (x.meet + '(' + x.useless + ')').padStart(13), String(x.chaos).padStart(6), String(x.titel).padStart(6), String(x.pfad).padStart(8));
   if (process.argv.includes('--check')) {
     const R = rows, errs = [], warn = [];
-    const best = Math.max(...Object.values(R).map(x => x.win));
+    // gut1730 ist eine Referenz für die offene Abweichung »maßvolle Überstunden« (docs/BALANCE-v0.5.md), sie zählt nur als Warnung
+    const best = Math.max(...Object.entries(R).filter(([k]) => k !== 'gut1730').map(([, x]) => x.win));
     // harte Invarianten (Auftrag: Meeting-Marathon ist nicht die stärkste Strategie)
     if (R.meetingfan.win > R.gut.win - 15) errs.push('meetingfan nicht >= 15 PP unter gut');
     if (R.meetingfan_plus.win > R.gut.win - 8) errs.push('meetingfan_plus nicht >= 8 PP unter gut');
@@ -152,10 +174,18 @@ if (require.main === module) {
     if (R.melone.win > R.gut.win + 3) errs.push('Wassermelonen-Bericht lohnt sich (melone > gut + 3)');
     if (R.marktfan.win > R.gut.win) errs.push('Markt-Dauerkauf lohnt sich (marktfan > gut)');
     if (R.gut.titel > 40) errs.push('Werk des Jahres zu leicht (gut Titel% > 40)');
+    // v0.5: zweiter Siegpfad »Vorzeigewerk« ist erreichbar, aber nicht dominant; die Ausschreibung ist kein Gratis-Gewinn
+    if (R.vorzeig.win > R.gut.win) errs.push('Vorzeigewerk-Jagd schlägt gut');
+    if (R.vorzeig.pfad < 10) errs.push('Vorzeigewerk kaum erreichbar (vorzeig Vorzeig% < 10)');
+    if (R.gut.pfad > 12) errs.push('Vorzeigewerk zu häufig nebenbei (gut Vorzeig% > 12)');
+    for (const k of ['meetingfan', 'passiv', 'workaholic', 'sapChaos']) if (R[k].pfad > 3) errs.push(k + ' erreicht das Vorzeigewerk zu oft');
+    if (R.bieter.win > R.gut.win + 8) errs.push('Ausschreibung lohnt sich zu sehr (bieter > gut + 8)');
     // Zielbereiche aus docs/PHASEN.md 10.2 (Abweichungen als Warnung)
     const Z = { einfach: [20, 40], gut: [55, 70], ohneSchichtplan: [45, 62], meetingfan: [8, 30], ablenkbar: [30, 50], berater: [50, 68], workaholic: [0, 5], sparfuchs: [35, 55] };
     for (const [k, [lo, hi]] of Object.entries(Z)) if (R[k].win < lo || R[k].win > hi) warn.push(k + ' ' + R[k].win + ' % (Ziel ' + lo + '–' + hi + ')');
     if (R.ohneSchichtplan.win > R.gut.win - 3) warn.push('ohneSchichtplan nicht >= 3 PP unter gut');
+    if (R.gut1730.win > 75) warn.push('gut1730 ' + R.gut1730.win + ' % (über 75, offene Abweichung)');
+    if (R.fleissig.win > R.gut.win + 3) warn.push('fleissig ' + R.fleissig.win + ' % (mehr als gut + 3)');
     if (warn.length) console.log('WARNUNG Zielbereiche: ' + warn.join('; '));
     console.log(errs.length ? 'CHECK FEHLER: ' + errs.join('; ') : 'CHECK OK (harte Invarianten)');
     process.exitCode = errs.length ? 1 : 0;

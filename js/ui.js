@@ -39,7 +39,8 @@
     $('calendar').innerHTML = (act ? '<b class="blink">JETZT ' + hm(act.start) + ' ' + esc(act.title) + ' → MEETING (2. OG)</b>' : nm ? 'Nächster Termin: <b>' + hm(nm.start) + '</b> ' + esc(nm.title) + ' <span class="dim">(' + nm.dur + ' Min.)</span>' : '<span class="dim">Keine Termine mehr heute.</span>') +
       ' · Server: ' + (s.server.up ? '<span class="good">läuft</span>' : '<span class="bad">DOWN</span>') + (s.printer.jam ? ' · <span class="bad">Drucker: Papierstau</span>' : '') +
       (s.stations.some(x => x.fault) ? ' · <span class="bad">Störung: ' + s.stations.filter(x => x.fault).map(x => sim().stName(x.id)).join(', ') + '</span>' : '') +
-      (s.sap.state === 'migration' || s.sap.state === 'nacharbeit' ? ' · <span class="warn">SAP-' + (s.sap.state === 'nacharbeit' ? 'Nacharbeit ' : 'Migration ') + s.sap.pk + '/' + s.sap.need + '</span>' : '') + (s.chaosUntil >= s.day ? ' · <span class="bad">SAP-Chaos</span>' : '') + (s.excel ? '' : ' · <span class="bad">Excel-Liste offen</span>') + (s.tiramisu === s.day ? ' · <span class="good">Tiramisu: nächster Testlauf −15 % Fehlerrisiko</span>' : s.itStreak > 0 ? ' · <span class="dim">Tiramisu ' + s.itStreak + '/3</span>' : '') + (s.kaffeeDef === s.day ? ' · <span class="bad">Kaffeeautomat defekt</span>' : '') + (s.nordUntil >= s.day ? ' · <span class="bad">Bediener fehlt (Werk Nord)</span>' : '') + (s.zusage ? ' · <span class="warn">Zusage bis Tag ' + s.zusage.until + '</span>' : '') + (s.prog && s.prog.week === sim().week(s) && s.prog.k !== null ? ' · <span class="dim">Prognose: ' + ['unter', 'im', 'über'][s.prog.k] + ' Plan</span>' : '');
+      (s.sap.state === 'migration' || s.sap.state === 'nacharbeit' ? ' · <span class="warn">SAP-' + (s.sap.state === 'nacharbeit' ? 'Nacharbeit ' : 'Migration ') + s.sap.pk + '/' + s.sap.need + '</span>' : '') + (s.chaosUntil >= s.day ? ' · <span class="bad">SAP-Chaos</span>' : '') + (s.excel ? '' : ' · <span class="bad">Excel-Liste offen</span>') + (s.tiramisu === s.day ? ' · <span class="good">Tiramisu: nächster Testlauf −15 % Fehlerrisiko</span>' : s.itStreak > 0 ? ' · <span class="dim">Tiramisu ' + s.itStreak + '/3</span>' : '') + (s.kaffeeDef === s.day ? ' · <span class="bad">Kaffeeautomat defekt</span>' : '') + (s.nordUntil >= s.day ? ' · <span class="bad">Bediener fehlt (Werk Nord)</span>' : '') + (s.zusage ? ' · <span class="warn">Zusage bis Tag ' + s.zusage.until + '</span>' : '') + (s.prog && s.prog.week === sim().week(s) && s.prog.k !== null ? ' · <span class="dim">Prognose: ' + ['unter', 'im', 'über'][s.prog.k] + ' Plan</span>' : '') + (sim().auktionOpen(s) ? ' · <span class="warn">Ausschreibung bis Mi 15:00' + (s.auktion.bid !== null ? ' (Gebot ' + s.auktion.bid + ' k€)' : '') + '</span>' : '') + (s.kopf === s.day ? ' · <span class="dim">🎧 Kopfhörer auf</span>' : '');
+    $('btn-kopf').disabled = !!sim().kopfWhy(s); $('btn-kopf').textContent = s.kopf === s.day ? '🎧 auf' : '🎧 Kopfhörer';
     if (UI.room && UI._lastMin !== Math.floor(s.minute / 5)) { UI._lastMin = Math.floor(s.minute / 5); renderRoom(); }
   };
 
@@ -70,14 +71,15 @@
     if (room === 'meeting') {
       h += '<h3>Kalender heute</h3><table>' + s.meetings.map(m => '<tr><td>' + hm(m.start) + '</td><td>' + esc(m.title) + '</td><td>' + m.dur + ' Min.</td><td>' + ({ chef: 'Werkleitung', schicht: 'Schichtleiter', useful: '<span class="good">nützlich</span>' })[m.kind] + '</td><td class="' + (m.state === 'missed' ? 'bad' : m.state === 'done' ? 'good' : '') + '">' + ({ open: 'offen', missed: 'verpasst', done: 'dabei' })[m.state] + '</td></tr>').join('') + '</table>';
     }
+    if (room === 'buero' && sim().auktionOpen(s)) h += '<p class="warn">Ausschreibung offen: ' + esc(SC.AUKTION[s.auktion.lot].label) + '. Gebot per Mail geht auch von hier.</p>';
     if (room === 'buero' || room === 'chef') h += '<h3>' + (room === 'buero' ? 'Excel-Liste »MES_Rollout_final_v7_NEU.xlsx«' : 'Werksvergleich') + '</h3>' + (room === 'buero' ? modTable(s) : rivals(s));
     if (room === 'chef') h += '<div class="say">' + chefSays(s) + '</div>';
     if (room === 'chef') h += '<p>Image im Konzern: <b>' + Math.round(s.image) + '</b>/100 · ' + (s.zusage ? '<span class="warn">Offene Zusage: ' + s.zusage.need + ' Modul(e) bis Tag ' + s.zusage.until + ' (geschafft: ' + (s.modules.filter(m => m.done).length - s.zusage.base) + ')</span>' : '<span class="dim">Keine offene Zusage. Zusagen bringen Prämie und Image, gebrochene kosten.</span>') + '</p>';
     if (room === 'schicht') h += '<div class="say">' + schichtSays(s) + '</div>';
     if (room === 'halle') h += stationTable(s);
     if (room === 'werkstatt') h += '<div class="say">' + (s.stations.some(x => x.fault) ? 'Die Instandhaltung: »' + s.stations.filter(x => x.fault).map(x => sim().stName(x.id)).join(', ') + ' steht. Wie immer zuerst der Verpackungsautomat?«' : 'Die Instandhaltung: »Alles läuft. Das macht mich nervös.«') + (s.partsUntil >= s.day ? ' <span class="good">Ersatzteile im Lager (Reparatur 2 k€).</span>' : '') + '</div>';
-    if (room === 'leitstand') h += kpiTable(s) + progHtml(s);
-    if (room === 'controlling') h += '<p>Budget: <b class="' + (s.budget < 0 ? 'bad' : '') + '">' + Math.round(s.budget) + ' k€</b> · ausgegeben: ' + Math.round(s.stats.budgetSpent) + ' k€ · Tranche diese Woche: ' + (s.trancheWeek === sim().week(s) ? '<span class="good">beantragt</span>' : '<span class="warn">offen</span>') + ' · Kredit: ' + (s.kredit ? '<span class="warn">' + s.kredit + ' k€</span>' : '0 k€') + ' von ' + sim().rahmen(s) + ' k€ Rahmen (8 % Zins freitags) · Image: <b>' + Math.round(s.image) + '</b>' + '</p><p class="small dim">Unter 0 k€: Budgetsperre. Unter −40 k€ stoppt das Controlling das Projekt.</p>' + marktHtml(s);
+    if (room === 'leitstand') h += kpiTable(s) + progHtml(s) + auditHtml(s);
+    if (room === 'controlling') h += '<p>Budget: <b class="' + (s.budget < 0 ? 'bad' : '') + '">' + Math.round(s.budget) + ' k€</b> · ausgegeben: ' + Math.round(s.stats.budgetSpent) + ' k€ · Tranche diese Woche: ' + (s.trancheWeek === sim().week(s) ? '<span class="good">beantragt</span>' : '<span class="warn">offen</span>') + ' · Kredit: ' + (s.kredit ? '<span class="warn">' + s.kredit + ' k€</span>' : '0 k€') + ' von ' + sim().rahmen(s) + ' k€ Rahmen (8 % Zins freitags) · Image: <b>' + Math.round(s.image) + '</b>' + '</p><p class="small dim">Unter 0 k€: Budgetsperre. Unter −40 k€ stoppt das Controlling das Projekt.</p>' + marktHtml(s) + auktionHtml(s);
     if (room === 'it') h += pyramidHtml(null) + '<div class="say">Die IT-Chefin: »' + esc(SC.VISIT_TEXT.itchefin[s.day % SC.VISIT_TEXT.itchefin.length]) + ' Hast du gesehen? Jede Etage hier ist eine Ebene. Das hab ich durchgesetzt.«</div>';
     if (room === 'server') h += '<p>Status: ' + (s.server.up ? '<span class="good">MES-Server läuft</span>' : '<span class="bad">MES-Server DOWN</span>') + (s.server.careUntil >= s.day ? ' · <span class="good">frisch gewartet</span>' : '') + '</p>';
     h += '<h3>Was tun?</h3><div class="acts">';
@@ -97,6 +99,20 @@
   function progHtml(s) {
     const names = ['unter Plan', 'im Plan', 'über Plan'], wk = sim().week(s), now = names[sim().prognoseBand(s)];
     return '<h3>Planung</h3><p>' + (s.prog.week === wk && s.prog.k !== null ? 'Prognose dieser Woche: <b>' + names[s.prog.k] + '</b>. Stand heute: ' + now + '. Auswertung im Wochenrückblick am Freitag.' : 'Noch keine Prognose diese Woche (Montag oder Dienstag). Stand heute: <b>' + now + '</b>.') + (s.prog.melone === wk ? ' <span class="warn">Wassermelonen-Bericht ist raus.</span>' : '') + ' Treffer bisher: ' + s.prog.hits + '.</p><p class="small dim">Treffer: Werkleitung +' + SC.TUNE.prognose.hit + ', Image +' + SC.TUNE.prognose.hitImage + '. Zwei Stufen daneben: Werkleitung −' + SC.TUNE.prognose.miss2 + '.</p>';
+  }
+  // v0.5 Ausschreibung und Konzernaudit
+  function auktionHtml(s) {
+    const a = s.auktion, AU = SC.TUNE.auktion;
+    let h = '<h3>Ausschreibung (Gebote bis Mittwoch 15:00, verdeckt gegen Werk Nord)</h3>';
+    if (!a) return h + '<p class="dim">Die erste Ausschreibung hängt Dienstag aus.</p>';
+    const L = SC.AUKTION[a.lot];
+    h += '<table><tr><td>' + esc(L.label) + '</td><td>Richtpreis ' + L.base + ' k€</td><td>' + (a.res ? ({ win: '<span class="good">gewonnen</span>', lose: '<span class="bad">an Werk Nord</span>', none: '<span class="dim">ohne dich vergeben</span>' })[a.res] : a.bid !== null ? 'dein Gebot: <b>' + a.bid + ' k€</b>' : sim().auktionOpen(s) ? '<span class="warn">offen</span>' : '<span class="dim">Frist vorbei</span>') + '</td></tr></table>';
+    return h + '<p class="small dim">Gezahlt wird nur beim Zuschlag. Gleichstand gewinnt Werk Nord. ' + (s.nordLastR ? 'Werk Nord bot zuletzt ' + Math.round(s.nordLastR * 100) + ' % des Richtpreises (es ändert sich von Woche zu Woche nur wenig).' : 'Wie viel Werk Nord bietet, weiß noch niemand (' + Math.round(AU.nordLo * 100) + ' bis ' + Math.round(AU.nordHi * 100) + ' % des Richtpreises, sagt der Flurfunk).') + '</p>';
+  }
+  function auditHtml(s) {
+    const AD = SC.TUNE.audit, mods = s.modules.filter(m => m.done).length, k = sim().kpiIndex(s), im = Math.round(s.image);
+    const miss = [k < AD.kpi ? 'KPI-Index ' + k + '/' + AD.kpi : '', im < AD.image ? 'Image ' + im + '/' + AD.image : '', mods < AD.mods ? 'Module ' + mods + '/' + AD.mods : ''].filter(Boolean);
+    return '<h3>Konzernaudit »Vorzeigewerk« (zweiter Weg zum Sieg)</h3><p>Jeden Freitag ab Tag ' + AD.from + ': KPI-Index ab ' + AD.kpi + ' %, Image ab ' + AD.image + ' und mindestens ' + AD.mods + ' abgenommene Module. Dann ist das Projekt ein Erfolg, auch ohne alle Module. ' + (miss.length ? '<span class="warn">Es fehlt: ' + esc(miss.join(', ')) + '.</span>' : '<span class="good">Stand heute würde es reichen.</span>') + '</p>';
   }
   function rivals(s) {
     const me = sim().progress(s);
@@ -179,7 +195,7 @@
     overlay(h);
   }
   function endHtml(s) {
-    return '<div class="end ' + (s.result.win ? 'good' : 'bad') + '"><h2>' + (s.result.win ? (s.result.titel ? 'GO-LIVE! WERK DES JAHRES!' : 'GO-LIVE!') : 'PROJEKT GESCHEITERT') + '</h2><p>' + esc(s.result.why) + '</p><p>Punkte: <b>' + s.result.score + '</b></p>' +
+    return '<div class="end ' + (s.result.win ? 'good' : 'bad') + '"><h2>' + (s.result.win ? (s.result.pfad ? 'VORZEIGEWERK!' : s.result.titel ? 'GO-LIVE! WERK DES JAHRES!' : 'GO-LIVE!') : 'PROJEKT GESCHEITERT') + '</h2><p>' + esc(s.result.why) + '</p><p>Punkte: <b>' + s.result.score + '</b></p>' +
       '<p class="small">KPI-Index: ' + sim().kpiIndex(s) + ' % · Budget: ' + Math.round(s.budget) + ' k€ · Besuche: ' + s.stats.visits + ' · Pyramiden-Fragen richtig: ' + s.stats.pyrRight + '/' + (s.stats.pyrRight + s.stats.pyrWrong) + ' · Störungen: ' + s.stats.faults + '</p>' + highHtml(s) +
       '<p class="small">Meetings besucht: ' + s.stats.meetings + ' (davon nutzlos: ' + s.stats.useless + ') · verpasst: ' + s.stats.missed + ' · Wochenendschichten: ' + s.stats.weekend + ' · Bugs: ' + s.stats.bugs + ' · Kaffee: ' + s.stats.coffee + ' · Überstunden: ' + s.stats.overtime + ' Min.</p></div>';
   }
@@ -220,6 +236,7 @@
       '<li><b>Großereignisse:</b> Tag 6 kommt ein neues SAP (Stammdaten migrieren, Cutover Freitag). Tag 13 kauft die Firma die Konkurrenz (Systemfusion als sechstes Modul, Go-Live Tag 22).</li>' +
       '<li><b>Neu in 0.3:</b> Werk Nord und Werk Süd greifen ein (Abwerbung, Gerüchte beim Vorstand). Gegenmaßnahmen kosten Geld, Ignorieren kostet Image. Das Image im Konzern beeinflusst Tranche, Kreditrahmen und das Tempo der Rivalen. In der Werkleitung kannst du Zusagen machen (Module bis zu einer Frist): gehalten gibt Prämie, gebrochen kostet. Dazu Pflichttermine: Kaffeeautomat zum SAP-Cutover, die IT-Chefin mit Industrie 5.0 als Kreis, ein Morse-Rätsel am Verpackungsautomaten und die Kostümparty ab Tag 14 (Feierabend erst nach der Party). Wer dem italienischen Kollegen dreimal in Folge zuhört, bekommt Tiramisu.</li>' +
       '<li><b>Neu in 0.4:</b> Markt im Controlling (drei Angebote am Tag, ein Geschäft: Berater-Paket, Ersatzteile, Agentur-Kampagne, Pressemitteilung, Toner, Wartungsvertrag oder eine alte Lizenz verkaufen). Im Leitstand Montag oder Dienstag eine Prognose für den KPI-Index am Freitag abgeben (Treffer: Werkleitung und Image). Der Wassermelonen-Bericht meldet »alles grün«, bis das Audit nachschaut. Während der SAP-Migration gibt es die SAP-Hotline. Go-Live mit KPI-Index ab 90 % und Image ab 75: Titel »Werk des Jahres«. Jede Etage hat ein Fenster in die Produktion.</li>' +
+      '<li><b>Neu in 0.5:</b> Dienstags hängt im Controlling eine Ausschreibung aus (Ersatzteile, Beraterkontingent oder Wartungspaket). Gebote bis Mittwoch 15:00, im Controlling oder per Mail aus dem Büro. Werk Nord bietet verdeckt, gezahlt wird nur beim Zuschlag. Zweiter Weg zum Sieg: das Konzernaudit »Vorzeigewerk« (Freitag ab Tag 15, sehr hohes Image und KPI-Index, mindestens 3 Module). Der Knopf 🎧 setzt Kopfhörer auf: Tesla-Kollege, Ahnungslose und Altwerk halten sich dann kurz. Im Serverraum wohnt jetzt ein digitaler Zwilling, und das Archiv hat Fundstücke.</li>' +
       '<li><b>Flurfunk (neu in 0.3):</b> Brandschutzübungen, Beamer-Kabel, Überraschungsgerichte und mehr. Die Werkleitung streut Buzzwords: fünf verschiedene sind ein Bingo (Punkte). Werksdurchsagen, die Werkszeitung am Abend und ein paar Easter Eggs.</li>' +
       '<li><b>Excel-Liste</b> jeden Tag pflegen. Server und Drucker zicken. Kaffee und Mittagessen in der Kantine geben Energie.</li>' +
       '<li><b>Feierabend</b> über die Pforte ab 15:00. Überstunden bis 20:00 kosten Familie. Sirene um 14:00: Schichtwechsel.</li>' +
@@ -248,11 +265,12 @@
       if (!S() || S().phase !== 'tag') return;
       const [x, y] = SC.building.toLogical(e); const p = SC.building.pick(x, y);
       if (!p && SC.building.chimney && SC.building.chimney(x, y)) { const S0 = S(); S0.eggs.chN = (S0.eggs.chN || 0) + 1; UI.toast(SC.SCHORNSTEIN[(S0.eggs.chN - 1) % SC.SCHORNSTEIN.length]); if (S0.eggs.chN === 5 && !S0.eggs.schornstein) { S0.eggs.schornstein = S0.day; S0.stats.eggs++; UI.toast('Easter Egg! Fünfmal den Schornstein angeklickt. Die Werkleitung macht dich zum Schornsteinbeauftragten. Ehrenamtlich.'); } return; }
-      if (p) { if (p.d.deco) { UI.toast(p.d.msg); SC.building.goTo(p.f, p.d.x, null); } else UI.walkTo(p.d.room); return; }
+      if (p) { if (p.d.deco) { UI.toast(p.d.label === 'ARCHIV' ? sim().archiv(S()) : p.d.msg); flushMsgs(); SC.building.goTo(p.f, p.d.x, null); } else UI.walkTo(p.d.room); return; }
       const f = SC.building.floorAt(y); if (f !== null && x > 70 && x < 410) SC.building.goTo(f, Math.round(x), null);
     });
     $('btn-pause').onclick = () => { UI.paused = !UI.paused; $('btn-pause').textContent = UI.paused ? 'Weiter' : 'Pause'; };
     $('btn-speed').onclick = () => { UI.speed = UI.speed >= 4 ? 1 : UI.speed * 2; $('btn-speed').textContent = 'Tempo ' + UI.speed + 'x'; };
+    $('btn-kopf').onclick = () => { const s = S(); if (!s) return; const r = sim().kopfhoerer(s); if (!r.ok) UI.toast(r.why, true); UI.hud(); if (UI.room) renderRoom(); };
     $('btn-menu').onclick = () => { UI.paused = true; $('btn-pause').textContent = 'Weiter'; UI.showTitle(); };
     if (SC.audio) { SC.audio.init(); }
     // v0.4: Ton-Knopf zeigt auch »Ton: tippen«, solange der Browser den Ton noch sperrt (Handy)
@@ -261,7 +279,8 @@
     // iOS-Hinweis einmal je Gerät (nicht bei jedem Seitenaufruf)
     if (SC.audio) SC.audio.onFirstUnlock = () => { let seen = false; try { seen = !!localStorage.getItem('mesmarathon-sndhint'); localStorage.setItem('mesmarathon-sndhint', '1'); } catch (e) { /* */ } if (!seen && SC.audio.isIOS && SC.audio.isIOS()) { UI._sndHint = true; UI.toast(SND_HINT); } };
     // Erster Tipp auf »Ton: tippen« entsperrt nur, er schaltet den Ton nicht ab: hat dieselbe Geste gerade erst entsperrt (< 1,5 s), nicht umschalten
-    $('btn-sound').onclick = () => { const A = SC.audio, fresh = !!(A && A._gestureUnlockAt && Date.now() - A._gestureUnlockAt < 1500); if (A) A._gestureUnlockAt = 0; aud('unlock'); if (A && !A.isMuted() && fresh) { syncSnd(); aud('play', S() && S().phase === 'tag' ? 'tower' : 'title'); return; } aud('setMuted', !(A && A.isMuted())); syncSnd(); if (SC.audio && !SC.audio.isMuted()) aud('play', S() && S().phase === 'tag' ? 'tower' : 'title'); };
+    // v0.5: »frisch« nur, wenn die entsperrende Geste auf dem Ton-Knopf selbst lag (oder Taste M war); ein Tipp irgendwo anders davor zählt nicht
+    $('btn-sound').onclick = () => { const A = SC.audio, btn = $('btn-sound'), g = A && A._gestureEl, fresh = !!(A && A._gestureUnlockAt && Date.now() - A._gestureUnlockAt < 1500 && g && (g === 'key-m' || (g.nodeType === 1 && btn.contains(g)))); if (A) { A._gestureUnlockAt = 0; A._gestureEl = null; } aud('unlock'); if (A && !A.isMuted() && fresh) { syncSnd(); aud('play', S() && S().phase === 'tag' ? 'tower' : 'title'); return; } aud('setMuted', !(A && A.isMuted())); syncSnd(); if (SC.audio && !SC.audio.isMuted()) aud('play', S() && S().phase === 'tag' ? 'tower' : 'title'); };
     $('vol').oninput = e => aud('setVolume', e.target.value / 100);
     syncSnd();
     document.addEventListener('keydown', e => {

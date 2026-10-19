@@ -386,7 +386,8 @@
     // Jede echte Berührung, jeder Klick und jede Taste entsperrt den Ton (erneut), solange der AudioContext nicht läuft:
     // nach Tab-Wechsel, Anruf oder Sperrbildschirm bleibt er auf iOS sonst »suspended« oder »interrupted«.
     // _gestureUnlockAt: Zeitpunkt, an dem eine Geste einen nicht laufenden Kontext entsperrt hat (für den Ton-Knopf: erster Tipp schaltet nicht ab)
-    const gesture = () => { if (A.muted && A._ctx) return; const off = !A._ctx || A._ctx.state !== 'running'; if (off || (A._el && A._el.paused && !A.muted)) { if (off) A._gestureUnlockAt = Date.now(); A.unlock(); } };
+    // v0.5: dazu das Ziel der Geste (_gestureEl), damit der Ton-Knopf nur dann »nur entsperrt«, wenn genau er die entsperrende Geste bekam
+    const gesture = e => { if (A.muted && A._ctx) return; const off = !A._ctx || A._ctx.state !== 'running'; if (off || (A._el && A._el.paused && !A.muted)) { if (off) { A._gestureUnlockAt = Date.now(); A._gestureEl = e && e.type === 'keydown' ? (e.key === 'm' || e.key === 'M' ? 'key-m' : 'key') : (e && e.target) || null; } A.unlock(); } };
     ['pointerdown', 'touchstart', 'touchend', 'mousedown', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, gesture, { capture: true, passive: true }));
     document.addEventListener('visibilitychange', () => {
       if (!A._ctx) return;

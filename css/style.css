@@ -67,6 +67,8 @@ button.on, .tag.on { background: #40c040; }
 
 #vol { width: 70px; vertical-align: middle; accent-color: #ff8800; }
 #btn-sound { min-width: 112px; white-space: nowrap; }
+/* v0.5: Ton-Knopf und Lautstärke bleiben auch über Titel- und Abendbild bedienbar */
+#btn-sound, #vol { position: relative; z-index: 11; }
 @media (max-width: 640px) { #vol { display: none; } }
 
 /* MES-Marathon */

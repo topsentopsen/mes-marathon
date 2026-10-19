@@ -3,7 +3,7 @@
 'use strict';
 window.SC = window.SC || {};
 (function (SC) {
-  SC.VERSION = '0.4.0';
+  SC.VERSION = '0.5.0';
   SC.DAY_START = 7 * 60 + 30;   // 07:30 Frühschicht-Beginn im Büro
   SC.DAY_END = 17 * 60;         // 17:00 regulärer Feierabend
   SC.LATEST = 20 * 60;          // 20:00 der Pförtner schließt ab
@@ -71,6 +71,13 @@ window.SC = window.SC || {};
     prognose: { band: 0.06, hit: 4, hitImage: 2, miss1: 1, miss2: 3, melone: 3, meloneP: 0.35, meloneMinus: 6 },
     hotline: { p: 0.5, min: 30, max: 60 },
     titel: { kpi: 90, image: 75, score: 300 },
+    // v0.5: Ausschreibung (Gebote bis Mittwoch 15:00 gegen Werk Nord), zweiter Siegpfad »Vorzeigewerk«, Kopfhörer
+    auktion: { from: 2, close: 15 * 60, bids: [0.8, 1, 1.3], nordLo: 0.75, nordHi: 1.3, drift: 0.3, loseImage: 0, loseNord: 0 },
+    audit: { from: 15, kpi: 65, image: 85, mods: 3, streak: 1, score: 700 },
+    kopf: { schicht: 1, min: 2 },
+    weekendFam: 13,
+    // Überstunden: Familie −over/div; ab »frei« Minuten mindestens »min« (das Abendessen ist dann kalt)
+    ueber: { div: 20, frei: 15, min: 0 },
     meet: { gain: 8, step: 2, cap: 80, quotaMin: 90, quotaPen: 1, spiral: 0.35, spiral2: 0.5, testFactor: 0.75, reqDouble: 0.35 }
   };
   SC.KPI = {
@@ -297,6 +304,37 @@ window.SC = window.SC || {};
     'Die Hotline spielt »Für Elise« in Endlosschleife. Nach dem dritten Durchlauf summst du mit.',
     'Eine freundliche Stimme: »Haben Sie es schon mit Aus- und wieder Einschalten versucht?« Es ist ein SAP-System.'
   ];
+  // v0.5 Ausschreibung: ein Los je Woche (nicht in der Übernahme-Woche), Richtpreis base in k€
+  SC.AUKTION = [
+    { id: 'teile', label: 'Rahmenvertrag Ersatzteile (5 Tage Reparatur für 2 k€)', short: 'Ersatzteile', base: 10 },
+    { id: 'kontingent', label: 'Beraterkontingent (3 Pakete Requirements/Spezifikation)', short: 'Beraterkontingent', base: 22 },
+    { id: 'wartung', label: 'Wartungspaket Server und Verpackungsautomat (5 Tage)', short: 'Wartungspaket', base: 12 }
+  ];
+  SC.AUKTION_BIDS = ['Gebot knapp', 'Gebot zum Richtpreis', 'Gebot großzügig'];
+  // Satire: Werk Nord bietet immer etwas dazu
+  SC.NORD_GEBOTE = [
+    'Werk Nord legt einen Dienstwagen und ein Stück Kuchen dazu.',
+    'Werk Nord bietet in einer PowerPoint mit 40 Folien. Das Angebot steht auf Folie 39.',
+    'Werk Nord schickt das Gebot per Fax. Das Controlling ist gerührt.',
+    'Werk Nord bietet und behauptet, das MES dort laufe schon. Seit 2014. Im Testmodus.',
+    'Werk Nord legt einen Gutschein für die Kantine bei. Die Kantine kennt Werk Nord gar nicht.',
+    'Werk Nord bietet mit Unterschrift in Neonfarbe, damit es »digitaler« aussieht.'
+  ];
+  SC.ARCHIV = [
+    'Archiv: Lastenhefte seit 2009. Das erste MES-Lastenheft liegt ganz unten, unter dem zweiten.',
+    'Archiv: Ein Ordner »MES 2.0 (nie gestartet)«. Daneben »MES 3.0 (sofort gestoppt)«.',
+    'Archiv: Ein Karton mit 400 Disketten. Beschriftung: »Stammdaten, final«.',
+    'Archiv: Ein Wandkalender von 2011. Bei Go-Live steht »nächste Woche«.'
+  ];
+  SC.ARCHIV_EGG = 'Ganz unten im Archiv: das erste MES-Lastenheft, Version 0.1. Seite 1, einziger Satz: »Das System soll schnell sein.« Seite 2: »Und alles können.« Unterschrieben 2009.';
+  SC.ZWILLING = [
+    'Der digitale Zwilling von Werk Mitte läuft. Er hat heute schon 3 Module abgenommen. Virtuell.',
+    'Der Zwilling meldet OEE 99,9 %. Er hat keinen Verpackungsautomaten modelliert.',
+    'Der Zwilling ist pünktlicher als du und schreibt schönere Excel-Listen. Er hat auch keine Familie.',
+    'Der Zwilling schlägt vor, das Daily der Werkleitung zu simulieren. Die Werkleitung hat abgelehnt. Real.'
+  ];
+  SC.ZWILLING_EGG = 'Der digitale Zwilling hat einen eigenen Zwilling angelegt. Der fragt, ob er ins Meeting darf. Du schaltest beide aus.';
+  SC.VORZEIG = 'Das Konzernaudit kürt Werk Mitte zum »Vorzeigewerk«: Image und Kennzahlen glänzen, obwohl noch nicht alle Module abgenommen sind. Den Rest übernimmt ein Exzellenz-Team aus der Zentrale. Christian geht auf Vortragsreise: »Wie wir das MES fast eingeführt haben«.';
   SC.PROGNOSE = [
     { id: 'p_lo', label: 'Prognose: KPI-Index Freitag unter Plan', k: 0 },
     { id: 'p_mid', label: 'Prognose: KPI-Index Freitag im Plan', k: 1 },
