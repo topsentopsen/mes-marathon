@@ -375,7 +375,7 @@
     },
     // Easter Egg: Klick auf den Schornstein
     // v0.6 Easter Egg: Klick auf den Aufzugsschacht
-    liftHit(lx, ly) { return lx >= EX - EW / 2 && lx <= EX + EW / 2 && ly >= floorY(5) + 4 && ly <= GROUND; },
+    liftHit(lx, ly) { const cy = floorY(lift.pos); return lx >= EX - EW / 2 && lx <= EX + EW / 2 && ly >= cy - 35 && ly <= cy; },
     chimney(lx, ly) { const CX = BX1 - 34; return lx >= CX - 2 && lx <= CX + 14 && ly >= 0 && ly <= floorY(5) - 6; },
     bubble: () => (bub.n ? { role: bub.n.role, t: bub.t } : null),
     floorAt(ly) { const f = Math.floor((GROUND - ly) / FH); return f >= 0 && f <= 4 ? f : null; },

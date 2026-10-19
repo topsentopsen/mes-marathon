@@ -333,7 +333,7 @@
   // v0.5 Ausschreibung: ein verdecktes Gebot je Los, gezahlt wird erst beim Zuschlag (im Controlling oder per Mail aus dem Büro)
   const AUK_ACTS = cost => [0, 1, 2].map(i => ({ id: 'a' + i, cost, energy: 1,
         label: S => { if (!S || !S.auktion || S.auktion.res) return 'Ausschreibung: ' + SC.AUKTION_BIDS[i]; return 'Ausschreibung: ' + SC.AUKTION_BIDS[i] + ' ' + bidPrice(S, i) + ' k€'; },
-        check: S => !S.auktion || S.auktion.res ? 'Gerade keine Ausschreibung. Die nächste hängt am Dienstag aus (nicht in der Woche der Übernahme).' : !auktionOpen(S) ? 'Die Frist ist um (Mittwoch 15:00).' : S.auktion.bid !== null ? 'Dein Gebot liegt schon im Umschlag (' + S.auktion.bid + ' k€).' : S.budget < bidPrice(S, i) ? 'Dafür reicht das Budget nicht.' : null,
+        check: S => !S.auktion || S.auktion.res ? 'Gerade keine Ausschreibung. Die nächste hängt am Dienstag aus (am Mittwoch, falls der Dienstag ausfällt; nicht in der Woche der Übernahme).' : !auktionOpen(S) ? 'Die Frist ist um (Mittwoch 15:00).' : S.auktion.bid !== null ? 'Dein Gebot liegt schon im Umschlag (' + S.auktion.bid + ' k€).' : S.budget < bidPrice(S, i) ? 'Dafür reicht das Budget nicht.' : null,
         run: S => { S.auktion.bid = bidPrice(S, i); S.stats.auktion++; say(S, 'Gebot abgegeben: ' + S.auktion.bid + ' k€ für ' + SC.AUKTION[S.auktion.lot].short + '. Die Controlling-Abteilung klebt den Umschlag zu und stempelt »VERTRAULICH«. Zuschlag Mittwoch 15:00.'); } }));
   // Aktionen je Raum: { label, cost (min), energy, check(S) -> null|Grund, run(S) }
   const A = {
@@ -518,9 +518,9 @@
   };
 
   // v0.6 Aufzugknopf (Klick auf den Schacht): zählt, beim 7. Mal Easter Egg
-  function aufzug(S) { S.stats.aufzug++; const n = S.stats.aufzug; if (n >= 7 && !S.eggs.aufzug) { egg(S, 'aufzug', SC.AUFZUG_EGG); return SC.AUFZUG_EGG; } return SC.AUFZUG[(n - 1) % SC.AUFZUG.length]; }
+  function aufzug(S) { S.stats.aufzug++; const n = S.stats.aufzug; if (n >= 7 && !S.eggs.aufzug) { egg(S, 'aufzug', SC.AUFZUG_EGG); return null; } return SC.AUFZUG[(n - 1) % SC.AUFZUG.length]; }
   // v0.6 Wartezeit bis zur Schichtübergabe (für die Anzeige auf den Knöpfen)
-  const handoverWait = (S, room) => (room === 'halle' && S.minute >= SIREN && S.minute < HANDOVER ? HANDOVER - S.minute : 0);
+  const handoverWait = (S, room) => (room === 'halle' && S.minute >= SIREN && S.minute < HANDOVER ? Math.ceil(HANDOVER - S.minute) : 0);
   // v0.5 Elon-Zähler des Tages (Running Gag des Tesla-Kollegen); neue Zufälle nur über rngA mit Salzen ab 20000
   function elonPlus(S) { const E = S.elon; if (E.day !== S.day) { E.day = S.day; E.n = 0; } E.n++; S.stats.elon++; if (S.stats.elon >= T().elon.egg) egg(S, 'elon', SC.ELON_EGG.replace('{n}', S.stats.elon)); }
   const elonHeute = S => (S.elon && S.elon.day === S.day ? S.elon.n : 0);
@@ -540,11 +540,11 @@
       return { ok: false, why };
     }
     if (room === 'halle' && S.minute >= SIREN && S.minute < HANDOVER) { say(S, 'Schichtübergabe: Wartezeit bis 14:20.'); S.minute = HANDOVER; }
-    const { cost: c0, rabatt } = costOf(S, room, id, a);
+    const { cost: c0, rabatt, late } = costOf(S, room, id, a);
     let cost = c0;
     S.energy -= S.kaffeeDef === S.day ? Math.round(a.energy * 1.3) : a.energy;
     a.run(S);
-    if (S._cost !== undefined) { cost = S._cost; delete S._cost; } else if (rabatt) S.box.used = true;
+    if (S._cost !== undefined) { cost = late ? Math.round(S._cost * T().ueber.spaet) : S._cost; delete S._cost; } else if (rabatt) S.box.used = true;
     advance(S, cost);
     if (S.energy <= 0) S.burnout = true;
     return { ok: true };
@@ -563,8 +563,9 @@
     if (S.lunch && S.minute < 15 * 60 && cost > 20) cost = Math.round(cost * 0.9);
     const r = cost > 0 ? boxRabatt(S, room, id) : 0; if (r) cost = Math.max(5, cost - r);
     // v0.6 Spätzuschlag: wer nach Feierabend noch etwas anfängt, ist langsamer (Party-Minuten zählen nicht)
-    if (cost > 0 && T().ueber.spaet !== 1 && S.minute >= SC.DAY_END + (S.partyMin || 0)) cost = Math.round(cost * T().ueber.spaet);
-    return { cost, rabatt: r > 0 };
+    const late = T().ueber.spaet !== 1 && S.minute >= SC.DAY_END + (S.partyMin || 0);
+    if (cost > 0 && late) cost = Math.round(cost * T().ueber.spaet);
+    return { cost, rabatt: r > 0, late };
   }
   const actCost = (S, room, id) => costOf(S, room, id).cost;
 

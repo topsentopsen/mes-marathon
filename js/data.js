@@ -339,7 +339,7 @@ window.SC = window.SC || {};
     'Das Fax-Gerät meldet »Papierstau«. Der Drucker daneben fühlt sich verstanden.'
   ];
   SC.FAX_ELON = 'Du versuchst, das Elon-Abo des Tesla-Kollegen per Fax zu kündigen. Rückmeldung: »Empfänger unbekannt.« Das Abo läuft weiter, behauptet er jedenfalls.';
-  SC.FAX_EGG = 'Werk Nord faxt eine Entschuldigung für die letzte Ausschreibung. Auf Folie 39. Folie 40 fehlt. Das Fax-Gerät wird ab heute im Archiv geführt.';
+  SC.FAX_EGG = 'Werk Nord faxt eine Entschuldigung für alle Ausschreibungen, vergangene und künftige. Auf Folie 39. Folie 40 fehlt. Das Fax-Gerät wird ab heute im Archiv geführt.';
   SC.ELON_AKKU = 'Ich lade inzwischen dauernd Elon-Posts. Den Akku leider nicht.';
   SC.ELON_THEMA = [
     '»Und wie ist der Reifendruck?« Er redet zwei Minuten über Reifen. Elon kommt darin nur einmal vor.',

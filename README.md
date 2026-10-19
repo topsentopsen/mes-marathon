@@ -4,11 +4,16 @@ Retro-Managerspiel im Browser, inspiriert von **Mad TV** (1991) und abgeleitet a
 
 **Spielen:** https://topsentopsen.github.io/mes-marathon/
 
+## Neu in v0.6.0 »Feinschliff«
+- Endzeit und Wartezeit auf den Aktionsknöpfen, Spätzuschlag nach 17:00 (×1,2), Ausschreibung nach Krankheitstag am Mittwoch.
+- Pappkamerad im Büro, Fax-Gerät im Druckerraum, ein Geheimnis im Aufzug, Taste K für die Kopfhörer.
+- Details: `docs/RELEASE-v0.6.md`, Balance: `docs/BALANCE-v0.6.md`, Review: `docs/REVIEW-v0.6.md`.
+
 ## Neu in v0.5.0 »Ausschreibung«
 - Ausschreibung gegen Werk Nord (verdeckte Gebote bis Mittwoch 15:00), zweiter Weg zum Sieg: Konzernaudit »Vorzeigewerk«.
 - Christians Süßigkeitenbox im Büro (Stammgäste mit Vorlieben, Gemecker, das letzte Stück), der Tesla-Kollege schwärmt von »Elon« (Elon-Zähler, Thema wechseln), Kopfhörer im HUD, digitaler Zwilling, Fundstücke im Archiv.
 - Ton-Knopf: Randfall beim schnellen Tippen behoben, auf dem Handy auch über Titel- und Abendbild bedienbar.
-- Details: `docs/RELEASE-v0.5.md`, Balance: `docs/BALANCE-v0.5.md`, Review und Gesamtprüfung: `docs/REVIEW-v0.5.md`, Ausblick: `docs/PLAN-v0.6.md`.
+- Details: `docs/RELEASE-v0.5.md`, Balance: `docs/BALANCE-v0.5.md`, Review und Gesamtprüfung: `docs/REVIEW-v0.5.md`, Plan v0.6: `docs/PLAN-v0.6.md`.
 
 ## Neu in v0.4.0 »Leitstand«
 - Jede Etage hat ein eigenes Fenster in die Produktion (Lichtschranke, Schaltschränke, Panorama, MES-Draufsicht, Laderampe). Türen unverändert.
@@ -41,5 +46,5 @@ Vanilla JavaScript ohne Build, Canvas-Pixelgrafik, Musik und Fabriklärm per Web
 
 Eigenes Fanprojekt, keine Original-Inhalte von Mad TV. Alle Figuren, Werke und Firmen sind frei erfunden.
 
-## Balance (v0.5.0, `node tools/bot.js 1000 --check`)
-Siehe `docs/BALANCE-v0.5.md` (ältere: `docs/BALANCE-v0.4.md`, `-v0.3`, `-v0.2`). Meeting-Marathon bleibt deutlich schwächer als planvolles Arbeiten (16 gegen 60 %). Das Vorzeigewerk ist ein eigener Weg (Vorzeigewerk-Jagd 55 %, davon 36 % über das Audit), aber nicht stärker als gut. Offen: Wer jeden Tag bis 17:30 bleibt, gewinnt 77 %.
+## Balance (v0.6.0, `node tools/bot.js 1000 --check`)
+Siehe `docs/BALANCE-v0.6.md` (ältere: `-v0.5` bis `-v0.2`). Meeting-Marathon bleibt deutlich schwächer als planvolles Arbeiten (15 gegen 60 %). Überstunden lohnen sich weniger: fleissig 35 %, bis 17:30 bleiben 74,5 % (3000 Partien). Offen: Das ist weiter etwa 15 PP besser als pünktlich gehen.
