@@ -143,7 +143,7 @@
 
   UI.tick = function () {
     const s = S();
-    if (s.minute >= SC.DAY_END && !s._warned) { s._warned = true; UI.toast('17:00 Feierabend! Überstunden gehen bis 20:00, kosten aber Familie. Raus über die Pforte (EG).'); }
+    if (s.minute >= SC.DAY_END && !s._warned) { s._warned = true; UI.toast(s.day >= 14 && !s.ev.party ? '17:00, aber erst die Party in der Kantine! Verkleidungspflicht. Die Party zählt nicht als Überstunden.' : '17:00 Feierabend! Überstunden gehen bis 20:00, kosten aber Familie. Raus über die Pforte (EG).'); }
     if (s.minute >= SC.LATEST) { if (UI.room) UI.closeRoom(); UI.toast('20:00: Der Pförtner schließt ab.'); UI.endDay(); }
     if (s.burnout) { if (UI.room) UI.closeRoom(); UI.endDay(); }
   };
@@ -204,8 +204,9 @@
       '<li><b>Meetings:</b> Die Werkleitung hasst Schwänzer. Der Schichtleiter lädt ständig zu nutzlosen Meetings ein. Eins tut ihm gut, jedes weitere bringt weniger, und ab 90 Minuten am Tag zählt die Werkleitung mit. Besser: im Schichtleiter-Büro den Schichtplan abstimmen.</li>' +
       '<li><b>Besuche:</b> Der Tesla-Kollege (oft mit dem Kollegen, der nichts arbeitet), der italienische Kollege mit Geschichten vom Essen, Kollegen ohne Ahnung und die IT-Chefin mit der Pyramide. Du entscheidest, wie viel Zeit du ihnen gibst.</li>' +
       '<li><b>KPIs</b> (OEE, Ausschuss, Durchsatz, Liefertreue) im Leitstand. Abgenommene Module verbessern sie, Stillstand drückt sie. KPI-Bericht täglich, Freitag Wochenrückblick.</li>' +
-      '<li><b>Budget</b> im Controlling: Tranche einmal pro Woche, Vorschuss, Berater. Testläufe, Reparaturen, Toner und Wochenendschichten kosten. Unter −40 k€ ist Schluss.</li>' +
+      '<li><b>Budget</b> im Controlling: Tranche einmal pro Woche, Kredit (Rahmen 60 k€, ab Image 60 mehr, 8 % Zins jeden Freitag), Berater. Testläufe, Reparaturen, Toner und Wochenendschichten kosten. Unter −40 k€ ist Schluss.</li>' +
       '<li><b>Großereignisse:</b> Tag 6 kommt ein neues SAP (Stammdaten migrieren, Cutover Freitag). Tag 13 kauft die Firma die Konkurrenz (Systemfusion als sechstes Modul, Go-Live Tag 22).</li>' +
+      '<li><b>Neu in 0.3:</b> Werk Nord und Werk Süd greifen ein (Abwerbung, Gerüchte beim Vorstand). Gegenmaßnahmen kosten Geld, Ignorieren kostet Image. Das Image im Konzern beeinflusst Tranche, Kreditrahmen und das Tempo der Rivalen. In der Werkleitung kannst du Zusagen machen (Module bis zu einer Frist): gehalten gibt Prämie, gebrochen kostet. Dazu Pflichttermine: Kaffeeautomat zum SAP-Cutover, die IT-Chefin mit Industrie 5.0 als Kreis, ein Morse-Rätsel am Verpackungsautomaten und die Kostümparty ab Tag 14 (Feierabend erst nach der Party). Wer dem italienischen Kollegen dreimal in Folge zuhört, bekommt Tiramisu.</li>' +
       '<li><b>Flurfunk (neu in 0.3):</b> Brandschutzübungen, Beamer-Kabel, Überraschungsgerichte und mehr. Die Werkleitung streut Buzzwords: fünf verschiedene sind ein Bingo (Punkte). Werksdurchsagen, die Werkszeitung am Abend und ein paar Easter Eggs.</li>' +
       '<li><b>Excel-Liste</b> jeden Tag pflegen. Server und Drucker zicken. Kaffee und Mittagessen in der Kantine geben Energie.</li>' +
       '<li><b>Feierabend</b> über die Pforte ab 15:00. Überstunden bis 20:00 kosten Familie. Sirene um 14:00: Schichtwechsel.</li>' +

@@ -4,7 +4,12 @@ Retro-Managerspiel im Browser, inspiriert von **Mad TV** (1991) und abgeleitet a
 
 **Spielen:** https://topsentopsen.github.io/mes-marathon/
 
-## Worum geht es? (v0.2.0)
+## Neu in v0.3.0 »Flurfunk«
+- Pflicht-Ereignisse (Kaffeeautomat zum Cutover, Industrie 5.0 als Kreis, Morse-Rätsel, Kostümparty), Tiramisu, aktive Rivalen mit Image, Kredit, Zusagen an die Werkleitung, Flurfunk mit Sprechblasen, Buzzword-Bingo, Durchsagen, Werkszeitung, Running Gags und Easter Eggs.
+- Fabrik-Optik: Panoramafenster in die Produktion, animierte Stanzpresse, Hallenkulisse mit Kran.
+- Details: `docs/RELEASE-v0.3.md`, Balance: `docs/BALANCE-v0.3.md`, Ausblick: `docs/PLAN-v0.4.md`.
+
+## Worum geht es? (seit v0.2.0)
 - **Fabrik als Automatisierungspyramide:** Jede Etage ist eine Ebene. EG Feld (Werkstor, Schichtleiter, Produktionshallen), 1 Steuerung (Werkstatt, Drucker, Werkskantine), 2 Leitebene (Büro, Leitstand, Besprechungsraum), 3 MES (Serverraum, IT-Büro), 4 ERP (Werkleitung, Controlling). Sheddach, Schornstein, Hallenflügel, Förderbänder, Schichtwechsel-Sirene um 14:00, Fabriklärm im prozeduralen Sound.
 - **Sieben Stationen:** DEA, DEC, EEA, Extrusion, Innenverpackung, Außenverpackung, Sterilisation. Jedes Modul hat eine Teststation. Der **Verpackungsautomat** macht ständig Probleme.
 - **Alltag:** Requirements → Spezifikation → Implementierung → Deployment → Testlauf → Ausdruck → Abnahme. Dazu Meetings, Wochenendschichten, Überstunden, Excel-Liste, Drucker mit Papierstau, Serverraum.
@@ -18,11 +23,11 @@ Retro-Managerspiel im Browser, inspiriert von **Mad TV** (1991) und abgeleitet a
 Vanilla JavaScript ohne Build, Canvas-Pixelgrafik, Musik und Fabriklärm per Web Audio. `index.html` öffnen genügt.
 
 - `js/data.js` Daten und Balance-Hebel (`SC.TUNE`), `js/sim.js` Spiellogik (läuft auch in Node), `js/ui.js` Oberfläche, `js/building.js` Fabrik, Aufzug und Figuren, `js/audio.js` Musik und Fabriklärm.
-- Tests: `node test/sim.test.js`, `node test/names.test.js`, Browser: `node test/browser-check.js [url]` (puppeteer-core).
+- Tests: `node test/sim.test.js`, `node test/names.test.js`, Browser: `node test/browser-check.js [url]` und `node test/playthrough.js [tage] [seed]` (puppeteer-core).
 - Balance-Bot: `node tools/bot.js 300 --check`.
 - Konzept und Plan: `docs/KONZEPT.md`, `docs/PHASEN.md`.
 
 Eigenes Fanprojekt, keine Original-Inhalte von Mad TV. Alle Figuren, Werke und Firmen sind frei erfunden.
 
-## Balance (v0.2.0, `node tools/bot.js 300`)
-Siehe `docs/BALANCE-v0.2.md`. Kurz: die gute Strategie (Schichtplan abstimmen statt Meeting-Marathon) gewinnt am häufigsten, wer alle Meetings des Schichtleiters besucht, deutlich seltener.
+## Balance (v0.3.0, `node tools/bot.js 300`)
+Siehe `docs/BALANCE-v0.3.md` (v0.2: `docs/BALANCE-v0.2.md`). Kurz: Meeting-Marathon ist weiterhin deutlich schwächer als planvolles Arbeiten. Am stärksten ist jetzt maßvoller Fleiß (Überstunden bis 18:00, Samstagsschicht), der aber fast ein Drittel der Partien über die Familie verliert.

@@ -61,7 +61,7 @@ window.SC = window.SC || {};
   SC.TUNE = {
     budgetStart: 110, tranche: 30, trancheLow: 15, berater: 25,
     kredit: { rahmen: 60, rahmenHoch: 80, schritt: 20, zins: 0.08 },
-    rival: { p: 0.2, lead: 0.1, from: 4, cost: 5 },
+    rival: { p: 0.2, lead: 0.1, from: 4, cost: 5, cut: 15 },
     cost: { test: 2, repair: 3, care: 2, toner: 1, weekend: 8, sap: 10, fusion: 12, daily: 1 },
     fault: { inpack: 0.40, auspack: 0.15, other: 0.04 },
     visit: { tesla: 0.55, duo: 0.6, italienHour: 0.30, italienMax: 3, itEven: 0.85, itOdd: 0.25, ahnungslos: 0.5, altwerk: 0.5, glueck: 0.08 },
@@ -263,13 +263,13 @@ window.SC = window.SC || {};
   // v0.3 aus Sender-Chef übertragen: aktive Rivalen mit Image, Zusagen an die Werkleitung
   SC.RIVAL_EVT = [
     { who: 'Werk Nord (Anruf aus der Personalabteilung)', text: 'Werk Nord wirbt einen erfahrenen Bediener der Extrusion ab. Mit Dienstwagen. Ohne Testläufe wird es hier zwei Tage lang zäh.',
-      gegen: 'Bediener mit Zulage halten (5 k€, 10 Min.)', hin: 'Ziehen lassen (Testläufe 3 Tage deutlich langsamer)' },
+      gegen: 'Bediener mit Zulage halten ({k} k€, 10 Min.)', hin: 'Ziehen lassen (Testläufe 3 Tage deutlich langsamer)' },
     { who: 'Werk Süd (Flurfunk aus dem Vorstand)', text: 'Werk Süd erzählt dem Vorstand, Werk Mitte habe »noch nicht mal eine Excel-Liste«. Die Werkleitung hat es gehört.',
-      gegen: 'Gegendarstellung mit KPI-Folien (5 k€ Grafikagentur, 10 Min.)', hin: 'Ignorieren (Werkleitung −5, Image −7, nächste Tranche −10 k€)' }
+      gegen: 'Gegendarstellung mit KPI-Folien ({k} k€ Grafikagentur, 10 Min.)', hin: 'Ignorieren (Werkleitung −5, Image −7, nächste Tranche −{t} k€)' }
   ];
   SC.ZUSAGE = [
-    { id: 'kurz', label: 'Zusage »kurz«: 1 Modul in 4 Tagen', need: 1, days: 4, praemie: 8, chef: 4, image: 3, strafe: 8, chefMinus: 6, imageMinus: 5 },
-    { id: 'mittel', label: 'Zusage »mittel«: 2 Module in 8 Tagen', need: 2, days: 8, praemie: 15, chef: 6, image: 4, strafe: 15, chefMinus: 8, imageMinus: 6 },
-    { id: 'lang', label: 'Zusage »lang«: 3 Module in 12 Tagen', need: 3, days: 12, praemie: 22, chef: 8, image: 5, strafe: 20, chefMinus: 10, imageMinus: 8 }
+    { id: 'kurz', label: 'Zusage »kurz«: 1 Modul in 4 Tagen', need: 1, days: 4, praemie: 10, chef: 4, image: 3, strafe: 8, chefMinus: 6, imageMinus: 5 },
+    { id: 'mittel', label: 'Zusage »mittel«: 2 Module in 8 Tagen', need: 2, days: 8, praemie: 20, chef: 6, image: 4, strafe: 15, chefMinus: 8, imageMinus: 6 },
+    { id: 'lang', label: 'Zusage »lang«: 3 Module in 12 Tagen', need: 3, days: 12, praemie: 28, chef: 8, image: 5, strafe: 20, chefMinus: 10, imageMinus: 8 }
   ];
 })(window.SC);

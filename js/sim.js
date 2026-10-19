@@ -20,7 +20,7 @@
       v: SC.VERSION, seed: seed >>> 0 || 1, rs: (seed >>> 0 || 1), rf: (((seed >>> 0) ^ 0x5bd1e995) & 0x7fffffff) || 7, day: 1, minute: SC.DAY_START, phase: 'tag',
       name: SC.PLAYER.name, deadline: SC.DEADLINE,
       energy: 100, chef: 60, family: 70, schicht: 50,
-      budget: T().budgetStart, kredit: 0, image: 50, nordUntil: 0, lastRival: -1, zusage: null, trancheWeek: -1, partsUntil: 0,
+      budget: T().budgetStart, kredit: 0, trancheCut: 0, image: 50, nordUntil: 0, lastRival: -1, zusage: null, trancheWeek: -1, partsUntil: 0,
       kpi: Object.assign({}, SC.KPI.start), kpiHist: [], downMin: 0, reportDay: 0, reportWeek: -1,
       modules: SC.MODULES.map(m => newModule(m, SC.NEED)),
       stations: SC.STATIONS.map(s => ({ id: s.id, fault: null, pend: null, care: 0, again: 0 })),
@@ -65,9 +65,9 @@
     }
     // Pflicht-Ereignisse v0.3 (feste Tage, bis sie entschieden sind)
     if (S.day >= 10 && !S.ev.kaffee && !big.length) big.push({ at: 8 * 60 + 15, id: 'kaffee', t: 0 });
-    if (S.ev.ticket && S.day >= 18 && !S.ev.ticket2) {
-      S.ev.ticket2 = S.day; const st = stationOf(S, 'inpack'); st.fault = { at: SC.DAY_START }; S.stats.faults++;
-      S.msgs.push({ t: 'Ticket #4711 ist wieder da: Die Lampe am Verpackungsautomaten blinkt wieder Morse (— — · · · · = M E S). Die Innenverpackung steht seit Schichtbeginn. Ab in die Werkstatt.', bad: true });
+    if (S.ev.ticket && S.day >= S.ev.ticket && !S.ev.ticket2) {
+      S.ev.ticket2 = S.day; const st = stationOf(S, 'inpack'); if (!st.fault) { st.fault = { at: SC.DAY_START }; S.stats.faults++; }
+      say(S, 'Ticket #4711 ist wieder da: Die Lampe am Verpackungsautomaten blinkt wieder Morse (— — · · · · = M E S). Die Innenverpackung steht seit Schichtbeginn. Ab in die Werkstatt.', true);
     }
     if (S.day >= 14 && !S.ev.party) S.msgs.push({ t: 'Rundmail der Werkleitung: Heute ab 16:30 All-Employee-Party in der Kantine. Verkleidungspflicht! Feierabend erst nach der Party.', bad: false });
     // Meetings: zuerst die Pflichttermine der Werkleitung, dann der Rest
@@ -416,7 +416,7 @@
       case 'itchefin': return p.opts.map((l, i) => ({ id: 'a' + i, label: 'Ebene ' + l + ': ' + SC.PYR[l] })).concat([{ id: 'skip', label: 'Folie überspringen (10 Min.)' }]);
       case 'ahnungslos': return [{ id: 'erklaeren', label: 'Geduldig erklären (15 Min.)' }, { id: 'abkuerzen', label: '»Das MES ist wie Excel, nur anders.« (5 Min.)' }];
       case 'altwerk': return [{ id: 'mapping', label: 'Mapping zusammen anlegen (30 Min.)' }, { id: 'spaeter', label: 'Später (3 Min.)' }];
-      case 'rivale': return [{ id: 'gegen', label: SC.RIVAL_EVT[p.r].gegen }, { id: 'hin', label: SC.RIVAL_EVT[p.r].hin }];
+      case 'rivale': return [{ id: 'gegen', label: SC.RIVAL_EVT[p.r].gegen.replace('{k}', T().rival.cost) }, { id: 'hin', label: SC.RIVAL_EVT[p.r].hin.replace('{t}', T().rival.cut) }];
       case 'kaffee': return [{ id: 'kantine', label: 'In die Kantine, Filterkaffee (30 Min.)' }, { id: 'durchhalten', label: 'Durchhalten ohne Kaffee (höheres Fehlerrisiko im Testlauf)' }];
       case 'kreis': return [{ id: 'meeting', label: 'Meeting zur Kreis-Pyramide (45 Min.)' }, { id: 'spaeter', label: '»Gern, nach dem SAP-Go-live.« (3 Min.)' }];
       case 'raetsel': return [{ id: 'service', label: 'Servicetechniker rufen (5 k€, sicher, 20 Min.)' }, { id: 'aus', label: 'Aus und wieder an (gratis, 50 %, 10 Min.)' }, { id: 'ticket', label: 'Ticket aufmachen (2 Min.)' }];
@@ -435,10 +435,10 @@
       case 'ahnungslos': return { who: 'Ein Kollege ohne Ahnung', text: of(VT.ahnungslos) };
       case 'altwerk': return { who: 'Der Kollege vom Altwerk', text: of(VT.altwerk) };
       case 'rivale': return { who: SC.RIVAL_EVT[p.r].who, text: SC.RIVAL_EVT[p.r].text };
-      case 'kaffee': return { who: 'Die Kantinenkraft (Aushang am Kaffeeautomaten)', text: 'Pünktlich zum SAP-Cutover-Wochenende ist der Kaffeeautomat defekt. Display: »Bitte Wartung rufen«. Die Wartung steckt im Cutover. Die Kantine kocht notfalls Filterkaffee, aber die Schlange ist lang.' };
+      case 'kaffee': return { who: 'Die Kantinenkraft (Aushang am Kaffeeautomaten)', text: (S.sap.state === 'migration' && weekday(S) === 4 ? 'Pünktlich zum SAP-Cutover-Wochenende ist der Kaffeeautomat defekt.' : 'Der Kaffeeautomat ist defekt. Seit dem SAP-Umstieg findet er seine Materialnummer für Kaffeebohnen nicht.') + ' Display: »Bitte Wartung rufen«. Die Wartung steckt im Cutover. Die Kantine kocht notfalls Filterkaffee, aber die Schlange ist lang.' + (weekday(S) === 4 ? ' Am Wochenende bleibt er kaputt (Wochenendschicht: Energie −4 je Tag).' : '') };
       case 'kreis': return { who: 'Die IT-Chefin (mit einer neuen Folie)', text: '»Christian, die Pyramide ist vorbei. Ab heute: Industrie 5.0. Als Kreis! Alles ist mit allem verbunden, nichts ist oben, und das MES ist überall. Ich hab 45 Minuten im Besprechungsraum geblockt.«' };
       case 'raetsel': return { who: 'Die Instandhaltung', text: 'Rätselstörung am Verpackungsautomaten: Keine Fehlermeldung, nur die Lampe blinkt. Kurz, kurz, kurz, lang, lang, lang ... Die Instandhaltung meint: »Das ist Morse. Er will uns was sagen.«' };
-      case 'party': return { who: 'All-Employee-Party (Kantine, 16:30)', text: 'Verkleidungspflicht! ' + SC.PARTY_GAESTE + ' Und du, Christian?' };
+      case 'party': return { who: 'All-Employee-Party (Kantine, ab 16:30)', text: 'Verkleidungspflicht! ' + SC.PARTY_GAESTE + ' Und du, Christian?' };
       case 'flur': return { who: 'Flurfunk · ' + SC.FLUR[p.k].who, text: SC.FLUR[p.k].text };
       case 'lieferant': return { who: 'Ein Lieferant', text: 'Ein Lieferant bringt Ersatzteile für den Verpackungsautomaten. Zum Sonderpreis, drei Tage lang.' };
       case 'azubi': return { who: 'Der Azubi', text: 'Der Azubi hat heimlich die Requirements abgetippt. Sauber. Mit Inhaltsverzeichnis.' };
@@ -480,7 +480,7 @@
         break;
       case 'rivale':
         if (opt === 'gegen') { min = 10; spend(S, T().rival.cost); S.image += 1; say(S, p.r === 0 ? 'Der Bediener bleibt. Mit Zulage und einem neuen Stuhl. Werk Nord ist sauer.' : 'Die KPI-Folien sind bunt und überzeugen den Vorstand. Werk Süd muss jetzt selbst eine Excel-Liste vorzeigen.'); }
-        else { S.image -= 3; S.rivals[p.r].prog = Math.min(99, S.rivals[p.r].prog + 2); if (p.r === 0) { S.nordUntil = S.day + 2; say(S, 'Der Bediener geht zu Werk Nord. Testläufe dauern drei Tage lang deutlich länger. Image −3.', true); } else { S.chef -= 5; S.image -= 4; S.trancheCut = (S.trancheCut || 0) + 10; say(S, 'Der Vorstand glaubt Werk Süd: Werkleitung −5, Image −7, und die nächste Tranche wird um 10 k€ gekürzt.', true); } }
+        else { S.image -= 3; S.rivals[p.r].prog = Math.min(99, S.rivals[p.r].prog + 2); if (p.r === 0) { S.nordUntil = S.day + 2; say(S, 'Der Bediener geht zu Werk Nord. Testläufe dauern drei Tage lang deutlich länger. Image −3.', true); } else { S.chef -= 5; S.image -= 4; S.trancheCut = (S.trancheCut || 0) + T().rival.cut; say(S, 'Der Vorstand glaubt Werk Süd: Werkleitung −5, Image −7, und die nächste Tranche wird um ' + T().rival.cut + ' k€ gekürzt.', true); } }
         S.image = clamp(S.image, 0, 100); break;
       case 'kaffee': S.ev.kaffee = S.day;
         if (opt === 'kantine') { min = 30; S.energy += 4; say(S, 'Filterkaffee aus der Kantine. Schmeckt nach 1994, wirkt aber. Der Automat bleibt kaputt, die Kantine hilft heute aus.'); }
@@ -493,7 +493,7 @@
       case 'raetsel': { S.ev.raetsel = S.day; const st = stationOf(S, 'inpack');
         if (opt === 'service') { min = 20; spend(S, 5); if (st.fault) fixFault(S, st); say(S, 'Der Servicetechniker hört der Lampe zu, nickt und tauscht ein Relais. Die Lampe blinkt zum Abschied »D A N K E«. −5 k€.'); }
         else if (opt === 'aus') { min = 10; if (rngF(S) < 0.5) { if (st.fault) fixFault(S, st); say(S, 'Aus und wieder an. Er bootet, piept einmal und läuft. Niemand weiß, warum. Das ist IT.'); } else { if (!st.fault) { st.fault = { at: S.minute }; S.stats.faults++; } say(S, 'Aus und wieder an. Jetzt blinkt die Lampe »S O S«. Die Innenverpackung steht. Ab in die Werkstatt.', true); } }
-        else { min = 2; S.ev.ticket = 18; if (st.fault) fixFault(S, st); say(S, 'Ticket #4711 angelegt, Priorität »mittel«. Die Nachtschicht klebt Isolierband über die Lampe. Problem gelöst. Bis Tag 18.'); }
+        else { min = 2; S.ev.ticket = Math.max(18, S.day + 1); if (st.fault) fixFault(S, st); say(S, 'Ticket #4711 angelegt, Priorität »mittel«. Die Nachtschicht klebt Isolierband über die Lampe. Problem gelöst. Bis Tag ' + S.ev.ticket + '.'); }
         break; }
       case 'party': { S.ev.party = S.day; const k = SC.KOSTUEME[+String(opt).slice(1)] || SC.KOSTUEME[SC.KOSTUEME.length - 1];
         min = k.min; S.partyMin = Math.max(0, S.minute + k.min - SC.DAY_END) > 0 ? Math.min(k.min, S.minute + k.min - SC.DAY_END) : 0; S.energy += k.energy || 0; S.chef += k.chef || 0; S.schicht += k.schicht || 0; S.family += (k.family || 0) - 1; S.ev.kostuem = k.label.replace(/ \(.*$/, '');
