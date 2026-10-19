@@ -2,7 +2,7 @@
 'use strict';
 window.SC = window.SC || {};
 (function (SC) {
-  SC.VERSION = '0.1.0';
+  SC.VERSION = '0.1.1';
   SC.DAY_START = 7 * 60 + 30;   // 07:30 Arbeitsbeginn
   SC.DAY_END = 17 * 60;         // 17:00 regulärer Feierabend
   SC.LATEST = 20 * 60;          // 20:00 Pförtner schließt ab
@@ -16,7 +16,7 @@ window.SC = window.SC || {};
     { name: 'Birgit', plant: 'Werk Süd', col: '#40d070', min: 3.5, max: 7 }
   ];
   // Bedarf je Projektphase (Arbeitspakete)
-  SC.NEED = { req: 3, spec: 3, impl: 4, test: 2 };
+  SC.NEED = { req: 3, spec: 3, impl: 5, test: 3 };
   SC.MODULES = [
     { id: 'auftrag', name: 'Auftragsverwaltung' },
     { id: 'bde', name: 'Betriebsdatenerfassung (BDE)' },

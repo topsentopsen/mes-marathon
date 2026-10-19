@@ -51,7 +51,7 @@
       if (m.state === 'open' && S.minute > m.start + 10) {
         m.state = 'missed';
         if (m.kind === 'chef') { S.chef -= 7; S.stats.missed++; say(S, 'Meeting verpasst: »' + m.title + '«. Die Werksleitung notiert sich das.', true); }
-        else if (m.kind === 'kalle') { S.kalle -= 9; S.stats.missed++; say(S, 'Kalles »' + m.title + '« geschwänzt. Kalle ist beleidigt.', true); }
+        else if (m.kind === 'kalle') { S.kalle -= 13; S.stats.missed++; say(S, 'Kalles »' + m.title + '« geschwänzt. Kalle ist beleidigt.', true); }
         else { say(S, '»' + m.title + '« fand ohne dich statt.', true); }
       }
     }
@@ -83,12 +83,12 @@
     halle: [
       { id: 'req', label: 'Requirements bei Bedienern und Meistern aufnehmen', cost: 60, energy: 8,
         check: S => targets.req(S) ? null : 'Alle Requirements sind aufgenommen.',
-        run: S => { const m = targets.req(S); let g = 1; if (S.kalle >= 70 && rng(S) < 0.35) g = 2; if (S.kalle < 30 && rng(S) < 0.4) { say(S, 'Kalle hat die Bediener abgezogen. Nur halbe Requirements.', true); return; } m.req = Math.min(N.req, m.req + g); say(S, 'Requirements für ' + m.name + ': ' + m.req + '/' + N.req + (g > 1 ? ' (Kalle hat extra Leute geschickt!)' : '')); } },
+        run: S => { const m = targets.req(S); let g = 1; if (S.kalle >= 65 && rng(S) < 0.55) g = 2; if (S.kalle < 40 && rng(S) < 0.5) { say(S, 'Kalle hat die Bediener abgezogen. Nur halbe Requirements.', true); return; } m.req = Math.min(N.req, m.req + g); say(S, 'Requirements für ' + m.name + ': ' + m.req + '/' + N.req + (g > 1 ? ' (Kalle hat extra Leute geschickt!)' : '')); } },
       { id: 'test', label: 'Testlauf an Linie 3 fahren', cost: 90, energy: 12,
         check: S => !targets.test(S) ? 'Nichts testbereit. Erst implementieren und im Serverraum deployen.' : !S.server.up ? 'Server ist down. Erst im Serverraum neu starten.' : null,
         run: S => {
           const m = targets.test(S);
-          if (S.kalle < 35 && rng(S) < 0.5) { S.minute -= 60; say(S, 'Kalle: »Linie 3 ist heute nicht frei. Hättest halt zu meinem Meeting kommen sollen.« (30 Minuten verloren)', true); return; }
+          if (rng(S) < (S.kalle < 40 ? 0.8 - S.kalle / 100 : S.kalle < 60 ? 0.15 : 0)) { S.minute -= 60; say(S, 'Kalle: »Linie 3 ist heute nicht frei. Hättest halt zu meinem Meeting kommen sollen.« (30 Minuten verloren)', true); return; }
           const bug = 0.34 - m.spec * 0.03;
           if (rng(S) < bug) { m.impl = Math.max(0, m.impl - 1); m.deployed = false; S.stats.bugs++; say(S, 'Testlauf ' + m.name + ': Bug gefunden! Zurück an den Schreibtisch (Implementierung ' + m.impl + '/' + N.impl + ').', true); return; }
           m.test++; say(S, 'Testlauf ' + m.name + ' bestanden: ' + m.test + '/' + N.test + '.');
@@ -169,7 +169,7 @@
     if (!a) return { ok: false, why: 'Unbekannt.' };
     const why = a.check(S); if (why) return { ok: false, why };
     let cost = Math.round(a.cost * slow(S));
-    if (id === 'test' && S.testSlot === S.day) cost = Math.round(cost * 0.67);
+    if (id === 'test' && (S.testSlot === S.day || S.kalle >= 70)) cost = Math.round(cost * 0.67);
     if (S.lunch && S.minute < 15 * 60 && cost > 20) cost = Math.round(cost * 0.9);
     S.energy -= a.energy;
     a.run(S);
@@ -203,6 +203,8 @@
     if (me >= best) { S.chef += 2; R.lines.push(['good', 'Du führst im Werksvergleich: Werksleitung +2']); }
     else if (me < best - 12) { S.chef -= 3; R.lines.push(['bad', 'Deutlich hinter ' + S.rivals.find(r => r.prog === best).name + ': Werksleitung −3']); }
     if (S.modules.some(m => m.deployed && !m.done) && rng(S) < 0.22) { S.energy -= 10; S.family -= 3; R.lines.push(['bad', '23:40 Anruf aus der Nachtschicht: »Das neue MES-Dings zeigt Rot.« Energie −10, Familie −3']); }
+    S.kalle -= 3; // Kalle vergisst schnell
+    if (S.kalle < 20) { S.chef -= 3; R.lines.push(['bad', 'Kalle hat sich bei der Werksleitung über dich beschwert: Werksleitung −3']); }
     // Erholung
     const rest = 55 - Math.round(over / 6);
     S.energy = clamp(S.energy + rest, 15, 100);

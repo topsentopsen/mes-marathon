@@ -20,3 +20,6 @@ Vanilla JavaScript ohne Build, Canvas-Pixelgrafik, prozedurale Musik per Web Aud
 - Tests: `node test/sim.test.js`, Balance-Bot: `node tools/bot.js 300`.
 
 Eigenes Fanprojekt, keine Original-Inhalte von Mad TV. Alle Figuren und Firmen sind frei erfunden.
+
+## Balance (v0.1.1, `node tools/bot.js 300`)
+passiv: immer gefeuert · einfach (nur Chef-Meetings): ca. 13 % Go-Live · gut: ca. 56 % · alle Meetings: ca. 70 % · Workaholic (Überstunden + jedes Wochenende): Familie weg.
