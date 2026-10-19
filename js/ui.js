@@ -150,6 +150,10 @@
   UI.endDay = function () {
     const s = S(); if (s.phase !== 'tag') return;
     const R = sim().endDay(s); shown = 0; s.msgs = [];
+    showEvening(s, R);
+  };
+  function showEvening(s, R) {
+    if (!R) { s.phase = 'tag'; morning(); return; }
     aud('play', 'balance');
     let h = '<h2>Feierabend · ' + R.weekday + ', Tag ' + R.day + '</h2>' +
       '<div class="chefin"><img src="img/portrait.png" alt="" class="pt"><div><p>Projektfortschritt: <b>' + R.progress + ' %</b></p>' + rivals(s) + '</div></div>' +
@@ -162,7 +166,7 @@
     else h += '<p><button data-o="next">Nächster Tag</button></p>';
     sim().save(s);
     overlay(h);
-  };
+  }
   function endHtml(s) {
     return '<div class="end ' + (s.result.win ? 'good' : 'bad') + '"><h2>' + (s.result.win ? 'GO-LIVE!' : 'PROJEKT GESCHEITERT') + '</h2><p>' + esc(s.result.why) + '</p><p>Punkte: <b>' + s.result.score + '</b></p>' +
       '<p class="small">KPI-Index: ' + sim().kpiIndex(s) + ' % · Budget: ' + Math.round(s.budget) + ' k€ · Besuche: ' + s.stats.visits + ' · Pyramiden-Fragen richtig: ' + s.stats.pyrRight + '/' + (s.stats.pyrRight + s.stats.pyrWrong) + ' · Störungen: ' + s.stats.faults + '</p>' + highHtml(s) +
@@ -180,7 +184,7 @@
   }
 
   UI.newGame = function (seed) {
-    SC.S = sim().newGame(seed || (Date.now() & 0x7fffffff)); shown = 0;
+    SC.S = sim().newGame(seed || (Date.now() & 0x7fffffff)); shown = 0; UI._siren = 0;
     SC.building.reset(); closeOverlay(); aud('unlock'); aud('play', 'tower'); morning(); sim().save(SC.S);
   };
   UI.showTitle = function () {
@@ -213,7 +217,7 @@
       if (v && S() && S().pending) { sim().choose(S(), v.dataset.v); closeOverlay(); SC.building.dismiss && SC.building.dismiss(); if (UI.room) renderRoom(); UI.hud(); sim().save(S()); if (S().minute >= SC.LATEST) UI.tick(); return; }
       const b = e.target.closest('button[data-o]'); if (!b) return; const o = b.dataset.o; aud('unlock');
       if (o === 'new') UI.newGame();
-      else if (o === 'cont') { SC.S = sim().load(); shown = SC.S.msgs.length; closeOverlay(); SC.building.reset(); aud('play', 'tower'); if (SC.S.phase !== 'tag') { SC.S.phase = 'tag'; } morning(); }
+      else if (o === 'cont') { SC.S = sim().load(); shown = SC.S.msgs.length; closeOverlay(); SC.building.reset(); UI._siren = SC.S.sirene; if (SC.S.phase === 'tag') { aud('play', 'tower'); morning(); } else showEvening(SC.S, SC.S.lastReport); }
       else if (o === 'help') help();
       else if (o === 'back' || o === 'title') UI.showTitle();
       else if (o === 'next') next();

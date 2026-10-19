@@ -79,7 +79,6 @@ button.on, .tag.on { background: #40c040; }
 img.pt { width: 96px; height: 96px; image-rendering: pixelated; border: 2px solid #000; flex: none; }
 img.pt.big { width: 160px; height: 160px; }
 h1.logo { font-size: 40px; color: #ff8800; letter-spacing: 4px; text-shadow: 3px 3px 0 #000, 6px 6px 0 #0055aa; margin: 6px 0; }
-input#pname { font: inherit; background: #002a66; color: #fff; border: 1px solid #fff; padding: 2px 6px; }
 table.xl td { font-size: 12px; }
 details { margin-top: 8px; } summary { cursor: pointer; color: #ffcc00; }
 .hud-item .moodbar { width: 44px; }

@@ -207,7 +207,8 @@
     reset() { P.x = 190; P.f = 0; P.queue = []; P.visible = true; P.inLift = false; lift.pos = 0; B.dismiss(); },
     // Besuch: die Figur kommt zu Christian auf die Etage (Dialog läuft in ui.js)
     summon(id) {
-      const roles = id === 'tesla' ? ['tesla', 'nix'] : id === 'italien' ? ['italien'] : id === 'itchefin' ? ['itchefin'] : [];
+      const p = SC.S && SC.S.pending;
+      const roles = id === 'tesla' ? (p && p.duo ? ['tesla', 'nix'] : ['tesla']) : id === 'italien' ? ['italien'] : id === 'itchefin' ? ['itchefin'] : [];
       roles.forEach((r, i) => { const n = npcs.find(q => q.role === r); if (!n) return; n.f = P.f; n.idle = false; const side = P.x > 300 ? -1 : 1; n.x = P.x + side * 60; n.target = P.x + side * (14 + i * 10); });
     },
     dismiss() { npcs = NPC0.map(n => Object.assign({ wait: 0, home: n.f, hx: n.x }, n)); },

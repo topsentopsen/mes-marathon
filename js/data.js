@@ -59,11 +59,11 @@ window.SC = window.SC || {};
   };
   // Zahlen-Hebel für die Balance (docs/PHASEN.md 10.3)
   SC.TUNE = {
-    budgetStart: 100, tranche: 30, trancheLow: 15, vorschuss: 25, rueckzahlung: 30, berater: 15,
+    budgetStart: 100, tranche: 30, trancheLow: 15, vorschuss: 25, rueckzahlung: 30, berater: 25,
     cost: { test: 2, repair: 3, care: 2, toner: 1, weekend: 8, sap: 10, fusion: 12, daily: 1 },
     fault: { inpack: 0.40, auspack: 0.15, other: 0.04 },
     visit: { tesla: 0.55, duo: 0.6, italienHour: 0.30, italienMax: 3, itEven: 0.85, itOdd: 0.25, ahnungslos: 0.5, altwerk: 0.5, glueck: 0.08 },
-    meet: { gain: 8, step: 2, cap: 80, quotaMin: 90, quotaPen: 2, spiral: 0.35, spiral2: 0.5, testFactor: 0.75, reqDouble: 0.35 }
+    meet: { gain: 8, step: 2, cap: 80, quotaMin: 90, quotaPen: 1, spiral: 0.35, spiral2: 0.5, testFactor: 0.75, reqDouble: 0.35 }
   };
   SC.KPI = {
     names: { oee: 'OEE', ausschuss: 'Ausschuss', durchsatz: 'Durchsatz', liefer: 'Liefertreue' },
@@ -152,6 +152,11 @@ window.SC = window.SC || {};
       'Der Kollege vom Altwerk: »Unsere Pyramide war aber vier Ebenen hoch.«'
     ]
   };
+  SC.ITALIEN_KURZ = [
+    'Heute Mittag mach ich euch allen Bruschetta. Versprochen!', 'Hab ich dir schon von der Hochzeit meiner Cousine erzählt? 400 Gäste. Drei Tage.',
+    'Christian, der Kaffee hier ist kein Kaffee. Morgen bring ich echten mit.', 'In Italien hätte die Extrusion längst Mittagspause.',
+    'Meine Mama sagt, ein MES ist wie ein Ragù: braucht Zeit.', 'Weißt du, wie man Pasta richtig kocht? Ich erklär es dir später. Ausführlich.'
+  ];
   SC.PACKER_FAULTS = [
     'Verpackungsautomat: »Fehler 17: Etikett klebt am Falschen.«',
     'Verpackungsautomat: Folienriss. Wieder.',

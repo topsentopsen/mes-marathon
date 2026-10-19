@@ -62,7 +62,7 @@
     }
     // Meetings: zuerst die Pflichttermine der Werkleitung, dann der Rest
     const M = [{ start: 9 * 60, dur: 15, kind: 'chef', title: 'Daily bei der Werkleitung' }];
-    if (S.sap.state === 'migration' && S.sap.kick !== true && (S.sap.kick = true)) M.push({ start: 10 * 60, dur: 60, kind: 'chef', title: 'SAP-Kick-off der Werkleitung (Pflicht)' });
+    if (S.sap.state === 'migration' && S.sap.kick !== true && (S.sap.kick = true)) M.push({ start: 11 * 60, dur: 60, kind: 'chef', title: 'SAP-Kick-off der Werkleitung (Pflicht)' });
     if (weekday(S) === 4) M.push({ start: 14 * 60 + 30, dur: 30, kind: 'chef', title: 'Wochenrückblick mit der Werkleitung (KPI)' });
     if (weekday(S) === 0) M.push({ start: 10 * 60, dur: 45, kind: 'schicht', title: 'Montagsrunde Schicht (Pflicht laut Schichtleiter)' });
     const tm = T().meet;
@@ -141,6 +141,12 @@
         say(S, (pack ? pick(S, SC.PACKER_FAULTS) + ' (' + stName(st.id) + ')' : 'Störung an der Station ' + stName(st.id) + ': Die SPS meldet »Zustand unbekannt«.') + ' Ab in die Werkstatt.', true);
       }
     }
+    // Der italienische Kollege kommt jede volle Stunde vorbei (kurz im Vorbeigehen, wenn kein Besuch geplant ist)
+    const hr = Math.floor(S.minute / 60);
+    if (S.phase === 'tag' && hr >= 9 && hr <= 16 && S.itHour !== hr && !activeMeeting(S)) {
+      S.itHour = hr;
+      if (!S.visits.some(v => v.id === 'italien' && Math.floor(v.at / 60) === hr) && rng(S) < 0.7) { say(S, 'Der italienische Kollege im Vorbeigehen: »' + pick(S, SC.ITALIEN_KURZ) + '« (2 Min.)'); S.minute += 2; }
+    }
     if (S.sirene !== S.day && S.minute >= SIREN && S.minute < SC.LATEST) { S.sirene = S.day; say(S, 'Sirene: Schichtwechsel! In den Hallen ist bis 14:20 Übergabe.'); }
     if (!S.pending && S.visits.length && S.minute >= S.visits[0].at && !activeMeeting(S) && S.phase === 'tag') S.pending = S.visits.shift();
     S.chef = clamp(S.chef, 0, 100); S.schicht = clamp(S.schicht, 0, 100); S.family = clamp(S.family, 0, 100); S.energy = clamp(S.energy, 0, 100);
@@ -196,8 +202,9 @@
       { id: 'test', label: 'Testlauf an der Teststation fahren', cost: 75, energy: 12,
         check: S => { if (!targets.testAny(S)) return 'Nichts testbereit. Erst implementieren und im Serverraum deployen.'; if (!targets.test(S)) { const m = targets.testAny(S); return 'Station ' + stName(m.station) + ' steht (Störung). Erst in die Werkstatt.'; } return !S.server.up ? 'Server ist down. Erst im Serverraum neu starten.' : null; },
         run: S => {
-          const m = targets.test(S); spend(S, T().cost.test);
-          if (rng(S) < (S.schicht < 40 ? 0.8 - S.schicht / 100 : S.schicht < 60 ? 0.15 : 0)) { S.minute -= 60; say(S, 'Der Schichtleiter: »Die ' + stName(m.station) + ' ist heute nicht frei. Hättest halt zu meinem Meeting kommen sollen.« (30 Minuten verloren)', true); return; }
+          const m = targets.test(S);
+          if (rng(S) < (S.schicht < 40 ? 0.8 - S.schicht / 100 : S.schicht < 60 ? 0.15 : 0)) { S._cost = 30; say(S, 'Der Schichtleiter: »Die ' + stName(m.station) + ' ist heute nicht frei. Hättest halt zu meinem Meeting kommen sollen.« (30 Minuten verloren)', true); return; }
+          spend(S, T().cost.test);
           const bug = 0.34 - m.spec * 0.03 - (isDone(S, 'qs') ? 0.05 : 0);
           if (rng(S) < bug) { m.impl = Math.max(0, m.impl - 1); m.deployed = false; S.stats.bugs++; say(S, 'Testlauf ' + m.name + ' an der ' + stName(m.station) + ': Bug gefunden! Zurück an den Schreibtisch (Implementierung ' + m.impl + '/' + m.need.impl + ').', true); return; }
           m.test++; say(S, 'Testlauf ' + m.name + ' an der ' + stName(m.station) + ' bestanden: ' + m.test + '/' + m.need.test + '.');
@@ -308,9 +315,9 @@
       { id: 'vorschuss', label: 'Vorschuss (+25 k€ jetzt, −30 k€ in fünf Tagen)', cost: 20, energy: 1,
         check: S => S.debt.length ? 'Erst den alten Vorschuss zurückzahlen.' : null,
         run: S => { S.budget += T().vorschuss; S.debt.push({ due: S.day + 5, amt: T().rueckzahlung }); say(S, 'Vorschuss: +' + T().vorschuss + ' k€. Die Controlling-Abteilung notiert Tag ' + (S.day + 5) + ' in roter Tinte.'); } },
-      { id: 'berater', label: 'Externe Berater holen (15 k€)', cost: 30, energy: 2,
-        check: S => S.beraterDay === S.day ? 'Die Berater kommen erst morgen wieder. Mit neuen Folien.' : S.budget < T().berater ? 'Dafür reicht das Budget nicht.' : null,
-        run: S => { S.beraterDay = S.day; spend(S, T().berater); const k = rng(S) < 0.25 ? 1 : 3; autoWork(S, k); say(S, k === 3 ? 'Die Berater liefern tatsächlich: +3 Arbeitspakete. Und 80 Folien.' : 'Die Berater liefern 120 Folien und 1 Arbeitspaket. Die Folien haben schöne Farben.', k === 1); } }
+      { id: 'berater', label: 'Externe Berater holen (25 k€, einmal pro Woche)', cost: 30, energy: 2,
+        check: S => S.beraterWeek === week(S) ? 'Die Berater kommen erst nächste Woche wieder. Mit neuen Folien.' : S.budget < T().berater ? 'Dafür reicht das Budget nicht.' : null,
+        run: S => { S.beraterWeek = week(S); spend(S, T().berater); const k = rng(S) < 0.4 ? 1 : 2; for (let i = 0; i < k; i++) onePaper(S); say(S, k === 2 ? 'Die Berater liefern tatsächlich: +2 Pakete Requirements/Spezifikation. Und 80 Folien.' : 'Die Berater liefern 120 Folien und 1 Paket Spezifikation. Die Folien haben schöne Farben.', k === 1); } }
     ],
     pforte: [
       { id: 'home', label: 'Ausstempeln und Feierabend machen', cost: 0, energy: 0, check: S => S.minute < 15 * 60 ? 'Vor 15:00? Der Pförtner schaut dich nur an.' : null, run: S => { S.goHome = true; } }
@@ -333,6 +340,7 @@
     if (S.lunch && S.minute < 15 * 60 && cost > 20) cost = Math.round(cost * 0.9);
     S.energy -= a.energy;
     a.run(S);
+    if (S._cost !== undefined) { cost = S._cost; delete S._cost; }
     advance(S, cost);
     if (S.energy <= 0) S.burnout = true;
     return { ok: true };
@@ -342,10 +350,10 @@
   function visitOptions(S) {
     const p = S.pending; if (!p) return [];
     switch (p.id) {
-      case 'tesla': return [{ id: 'zuhoeren', label: 'Zuhören (' + (p.duo ? 35 : 25) + ' Min.)' }, { id: 'abwimmeln', label: 'Abwimmeln (5 Min.)' }];
+      case 'tesla': return [{ id: 'zuhoeren', label: 'Zuhören (' + (p.duo ? 25 : 15) + ' Min.)' }, { id: 'abwimmeln', label: 'Abwimmeln (5 Min.)' }];
       case 'italien': return [{ id: 'zuhoeren', label: 'Zuhören und mitessen (12 Min.)' }, { id: 'vertagen', label: '»Erzähl es mir beim Essen« (2 Min.)' }];
       case 'itchefin': return p.opts.map((l, i) => ({ id: 'a' + i, label: 'Ebene ' + l + ': ' + SC.PYR[l] })).concat([{ id: 'skip', label: 'Folie überspringen (10 Min.)' }]);
-      case 'ahnungslos': return [{ id: 'erklaeren', label: 'Geduldig erklären (20 Min.)' }, { id: 'abkuerzen', label: '»Das MES ist wie Excel, nur anders.« (5 Min.)' }];
+      case 'ahnungslos': return [{ id: 'erklaeren', label: 'Geduldig erklären (15 Min.)' }, { id: 'abkuerzen', label: '»Das MES ist wie Excel, nur anders.« (5 Min.)' }];
       case 'altwerk': return [{ id: 'mapping', label: 'Mapping zusammen anlegen (30 Min.)' }, { id: 'spaeter', label: 'Später (3 Min.)' }];
       default: return [{ id: 'ok', label: p.id === 'sap' || p.id === 'uebernahme' ? 'Na dann. An die Arbeit.' : 'Freut mich!' }];
     }
@@ -362,7 +370,7 @@
       case 'lieferant': return { who: 'Ein Lieferant', text: 'Ein Lieferant bringt Ersatzteile für den Verpackungsautomaten. Zum Sonderpreis, drei Tage lang.' };
       case 'azubi': return { who: 'Der Azubi', text: 'Der Azubi hat heimlich die Requirements abgetippt. Sauber. Mit Inhaltsverzeichnis.' };
       case 'audit': return { who: 'Das Qualitätsaudit', text: 'Das Qualitätsaudit lobt deine Testprotokolle bei der Werkleitung. Sogar die Excel-Liste.' };
-      case 'sap': return { who: 'Die Werkleitung (Rundmail an alle)', text: 'Ab heute gibt es ein neues SAP-System! Die ERP-Schnittstelle muss neu angepasst werden, die Stammdaten müssen migriert werden (Büro, 4 Pakete). Cutover ist Freitag. Kick-off um 10:00, Pflicht. Lizenz: −' + T().cost.sap + ' k€.' };
+      case 'sap': return { who: 'Die Werkleitung (Rundmail an alle)', text: 'Ab heute gibt es ein neues SAP-System! Die ERP-Schnittstelle muss neu angepasst werden, die Stammdaten müssen migriert werden (Büro, 4 Pakete). Cutover ist Freitag. Kick-off um 11:00, Pflicht. Lizenz: −' + T().cost.sap + ' k€.' };
       case 'uebernahme': return { who: 'Die Werkleitung (Betriebsversammlung in der Kantine)', text: 'Wir haben die Konkurrenz gekauft! Das Altwerk kommt dazu, mit eigenem System. Neues Modul: Systemfusion Altwerk (Teststation Extrusion). Go-Live verschiebt sich auf Tag ' + (SC.DEADLINE + 2) + '. Kosten: −' + T().cost.fusion + ' k€. Am Turm hängt jetzt ein zweites Schild. Schief.' };
       default: return { who: '', text: '' };
     }
@@ -373,11 +381,11 @@
     let min = 0;
     switch (p.id) {
       case 'tesla':
-        if (opt === 'zuhoeren') { min = p.duo ? 35 : 25; S.energy += 2; say(S, 'Du hörst zu. Du weißt jetzt alles über Reichweite im Winter. Energie +2 vom Lachen.'); }
+        if (opt === 'zuhoeren') { min = p.duo ? 25 : 15; S.energy += 4; S.schicht += 2; say(S, 'Du hörst zu. Du weißt jetzt alles über Reichweite im Winter. Energie +4 vom Lachen, und die Schicht erzählt es dem Schichtleiter (+2).'); }
         else { min = 5; S.energy -= 2; if (rng(S) < 0.25) { S.coffeeBlock = S.day; say(S, 'Abgewimmelt. Die beiden ziehen beleidigt in die Kaffeeküche und bleiben dort.', true); } else say(S, 'Abgewimmelt. Sie diskutieren im Flur weiter.'); }
         break;
       case 'italien':
-        if (opt === 'zuhoeren') { min = 12; S.energy += 4; if (rng(S) < 0.3) { S.lunchBonus = true; say(S, 'Er schreibt dir ein Rezept auf und gibt es der Kantinenkraft. Nächstes Mittagessen +10 Energie.'); } else say(S, 'Eine wunderbare Geschichte. Und ein Espresso. Energie +4.'); }
+        if (opt === 'zuhoeren') { min = 12; S.energy += 6; if (rng(S) < 0.3) { S.lunchBonus = true; say(S, 'Er schreibt dir ein Rezept auf und gibt es der Kantinenkraft. Nächstes Mittagessen +10 Energie.'); } else say(S, 'Eine wunderbare Geschichte. Und ein Espresso. Energie +6.'); }
         else { min = 2; say(S, '»Beim Essen, versprochen!« Er zwinkert. Er kommt wieder.'); }
         break;
       case 'itchefin': {
@@ -387,7 +395,7 @@
           else { min = 40; S.energy -= 4; S.stats.pyrWrong++; say(S, 'Falsch. Richtig wäre Ebene ' + q.a + ': ' + SC.PYR[q.a] + '. Es folgt ein Vortrag über alle fünf Ebenen. (40 Min.)', true); } }
         break; }
       case 'ahnungslos':
-        if (opt === 'erklaeren') { min = 20; if (rng(S) < 0.35) { S.chef += 2; say(S, 'Er hat es verstanden. Glaubt er. Er lobt dich bei der Werkleitung (+2).'); } else say(S, 'Er nickt. Dann fragt er, ob das MES auch Excel kann.'); }
+        if (opt === 'erklaeren') { min = 15; if (rng(S) < 0.5) { S.chef += 2; say(S, 'Er hat es verstanden. Glaubt er. Er lobt dich bei der Werkleitung (+2).'); } else say(S, 'Er nickt. Dann fragt er, ob das MES auch Excel kann.'); }
         else { min = 5; say(S, '»Ah. Wie Excel. Verstehe.« Er versteht nicht.'); }
         break;
       case 'altwerk':
@@ -452,7 +460,7 @@
     const left = Math.max(SC.DAY_END, S.minute);
     const over = Math.max(0, Math.round(left - SC.DAY_END));
     if (!S.excel) { S.chef -= 6; R.lines.push(['bad', 'Excel-Liste nicht gepflegt: Werkleitung −6']); }
-    if (over > 0) { const f = Math.round(over / 12); S.family -= f; S.stats.overtime += over; R.lines.push(['bad', 'Überstunden ' + over + ' Min.: Familie −' + f]); }
+    if (over > 0) { const f = Math.round(over / 20); S.family -= f; S.stats.overtime += over; R.lines.push(['bad', 'Überstunden ' + over + ' Min.: Familie −' + f]); }
     else { S.family += 4; R.lines.push(['good', 'Pünktlich daheim: Familie +4']); }
     // Stillstand und KPIs
     let down = S.downMin, overnight = false;
@@ -491,10 +499,11 @@
     if (S.schicht < 20) { S.chef -= 3; R.lines.push(['bad', 'Der Schichtleiter hat sich bei der Werkleitung über dich beschwert: Werkleitung −3']); }
     const rest = 55 - Math.round(over / 6);
     S.energy = clamp(S.energy + rest, 15, 100);
-    if (S.burnout) { S.burnout = false; S.chef -= 8; S.family -= 4; S.energy = 70; R.lines.push(['bad', 'Am Schreibtisch eingeschlafen, Kopf auf der Tastatur. Ein Tag krank: Werkleitung −8.']); S.day++; }
+    let fri = weekday(S) === 4;
+    if (S.burnout) { S.burnout = false; S.chef -= 8; S.family -= 4; S.energy = 70; R.lines.push(['bad', 'Am Schreibtisch eingeschlafen, Kopf auf der Tastatur. Ein Tag krank: Werkleitung −8.']); S.day++; if (weekday(S) === 4) fri = true; }
     S.chef = clamp(S.chef, 0, 100); S.family = clamp(S.family, 0, 100); S.schicht = clamp(S.schicht, 0, 100);
     R.progress = me; R.rivals = S.rivals.map(r => ({ name: r.name, prog: r.prog })); R.budget = S.budget; R.kpiIndex = kpiIndex(S);
-    R.friday = weekday(S) === 4;
+    R.friday = fri;
     if (R.friday && S.day >= 10 && S.sap.state === 'migration') { S.sap.cutover = true; R.lines.push(['bad', 'SAP-Cutover steht an, aber die Stammdaten sind erst ' + S.sap.pk + '/' + S.sap.need + '. Wochenendschicht oder Chaos?']); }
     checkEnd(S);
     if (!S.result) S.phase = R.friday ? 'wochenende' : 'abend';

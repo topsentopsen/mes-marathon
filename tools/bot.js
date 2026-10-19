@@ -43,7 +43,7 @@ function playDay(S, P) {
     if (!S.lunch && S.minute >= 11.5 * 60 && tryAct(S, 'kantine', 'lunch')) continue;
     if (P.tranche && S.trancheWeek !== sim.week(S) && tryAct(S, 'controlling', 'tranche')) continue;
     if (P.kredit && S.budget < 10 && tryAct(S, 'controlling', 'vorschuss')) continue;
-    if (P.berater && S.budget > 30 && tryAct(S, 'controlling', 'berater')) continue;
+    if (P.berater && S.budget > 45 && tryAct(S, 'controlling', 'berater')) continue;
     if (!S.server.up && tryAct(S, 'server', 'restart')) continue;
     if (P.repair && !sim.targets.test(S) && sim.targets.testAny(S) && tryAct(S, 'werkstatt', P.repair === 'notbehelf' ? 'notbehelf' : 'repair')) continue;
     if (P.repairAll && S.stations.some(st => st.fault) && tryAct(S, 'werkstatt', 'repair')) continue;
@@ -76,6 +76,7 @@ const POL = {
   ablenkbar: P({ care: true, visit: 'listen' }),
   berater: P({ care: true, berater: true, kredit: true }),
   workaholic: P({ meet: 'chef', we: () => 2, leave: 19 * 60 + 30 }),
+  fleissig: P({ care: true, we: S => (S.sap.cutover || S.family > 60 ? 1 : 0), leave: 18 * 60 }),
   sparfuchs: P({ care: true, tranche: false })
 };
 function run(n) {
@@ -100,14 +101,22 @@ if (require.main === module) {
   console.log('Strategie        Sieg%  Siegtag | Werkl. Familie Termin Budget | Fortschr. Budget KPI Meet(nutzlos) Chaos%');
   for (const [k, x] of Object.entries(rows)) console.log(k.padEnd(16), String(x.win).padStart(5), String(x.winDay).padStart(8), '|', String(x.chef).padStart(6), String(x.fam).padStart(7), String(x.termin).padStart(6), String(x.budget).padStart(6), '|', String(x.prog).padStart(9), String(x.bud).padStart(6), String(x.kpi).padStart(3), (x.meet + '(' + x.useless + ')').padStart(13), String(x.chaos).padStart(6));
   if (process.argv.includes('--check')) {
-    const R = rows, errs = [];
+    const R = rows, errs = [], warn = [];
     const best = Math.max(...Object.values(R).map(x => x.win));
+    // harte Invarianten (Auftrag: Meeting-Marathon ist nicht die stärkste Strategie)
     if (R.meetingfan.win > R.gut.win - 15) errs.push('meetingfan nicht >= 15 PP unter gut');
     if (R.meetingfan_plus.win > R.gut.win - 8) errs.push('meetingfan_plus nicht >= 8 PP unter gut');
     if (R.gut.win !== best && R.berater.win !== best) errs.push('beste Strategie ist weder gut noch berater');
+    const rank = Object.values(R).map(x => x.win).sort((a, b) => b - a).indexOf(R.meetingfan.win) + 1;
+    if (rank < 4) errs.push('meetingfan auf Rang ' + rank + ' (höchstens Rang 4 erlaubt)');
     if (R.passiv.win > 5) errs.push('passiv gewinnt zu oft');
     if (best > 75) errs.push('Spiel zu leicht (> 75 %)');
-    console.log(errs.length ? 'CHECK FEHLER: ' + errs.join('; ') : 'CHECK OK');
+    // Zielbereiche aus docs/PHASEN.md 10.2 (Abweichungen als Warnung)
+    const Z = { einfach: [20, 40], gut: [55, 70], ohneSchichtplan: [45, 62], meetingfan: [25, 40], ablenkbar: [30, 50], berater: [50, 68], workaholic: [25, 45], sparfuchs: [35, 55] };
+    for (const [k, [lo, hi]] of Object.entries(Z)) if (R[k].win < lo || R[k].win > hi) warn.push(k + ' ' + R[k].win + ' % (Ziel ' + lo + '–' + hi + ')');
+    if (R.ohneSchichtplan.win > R.gut.win - 3) warn.push('ohneSchichtplan nicht >= 3 PP unter gut');
+    if (warn.length) console.log('WARNUNG Zielbereiche: ' + warn.join('; '));
+    console.log(errs.length ? 'CHECK FEHLER: ' + errs.join('; ') : 'CHECK OK (harte Invarianten)');
     process.exitCode = errs.length ? 1 : 0;
   }
 }
