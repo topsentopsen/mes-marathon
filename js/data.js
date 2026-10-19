@@ -72,10 +72,12 @@ window.SC = window.SC || {};
     hotline: { p: 0.5, min: 30, max: 60 },
     titel: { kpi: 90, image: 75, score: 300 },
     // v0.5: Ausschreibung (Gebote bis Mittwoch 15:00 gegen Werk Nord), zweiter Siegpfad »Vorzeigewerk«, Kopfhörer
-    auktion: { from: 2, close: 15 * 60, bids: [0.8, 1, 1.3], nordLo: 0.75, nordHi: 1.3, drift: 0.3, loseImage: 0, loseNord: 0 },
-    audit: { from: 15, kpi: 65, image: 85, mods: 3, streak: 1, score: 700 },
+    auktion: { from: 2, close: 15 * 60, bids: [0.8, 1, 1.3], nordLo: 0.75, nordHi: 1.25, drift: 0.3, pakete: 2 },
+    audit: { from: 15, kpi: 65, image: 87, mods: 3, streak: 1, score: 700 },
     kopf: { schicht: 1, min: 2 },
     weekendFam: 13,
+    // v0.5 Süßigkeitenbox: einmal pro Woche auffüllen (Kantinen-Kiosk), 6 Stück, Verbrauch 1 bis 2 am Tag, das letzte Stück nimmt niemand
+    suess: { from: 3, stk: 6, cost: { schoko: 3, gummi: 2, lakritz: 1 }, beschwer: 0.5, schichtGut: 1, schichtLeer: 1, chefGut: 1, zeit: 10 },
     // Überstunden: Familie −over/div; ab »frei« Minuten mindestens »min« (das Abendessen ist dann kalt)
     ueber: { div: 20, frei: 15, min: 0 },
     meet: { gain: 8, step: 2, cap: 80, quotaMin: 90, quotaPen: 1, spiral: 0.35, spiral2: 0.5, testFactor: 0.75, reqDouble: 0.35 }
@@ -306,9 +308,9 @@ window.SC = window.SC || {};
   ];
   // v0.5 Ausschreibung: ein Los je Woche (nicht in der Übernahme-Woche), Richtpreis base in k€
   SC.AUKTION = [
-    { id: 'teile', label: 'Rahmenvertrag Ersatzteile (5 Tage Reparatur für 2 k€)', short: 'Ersatzteile', base: 10 },
-    { id: 'kontingent', label: 'Beraterkontingent (3 Pakete Requirements/Spezifikation)', short: 'Beraterkontingent', base: 22 },
-    { id: 'wartung', label: 'Wartungspaket Server und Verpackungsautomat (5 Tage)', short: 'Wartungspaket', base: 12 }
+    { id: 'teile', label: 'Rahmenvertrag Ersatzteile (ab Zuschlag 5 Tage Reparatur für 2 k€)', short: 'Ersatzteile', base: 10 },
+    { id: 'kontingent', label: 'Beraterkontingent (2 Pakete Requirements/Spezifikation)', short: 'Beraterkontingent', base: 22 },
+    { id: 'wartung', label: 'Wartungspaket Server und Verpackungsautomat (ab Zuschlag 5 Tage)', short: 'Wartungspaket', base: 12 }
   ];
   SC.AUKTION_BIDS = ['Gebot knapp', 'Gebot zum Richtpreis', 'Gebot großzügig'];
   // Satire: Werk Nord bietet immer etwas dazu
@@ -335,6 +337,22 @@ window.SC = window.SC || {};
   ];
   SC.ZWILLING_EGG = 'Der digitale Zwilling hat einen eigenen Zwilling angelegt. Der fragt, ob er ins Meeting darf. Du schaltest beide aus.';
   SC.VORZEIG = 'Das Konzernaudit kürt Werk Mitte zum »Vorzeigewerk«: Image und Kennzahlen glänzen, obwohl noch nicht alle Module abgenommen sind. Den Rest übernimmt ein Exzellenz-Team aus der Zentrale. Christian geht auf Vortragsreise: »Wie wir das MES fast eingeführt haben«.';
+  // v0.5 Süßigkeitenbox im Büro: Christian bringt immer etwas mit. Jeden Tag schaut ein Stammgast vorbei.
+  SC.SORTEN = { schoko: 'Schoko-Mix', gummi: 'Gummibärchen', lakritz: 'Lakritz' };
+  SC.NASCHER = [
+    { id: 'schicht', who: 'Der Schichtleiter', mag: 'schoko', gut: 'nimmt sich zwei Stück, lobt »den vom MES« vor der Schicht und gibt die Teststation heute schneller frei (Schichtleiter +1, ein Testlauf 10 Min. kürzer).', meck: '»Lakritz? Das ist ja wie meine Montagsrunde: keiner will es, alle müssen.«', leer: '»Wer hat die Schokolade alle gemacht? Das ist ein Meeting wert.«' },
+    { id: 'chef', who: 'Die Werkleitung', mag: 'schoko', gut: 'nimmt ein Stück »für den Vorstand«. Die Stimmung oben ist gut (Werkleitung +1, ein Termin bei der Werkleitung 10 Min. kürzer).', meck: '»Pralinen wären angemessen. Wir sind ein Konzern, keine Kantine.«', leer: '»Eine leere Box ist ein schlechtes Signal an die Mannschaft. Schreiben Sie das in die Excel-Liste.«' },
+    { id: 'controlling', who: 'Die Controlling-Abteilung', mag: 'schoko', gut: 'bucht die Schokolade als »Motivation, Kostenstelle 4711« und stempelt heute dein nächstes Formular schneller (eine Aktion im Controlling 10 Min. kürzer).', meck: '»Die Box kostet. Ich hab es in Zeile 14 gebucht. Unter Fehlinvestition.«', leer: '»Leere Box, volle Kostenstelle. Typisch Projekt.«' },
+    { id: 'werkstatt', who: 'Die Instandhaltung', mag: 'gummi', gut: 'kaut zufrieden auf einem Gummibärchen und kommt heute sofort, wenn etwas klemmt (eine Reparatur 10 Min. kürzer).', meck: '»Gummibärchen oder ich lass den Automaten stehen.«', leer: '»Keine Gummibärchen, keine Gewährleistung.«' },
+    { id: 'kantine', who: 'Die Kantinenkraft', mag: 'gummi', gut: 'schiebt dir zum Dank das Tablett schon hin (Mittagessen heute 10 Min. kürzer).', meck: '»Wer klebt mir hier die Papierchen ans Tablettband?«', leer: '»Die Box ist leer. Wie die Kaffeemaschine nach dem SAP-Umstieg.«' },
+    { id: 'it', who: 'Die IT-Chefin', mag: 'lakritz', gut: 'strahlt: »Lakritz ist die Pyramide unter den Süßigkeiten: schwarz, hart, notwendig.« Das Review heute geht schneller (10 Min. kürzer).', meck: '»Schokolade? Das ist so 2010. Industrie 5.0 isst Lakritz.«', leer: '»Eine leere Box. Das ist Ebene 0: Feld. Nichts drin.«' }
+  ];
+  SC.LETZTES = [
+    'Da liegt es wieder: das letzte Stück. Seit Montag. Niemand traut sich.',
+    'Das letzte Stück in der Box hat inzwischen eine eigene Materialnummer im SAP.',
+    'Jemand hat einen Zettel an das letzte Stück geklebt: »Reserviert. Für den Go-Live.«'
+  ];
+  SC.LETZTES_EGG = 'Fünfmal hast du das letzte Stück selbst gegessen. Die Kollegen nennen dich jetzt »den Entsorger«. Der Schichtleiter will dazu ein Meeting.';
   SC.PROGNOSE = [
     { id: 'p_lo', label: 'Prognose: KPI-Index Freitag unter Plan', k: 0 },
     { id: 'p_mid', label: 'Prognose: KPI-Index Freitag im Plan', k: 1 },

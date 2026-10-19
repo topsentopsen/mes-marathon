@@ -35,8 +35,8 @@
       rivals: SC.RIVALS.map(r => ({ name: r.name, prog: 0, live: false })),
       msgs: [], result: null, dayLog: [], bingo: [], eggs: {}, durchsageAt: null, ev: {}, itStreak: 0, tiramisu: 0, kaffeeDef: 0, partyMin: 0, immerToday: 0,
       markt: null, lizenzen: T().markt.lizenzen, tonerUntil: 0, prog: { week: -1, k: null, melone: -1, hits: 0 }, hotlineDay: 0, titel: null,
-      auktion: null, nordLast: null, nordLastR: null, audit: { streak: 0, day: 0 }, kopf: 0, vDay: 0, vN: 0, pfad: null,
-      stats: { meetings: 0, useless: 0, missed: 0, weekend: 0, overtime: 0, bugs: 0, coffee: 0, visits: 0, pyrRight: 0, pyrWrong: 0, faults: 0, repairs: 0, budgetSpent: 0, chaosDays: 0, flur: 0, bingo: 0, eggs: 0, immer: 0, tiramisu: 0, markt: 0, prognose: 0, treffer: 0, melone: 0, hotline: 0, auktion: 0, auktionWin: 0, kopf: 0, zwilling: 0, archiv: 0 }
+      auktion: null, nordLast: null, nordLastR: null, box: { n: 0, sorte: null, week: -1, day: 0, gast: null, stand: null, used: false }, audit: { streak: 0, day: 0 }, kopf: 0, vDay: 0, vN: 0, pfad: null,
+      stats: { meetings: 0, useless: 0, missed: 0, weekend: 0, overtime: 0, bugs: 0, coffee: 0, visits: 0, pyrRight: 0, pyrWrong: 0, faults: 0, repairs: 0, budgetSpent: 0, chaosDays: 0, flur: 0, bingo: 0, eggs: 0, immer: 0, tiramisu: 0, markt: 0, prognose: 0, treffer: 0, melone: 0, hotline: 0, auktion: 0, auktionWin: 0, kopf: 0, zwilling: 0, archiv: 0, suess: 0, suessGut: 0, suessMeck: 0, suessLetztes: 0 }
     };
     planDay(S);
     return S;
@@ -113,6 +113,7 @@
     planVisits(S, big);
     planMarkt(S);
     planAuktion(S);
+    planBox(S);
     // Werksdurchsage: einmal am Tag zu einer zufälligen Zeit
     S.durchsageAt = 9 * 60 + Math.floor(rngF(S) * 7 * 60);
   }
@@ -145,29 +146,55 @@
     if (S.auktion && !S.auktion.res && S.day > S.auktion.closeDay) closeAuktion(S, null);
     if (weekday(S) !== 1 || S.day < AU.from || w === 2 || (S.auktion && S.auktion.week === w)) return;
     const lot = Math.floor(rngA(S, 100 * w + 1) * SC.AUKTION.length), L = SC.AUKTION[lot];
-    S.auktion = { week: w, lot, closeDay: S.day + 1, bid: null, res: null, nord: Math.round(L.base * nordRatio(S, w)) };
+    S.auktion = { week: w, lot, closeDay: S.day + 1, bid: null, res: null, nord: Math.floor(L.base * nordRatio(S, w)) };
     S.msgs.push({ t: 'Ausschreibung im Controlling: ' + L.label + '. Richtpreis ' + L.base + ' k€, Gebote bis morgen 15:00. Werk Nord bietet auch.', bad: false });
   }
   // Werk Nord bietet nicht blind: der Faktor zum Richtpreis wandert von Woche zu Woche nur wenig (wer das letzte Nord-Gebot kennt, kann besser bieten)
   function nordRatio(S, w) { const AU = T().auktion; let r = AU.nordLo + rngA(S, 2) * (AU.nordHi - AU.nordLo); for (let k = 1; k <= w; k++) r = clamp(r + (rngA(S, 100 * k + 2) - 0.5) * AU.drift, AU.nordLo, AU.nordHi); return r; }
+  // v0.5 Süßigkeitenbox: morgens wird genascht (1 bis 2 Stück, das letzte bleibt liegen), ein Stammgast schaut vorbei.
+  // Passt die Sorte: kleine Hilfe von genau dieser Rolle. Leer oder falsche Sorte: Gemecker, die Teamlaune sinkt (Schichtleiter −1).
+  function planBox(S) {
+    const B = S.box, ST = T().suess; B.gast = null; B.stand = null; B.used = false; B.day = S.day;
+    if (S.day < ST.from) return;
+    const g = SC.NASCHER[Math.floor(rngA(S, 9000 + S.day * 8 + 1) * SC.NASCHER.length)], beschwert = rngA(S, 9000 + S.day * 8 + 2) < ST.beschwer;
+    if (B.n > 1) B.n = Math.max(1, B.n - 1 - (rngA(S, 9000 + S.day * 8) < 0.5 ? 1 : 0));
+    B.gast = g.id;
+    if (B.n > 1 && B.sorte === g.mag) { B.stand = 'gut'; S.stats.suessGut++;
+      if (g.id === 'schicht') S.schicht = clamp(S.schicht + ST.schichtGut, 0, 100); if (g.id === 'chef') S.chef = clamp(S.chef + ST.chefGut, 0, 100);
+      S.msgs.push({ t: 'Süßigkeitenbox: ' + g.who + ' ' + g.gut, bad: false }); return; }
+    B.stand = B.n > 1 ? 'falsch' : 'leer';
+    if (!beschwert) return;
+    // nur der Schichtleiter trägt es weiter (Teamlaune), alle anderen meckern nur
+    S.stats.suessMeck++; const pen = g.id === 'schicht' ? ST.schichtLeer : 0; S.schicht = clamp(S.schicht - pen, 0, 100);
+    const extra = B.n === 1 ? ' ' + SC.LETZTES[Math.floor(rngA(S, 9000 + S.day * 8 + 3) * SC.LETZTES.length)] : '';
+    S.msgs.push({ t: 'Süßigkeitenbox: ' + g.who + ': ' + (B.stand === 'leer' ? g.leer : g.meck) + extra + (pen ? ' (Teamlaune: Schichtleiter −' + pen + ')' : ''), bad: true });
+  }
+  // Hilfe des Stammgasts (einmal am Tag): kürzere Aktion bei genau dieser Rolle
+  function boxRabatt(S, room, id) {
+    const B = S.box, ST = T().suess; if (B.stand !== 'gut' || B.used || B.day !== S.day) return 0;
+    const hit = (B.gast === 'werkstatt' && room === 'werkstatt' && (id === 'repair' || id === 'notbehelf')) || (B.gast === 'kantine' && id === 'lunch') || (B.gast === 'it' && id === 'review') || (B.gast === 'controlling' && room === 'controlling') || (B.gast === 'schicht' && id === 'test') || (B.gast === 'chef' && room === 'chef');
+    if (!hit) return 0; B.used = true; return ST.zeit;
+  }
   const bidPrice = (S, i) => Math.round(SC.AUKTION[S.auktion.lot].base * T().auktion.bids[i]);
   // Zuschlag: höheres Gebot gewinnt, Gleichstand geht an Werk Nord; gezahlt wird erst beim Zuschlag. R: Abendbilanz (optional)
   function closeAuktion(S, R) {
     const a = S.auktion; if (!a || a.res) return;
     const AU = T().auktion, L = SC.AUKTION[a.lot], com = SC.NORD_GEBOTE[Math.floor(rngA(S, 100 * a.week + 3) * SC.NORD_GEBOTE.length)];
-    let t, bad = false;
+    let t;
     if (a.bid !== null && a.bid > a.nord) {
+      let extra = '';
+      if (L.id === 'kontingent') { let k = 0; for (let j = 0; j < T().auktion.pakete; j++) if (onePaper(S)) k++; extra = k ? ' Die Berater liefern ' + k + (k > 1 ? ' Pakete.' : ' Paket.') : ''; if (!k) { a.res = 'storno'; S.nordLast = a.nord; S.nordLastR = Math.round(a.nord / L.base * 100) / 100; const ts = 'Zuschlag storniert: Für das Beraterkontingent ist nichts mehr offen. Das Controlling zahlt nichts. ' + com; if (R) R.lines.push(['info', ts]); else say(S, ts); return; } }
       a.res = 'win'; S.stats.auktionWin++; spend(S, a.bid);
-      if (L.id === 'teile') S.partsUntil = Math.max(S.partsUntil, S.day + 4);
-      else if (L.id === 'kontingent') { onePaper(S); onePaper(S); onePaper(S); }
-      else { S.server.careUntil = Math.max(S.server.careUntil, S.day + 4); for (const id of ['inpack', 'auspack']) stationOf(S, id).care = Math.max(stationOf(S, id).care, S.day + 4); }
-      t = 'Zuschlag! ' + L.short + ' für ' + a.bid + ' k€ (Werk Nord bot ' + a.nord + ' k€). ' + com;
+      if (L.id === 'teile') S.partsUntil = Math.max(S.partsUntil, S.day + 5);
+      else if (L.id === 'wartung') { S.server.careUntil = Math.max(S.server.careUntil, S.day + 5); for (const id of ['inpack', 'auspack']) stationOf(S, id).care = Math.max(stationOf(S, id).care, S.day + 5); }
+      t = 'Zuschlag! ' + L.short + ' für ' + a.bid + ' k€ (Werk Nord bot ' + a.nord + ' k€).' + extra + ' ' + com;
     } else if (a.bid !== null) {
-      a.res = 'lose'; bad = true; S.image = clamp(S.image - AU.loseImage, 0, 100); S.rivals[0].prog = Math.min(99, S.rivals[0].prog + AU.loseNord);
-      t = 'Ausschreibung verloren: Werk Nord bekommt ' + L.short + ' für ' + a.nord + ' k€ (dein Gebot ' + a.bid + ' k€). ' + com + ' Image −' + AU.loseImage + '.';
+      // Verlieren kostet nichts außer der Zeit fürs Gebot (Messung v0.5: mit Strafe war Bieten klar ein Verlustgeschäft)
+      a.res = 'lose';
+      t = 'Ausschreibung verloren: Werk Nord bekommt ' + L.short + ' für ' + a.nord + ' k€ (dein Gebot ' + a.bid + ' k€). ' + com;
     } else { a.res = 'none'; t = 'Ausschreibung ' + L.short + ' ohne dein Gebot: Werk Nord nimmt es für ' + a.nord + ' k€. ' + com; }
     S.nordLast = a.nord; S.nordLastR = Math.round(a.nord / L.base * 100) / 100;
-    if (R) R.lines.push([bad ? 'bad' : a.res === 'win' ? 'good' : 'info', t]); else say(S, t, bad);
+    if (R) R.lines.push([a.res === 'win' ? 'good' : 'info', t]); else say(S, t);
   }
   const auktionOpen = S => !!(S.auktion && !S.auktion.res && (S.day < S.auktion.closeDay || (S.day === S.auktion.closeDay && S.minute < T().auktion.close)));
   // v0.5 Zweiter Siegpfad »Vorzeigewerk«: Konzernaudit an einem Freitag ab Tag 15 (KPI-Index, Image, abgenommene Module). Idempotent über audit.day
@@ -414,7 +441,12 @@
           if (S.coffee >= 7) egg(S, 'kaffee', 'Die Kaffeemaschine zeigt »Fehler 42: Benutzer zu wach«. Die Kantinenkraft hängt ein Foto von dir an die Pinnwand.'); } },
       { id: 'lunch', label: 'Mittagessen in der Werkskantine (11:30 bis 13:30)', cost: 30, energy: 0,
         check: S => S.lunch ? 'Schon gegessen.' : (S.minute < 11 * 60 + 30 || S.minute > 13 * 60 + 30) ? 'Die Ausgabe hat nur 11:30 bis 13:30 auf.' : null,
-        run: S => { S.lunch = true; const b = S.lunchBonus ? 10 : 0; S.lunchBonus = false; S.energy += 25 + b; say(S, (b ? 'Nudeln nach dem Rezept des italienischen Kollegen. Die Kantinenkraft hat es tatsächlich probiert! Energie +35. ' : 'Currywurst mit Pommes, dazu Fabriklärm. Energie +25. ') + pick(S, SC.TIPS)); } }
+        run: S => { S.lunch = true; const b = S.lunchBonus ? 10 : 0; S.lunchBonus = false; S.energy += 25 + b; say(S, (b ? 'Nudeln nach dem Rezept des italienischen Kollegen. Die Kantinenkraft hat es tatsächlich probiert! Energie +35. ' : 'Currywurst mit Pommes, dazu Fabriklärm. Energie +25. ') + pick(S, SC.TIPS)); } },
+      // v0.5 Süßigkeitenbox (steht im Büro, Nachschub gibt es am Kiosk der Kantine): einmal pro Woche, 6 Stück
+      ...Object.keys(SC.SORTEN).map(k => ({ id: 'box_' + k, label: S => 'Süßigkeitenbox auffüllen: ' + SC.SORTEN[k] + ' (' + T().suess.cost[k] + ' k€)', cost: 2, energy: 0,
+        check: S => S.box.week === week(S) ? 'Diese Woche schon aufgefüllt. Der Kiosk hat nur einmal pro Woche Nachschub.' : S.budget < T().suess.cost[k] ? 'Dafür reicht das Budget nicht.' : null,
+        run: S => { const B = S.box; let t = ''; if (B.n === 1) { S.stats.suessLetztes++; t = ' Das letzte Stück isst du selbst. Endlich.'; if (S.stats.suessLetztes >= 5) egg(S, 'letztes', SC.LETZTES_EGG); }
+          spend(S, T().suess.cost[k]); B.n = T().suess.stk; B.sorte = k; B.week = week(S); S.stats.suess++; say(S, 'Süßigkeitenbox im Büro aufgefüllt: ' + SC.SORTEN[k] + ', ' + B.n + ' Stück.' + t + ' Wer was mag, steht auf dem Zettel am Kiosk.'); } }))
     ],
     drucker: [
       { id: 'print', label: 'Spezifikation zur Unterschrift ausdrucken', cost: 10, energy: 1,
@@ -503,6 +535,7 @@
     if (id === 'repair' && isDone(S, 'trace')) cost -= 15;
     if (id === 'bericht' && isDone(S, 'bde')) cost = 15;
     if (S.lunch && S.minute < 15 * 60 && cost > 20) cost = Math.round(cost * 0.9);
+    { const r = boxRabatt(S, room, id); if (r) cost = Math.max(5, cost - r); }
     S.energy -= S.kaffeeDef === S.day ? Math.round(a.energy * 1.3) : a.energy;
     a.run(S);
     if (S._cost !== undefined) { cost = S._cost; delete S._cost; }
@@ -665,8 +698,6 @@
     if (S.reportWeek !== week(S)) { S.chef -= 4; R.lines.push(['bad', 'Wochenrückblick ohne KPI-Bericht: Werkleitung −4']); }
     else { const d = clamp(Math.round((kpiScore(S) - kpiPath(S)) * 20), -5, 5); S.chef += d; R.lines.push([d >= 0 ? 'good' : 'bad', 'Wochenrückblick KPI-Index ' + kpiIndex(S) + ' %: Werkleitung ' + (d >= 0 ? '+' : '') + d]); }
     wochenAuswertung(S, R);
-    S.image = clamp(S.image, 0, 100);
-    auditFreitag(S, R);
   }
   // v0.4: Prognose und Wassermelone am Freitag auswerten (idempotent: k = null, melone = -2; auch nach einem Burnout-Sprung auf den Freitag)
   function wochenAuswertung(S, R) {
@@ -727,6 +758,8 @@
     else if (me < best - 12) { S.chef -= 3; R.lines.push(['bad', 'Deutlich hinter ' + S.rivals.find(r => r.prog === best).name + ': Werkleitung −3']); }
     if (me >= best || met >= 3) S.image += 1;
     S.image = clamp(S.image, 0, 100);
+    // v0.5 Konzernaudit erst nach allen Abendwirkungen auf Image und Werkleitung (Review 1)
+    if (weekday(S) === 4) auditFreitag(S, R);
     if (S.modules.some(m => m.deployed && !m.done) && rng(S) < 0.22) { S.energy -= 10; S.family -= 3; R.lines.push(['bad', '23:40 Anruf aus der Nachtschicht: »Das neue MES-Dings zeigt Rot.« Energie −10, Familie −3']); }
     if (S.chaosUntil >= S.day) { S.stats.chaosDays++; R.lines.push(['bad', 'SAP-Chaos: Niemand findet seine Materialnummer.']); }
     // Das Chaos hört erst auf, wenn die Stammdaten nachgearbeitet sind
@@ -740,7 +773,7 @@
     const rest = 55 - Math.round(over / 6);
     S.energy = clamp(S.energy + rest, 15, 100);
     let fri = weekday(S) === 4;
-    if (S.burnout) { S.burnout = false; S.chef -= 8; S.family -= 4; S.energy = 70; R.lines.push(['bad', 'Am Schreibtisch eingeschlafen, Kopf auf der Tastatur. Ein Tag krank: Werkleitung −8.']); S.day++; if (S.auktion && !S.auktion.res && S.day >= S.auktion.closeDay) closeAuktion(S, R); if (weekday(S) === 4) { fri = true; wochenRueckblick(S, R); S.chef = clamp(S.chef, 0, 100); S.image = clamp(S.image, 0, 100); } }
+    if (S.burnout) { S.burnout = false; S.chef -= 8; S.family -= 4; S.energy = 70; R.lines.push(['bad', 'Am Schreibtisch eingeschlafen, Kopf auf der Tastatur. Ein Tag krank: Werkleitung −8.']); S.day++; if (S.auktion && !S.auktion.res && S.day >= S.auktion.closeDay) closeAuktion(S, R); if (weekday(S) === 4) { fri = true; wochenRueckblick(S, R); S.chef = clamp(S.chef, 0, 100); S.image = clamp(S.image, 0, 100); auditFreitag(S, R); } }
     S.chef = clamp(S.chef, 0, 100); S.family = clamp(S.family, 0, 100); S.schicht = clamp(S.schicht, 0, 100);
     R.progress = me; R.rivals = S.rivals.map(r => ({ name: r.name, prog: r.prog })); R.budget = S.budget; R.kpiIndex = kpiIndex(S);
     R.friday = fri;
@@ -752,11 +785,12 @@
   }
   function checkEnd(S) {
     if (S.result) return;
-    if (!S.modules.every(m => m.done) && S.pfad === 'vorzeig') S.result = { win: true, pfad: 'vorzeig', why: SC.VORZEIG };
-    else if (S.modules.every(m => m.done)) S.result = { win: true, why: 'Alle ' + S.modules.length + ' Module sind abgenommen. Das MES geht in ' + SC.PLANT + ' live! Nach nur ' + (7 + S.day % 3) + ' Jahren.' };
+    if (S.modules.every(m => m.done)) S.result = { win: true, why: 'Alle ' + S.modules.length + ' Module sind abgenommen. Das MES geht in ' + SC.PLANT + ' live! Nach nur ' + (7 + S.day % 3) + ' Jahren.' };
     else if (S.budget < -40) S.result = { win: false, why: 'Das Controlling stoppt das Projekt. Du darfst die Excel-Liste behalten.' };
     else if (S.chef <= 0) S.result = { win: false, why: 'Die Werkleitung zieht dich vom Projekt ab. Werk Nord übernimmt.' };
     else if (S.family <= 0) S.result = { win: false, why: 'Zuhause hängt der Haussegen schief. Du kündigst und wirst Imker.' };
+    // v0.5 zweiter Siegpfad: nach den Niederlagen durch Werkleitung, Familie und Budget, aber vor dem verpassten Termin
+    else if (S.pfad === 'vorzeig') S.result = { win: true, pfad: 'vorzeig', why: SC.VORZEIG };
     else if (S.day >= S.deadline) S.result = { win: false, why: 'Go-Live-Termin verpasst. Das Projekt wird »neu aufgesetzt«, mit einem neuen Kick-off zum Kick-off.' };
     if (S.result && S.result.win && !S.result.pfad) { if (kpiIndex(S) >= T().titel.kpi && S.image >= T().titel.image) { S.titel = 'Werk des Jahres'; S.result.titel = S.titel; S.result.why += ' Und mehr: KPI-Index ' + kpiIndex(S) + ' %, Image ' + Math.round(S.image) + '. Der Konzern kürt ' + SC.PLANT + ' zum »Werk des Jahres«. Der Pokal steht jetzt neben der Pyramide aus Pappe.'; } }
     if (S.result) { S.result.score = score(S); S.phase = 'ende'; }
@@ -809,5 +843,5 @@
   function highscores() { try { return JSON.parse(localStorage.getItem('mesmarathon-highscore') || '[]'); } catch (e) { return []; } }
 
   SC.sim = { newGame, act, advance, events, endDay, weekend, startDay, progress, nextMeeting, activeMeeting, actions: A, targets, hm, weekday, week, save, load, slow,
-    choose, visitOptions, visitText, oldSave, archiv, kopfhoerer, kopfWhy, rngA, closeAuktion, auktionOpen, bidPrice, auditOk, rngF, rngM, prognoseBand, rahmen, kpiScore, kpiIndex, kpiPath, kpiTarget, autoWork, addScore, highscores, stationOf, stName, rng };
+    choose, visitOptions, visitText, oldSave, archiv, kopfhoerer, kopfWhy, nordRatio, rngA, closeAuktion, auktionOpen, bidPrice, auditOk, rngF, rngM, prognoseBand, rahmen, kpiScore, kpiIndex, kpiPath, kpiTarget, autoWork, addScore, highscores, stationOf, stName, rng };
 })(window.SC);

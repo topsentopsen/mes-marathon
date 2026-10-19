@@ -67,7 +67,10 @@ function playDay(S, P) {
     if (short && P.bericht && tryAct(S, 'leitstand', 'bericht')) continue;
     if (short && P.report && S.excel && S.reported !== S.day && tryAct(S, 'chef', 'report')) continue;
     if (S.energy < 40 && S.coffee < 3 && tryAct(S, 'kantine', 'coffee')) continue;
+    // v0.5 Süßigkeitenbox: nur sichtbare Werte (Box-Inhalt, Woche); 'mit' füllt auf, wenn er ohnehin in der Kantine steht, 'extra' geht dafür hin
+    if (P.suess && S.box.week !== sim.week(S) && S.box.n <= 3 && (S.at === 'kantine' || P.suessWeg) && tryAct(S, 'kantine', 'box_' + P.suess)) continue;
     if (!S.lunch && S.minute >= 11.5 * 60 && tryAct(S, 'kantine', 'lunch')) continue;
+    if (P.suess && S.box.week !== sim.week(S) && S.box.n <= 3 && S.at === 'kantine' && tryAct(S, 'kantine', 'box_' + P.suess)) continue;
     if (P.tranche && S.trancheWeek !== sim.week(S) && tryAct(S, 'controlling', 'tranche')) continue;
     if (P.kredit && S.budget < 10 && tryAct(S, 'controlling', 'kredit')) continue;
     if (P.kredit && S.budget > 40 && S.kredit > 0 && tryAct(S, 'controlling', 'tilgen')) continue;
@@ -122,6 +125,10 @@ const POL = {
   melone: P({ care: true, melone: true }),
   // v0.5: Ausschreibung (bietet nach dem letzten bekannten Nord-Gebot), Konzernaudit-Jäger (Image über Markt)
   bieter: P({ care: true, auktion: 'schlau' }),
+  // v0.5 Süßigkeitenbox: naschbox füllt Schoko nach, wenn er ohnehin in der Kantine ist; lakritz nur Lakritz; naschWeg geht extra hin
+  naschbox: P({ care: true, suess: 'schoko' }),
+  lakritz: P({ care: true, suess: 'lakritz' }),
+  naschWeg: P({ care: true, suess: 'schoko', suessWeg: true }),
   // Referenz (v0.5 gefunden, gilt schon für v0.4): wie gut, aber jeden Tag bis 17:30 (maßvolle Überstunden)
   gut1730: P({ care: true, leave: 17 * 60 + 30 }),
   vorzeig: P({ care: true, markt: 'image', auktion: 'mittel' }),
@@ -180,6 +187,10 @@ if (require.main === module) {
     if (R.gut.pfad > 12) errs.push('Vorzeigewerk zu häufig nebenbei (gut Vorzeig% > 12)');
     for (const k of ['meetingfan', 'passiv', 'workaholic', 'sapChaos']) if (R[k].pfad > 3) errs.push(k + ' erreicht das Vorzeigewerk zu oft');
     if (R.bieter.win > R.gut.win + 8) errs.push('Ausschreibung lohnt sich zu sehr (bieter > gut + 8)');
+    // v0.5 Süßigkeitenbox: ignorieren (gut) darf nicht klar besser sein, Pflege nicht dominant
+    if (R.gut.win > R.naschbox.win + 4) errs.push('Süßigkeitenbox ignorieren lohnt sich (gut > naschbox + 4)');
+    if (R.naschbox.win > R.gut.win + 6) errs.push('Süßigkeitenbox zu stark (naschbox > gut + 6)');
+    if (R.naschWeg.win > R.naschbox.win + 3) errs.push('Extra-Weg zur Box lohnt sich');
     // Zielbereiche aus docs/PHASEN.md 10.2 (Abweichungen als Warnung)
     const Z = { einfach: [20, 40], gut: [55, 70], ohneSchichtplan: [45, 62], meetingfan: [8, 30], ablenkbar: [30, 50], berater: [50, 68], workaholic: [0, 5], sparfuchs: [35, 55] };
     for (const [k, [lo, hi]] of Object.entries(Z)) if (R[k].win < lo || R[k].win > hi) warn.push(k + ' ' + R[k].win + ' % (Ziel ' + lo + '–' + hi + ')');
