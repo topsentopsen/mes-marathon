@@ -184,7 +184,7 @@ t('Gesamtprüfung: Laufzeiten stimmen mit den Texten (Lieferant 3 Tage, Ausschre
 const ELON_ALL = () => [...SC.ELON, SC.ELON_AKKU, ...SC.ELON_THEMA, SC.ELON_THEMA_NEIN, SC.ELON_MEETING, SC.ELON_EGG, ...SC.BUBBLES.tesla];
 t('v0.5 Elon: nur vage Umschreibungen des Kollegen, kein Nachname, kein Zitatformat, nichts Politisches', () => {
   const nach = String.fromCharCode(77, 117, 115, 107); const all = ELON_ALL().join(' ');
-  assert.ok(!new RegExp('\\b' + nach + '\\b', 'i').test(all)); assert.ok(!/Elon\s*:/.test(all), 'kein »Elon: «-Zitat'); assert.ok(!/Elon (sagt|schreibt|postet|meint)\s*[:»]/.test(all), 'keine wörtliche Rede von Elon');
+  assert.ok(!new RegExp('\\b' + nach + '\\b', 'i').test(all)); assert.ok(!/Elon\s*:/.test(all), 'kein »Elon: «-Zitat'); assert.ok(!/Elon (sagt|schreibt|postet|meint|hat)\b/.test(all), 'keine Aussage im Indikativ über die reale Person');
   for (const x of SC.ELON) { assert.ok(/Elon/.test(x)); assert.ok(/sinngemäß|würde|hätte|fände|angeblich|glaube|wette|stelle mir vor|bestimmt|sicher|so ungefähr|wenn es nach mir ginge|wäre/i.test(x), 'Umschreibung: ' + x); assert.ok(/\b(ich|mir|mich)\b/i.test(x), 'in seinen eigenen Worten: ' + x); }
   assert.ok(!/(Wahl|Partei|Regierung|Steuer|Politik|Präsident|Idiot|Narr|dumm|Lüge)/i.test(all));
   const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', 'sim.js'), 'utf8'); const salts = [...src.matchAll(/rngA\(S, (\d+)/g)].map(m => +m[1]); for (const k of salts) assert.ok(k < 9000 || k >= 20000 || (k >= 9000 && k < 10000), 'Salz ' + k);

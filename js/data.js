@@ -233,7 +233,7 @@ window.SC = window.SC || {};
     'Die Kantine ist heute bis auf Weiteres geöffnet. Wir bitten um Verständnis.',
     'Der Notausgang West ist ab sofort wieder ein Notausgang. Bitte die Paletten entfernen.',
     'Herzlichen Glückwunsch an die Extrusion: drei Tage ohne Etikettenstau! Der Rekord liegt bei vier.',
-    'Das Meeting zur Reduzierung von Durchsagen beginnt in fünf Minuten im Besprechungsraum.',
+    'Das Meeting zur Reduzierung von Durchsagen fällt aus. Wegen zu vieler Durchsagen.',
     'Wer hat den Tacker aus der Werkleitung? Er wird vermisst. Bitte keine Fragen stellen, einfach zurückbringen.',
     'Probealarm der Sirene. Bitte nicht in Panik verfallen. Der Schichtwechsel ist wie immer um 14:00.',
     'Parkplatz P3 wird heute neu markiert. Bitte nicht auf den frischen Linien parken. Wie gestern.'
@@ -303,15 +303,15 @@ window.SC = window.SC || {};
   // v0.5 Running Gag: Der Tesla-Kollege ist großer Fan von »Elon«. Nur vage Umschreibungen in seinen eigenen Worten,
   // klar als seine Übertreibung, keine Zitate und keine Behauptungen über die reale Person, nichts Politisches.
   SC.ELON = [
-    'Elon sagt sinngemäß, Meetings sind ineffizient. Hab ich irgendwo gelesen. Oder geträumt.',
+    'Elon würde bestimmt sagen, Meetings sind ineffizient. Glaube ich. Oder hab ich das geträumt?',
     'Elon würde dieses Werk in zwei Wochen hochziehen. Mindestens. Behaupte ich jetzt mal.',
     'Wenn es nach mir ginge, fliegt das Werk bald zum Mars. Elon fände das bestimmt super.',
-    'Elon hat gestern angeblich wieder was gepostet. Was genau, weiß ich nicht mehr, aber es war groß.',
+    'Ich stelle mir vor, Elon würde gerade wieder irgendwas Großes posten. Was genau, weiß ich nicht, aber ich bin jetzt schon begeistert.',
     'Ich wette, Elon hätte das MES längst eingeführt. Mit einem einzigen Knopf.',
     'Wäre Elon hier Werkleiter, gäbe es keine Schichtleiter-Meetings. Glaube ich. Hoffe ich.',
     'Ich stelle mir vor, Elon würde die Kantine in eine Rakete verlegen. Currywurst in der Schwerelosigkeit!',
     'Ich wette, Elon würde den Gabelstapler allein fahren lassen. Also noch alleiner.',
-    'Ich hab dir einen Link zu Elons neuestem Post geschickt. Nicht geöffnet? Ich erzähl ihn dir, so ungefähr.',
+    'Ich hab dir einen Link zu irgendwas mit Elon geschickt. Nicht geöffnet? Ich erzähl es dir, so ungefähr.',
     'Ich bin sicher, Elon fände, Reichweite ist Einstellungssache. So ungefähr jedenfalls.'
   ];
   SC.ELON_AKKU = 'Ich lade inzwischen dauernd Elon-Posts. Den Akku leider nicht.';
