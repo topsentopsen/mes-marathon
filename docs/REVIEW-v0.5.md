@@ -13,7 +13,7 @@ Lead für Planung und Review: Claude Code (nur lesende Werkzeuge). Umsetzung: Gr
 - Kopfhörer: Knopf im HUD statt Büro-Aktion (als Aktion netto schädlich), Schichtleiter −1 statt −2.
 - Zusätzlich gefunden: Der Ton-Knopf lag auf dem Handy unter dem Overlay.
 
-## Süßigkeitenbox (Plan von Claude, auf Wunsch von Tobi)
+## Süßigkeitenbox (Plan von Claude, auf Wunsch des Projektinhabers)
 - Box im Büro, Nachschub einmal pro Woche am Kantinen-Kiosk (Weg fällt mit dem Mittagessen zusammen), drei Sorten mit Preisen, Stammgast je Tag mit fester Vorliebe, Gemecker bei leer oder falscher Sorte, das letzte Stück als Running Gag.
 - Umsetzung mit gemessenen Änderungen: Auffüllen 2 statt 4 Min.; nur das Gemecker des Schichtleiters kostet Teamlaune (vorher jedes, dann lag Schoko unter dem Ignorieren); jede Rolle hilft bei passender Sorte einmal am Tag mit 10 Min. bei ihrer Aufgabe.
 

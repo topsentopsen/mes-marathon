@@ -77,7 +77,8 @@ window.SC = window.SC || {};
     kopf: { schicht: 1, min: 2 },
     weekendFam: 13,
     // v0.5 Süßigkeitenbox: einmal pro Woche auffüllen (Kantinen-Kiosk), 6 Stück, Verbrauch 1 bis 2 am Tag, das letzte Stück nimmt niemand
-    suess: { from: 3, stk: 6, cost: { schoko: 3, gummi: 2, lakritz: 1 }, beschwer: 0.5, schichtGut: 1, schichtLeer: 1, chefGut: 1, zeit: 10 },
+    suess: { from: 3, stk: 6, cost: { schoko: 3, gummi: 2, lakritz: 1 }, beschwer: 0.5, schichtGut: 1, schichtLeer: 1, chefGut: 1, zeit: 10, egg: 3 },
+    elon: { thema: 8, nein: 0.2, neinMin: 4, meet: 0.25, meetMin: 3, meetEnergie: 2, egg: 8, akkuDay: 15 },
     // Überstunden: Familie −over/div; ab »frei« Minuten mindestens »min« (das Abendessen ist dann kalt)
     ueber: { div: 20, frei: 15, min: 0 },
     meet: { gain: 8, step: 2, cap: 80, quotaMin: 90, quotaPen: 1, spiral: 0.35, spiral2: 0.5, testFactor: 0.75, reqDouble: 0.35 }
@@ -86,7 +87,7 @@ window.SC = window.SC || {};
     names: { oee: 'OEE', ausschuss: 'Ausschuss', durchsatz: 'Durchsatz', liefer: 'Liefertreue' },
     unit: { oee: ' %', ausschuss: ' %', durchsatz: ' (Index)', liefer: ' %' },
     start: { oee: 62, ausschuss: 5.5, durchsatz: 100, liefer: 86 },
-    ziel: { oee: 78, ausschuss: 3.0, durchsatz: 112, liefer: 94 },
+    ziel: { oee: 77, ausschuss: 3.0, durchsatz: 112, liefer: 94 },
     mod: {
       oee: { bde: 7, auftrag: 3, trace: 2, qs: 2, erp: 1, fusion: 2 },
       ausschuss: { qs: -1.5, trace: -0.8, bde: -0.5, fusion: -0.2 },
@@ -185,7 +186,7 @@ window.SC = window.SC || {};
   // v0.3 »Flurfunk«: Sprechblasen der Figuren im Gebäude (rein kosmetisch, höchstens 40 Zeichen)
   SC.BUBBLES = {
     schicht: ['Hast du kurz?', 'Kleines Meeting gleich?', 'Ich lad dich mal ein.', 'Wichtig. Glaub ich.', 'Nur fünf Minuten!', 'Termin folgt!'],
-    tesla: ['0 auf 100 in 3,1!', 'Reichweite, Christian!', 'Update über Nacht!', 'Der parkt allein ein.', 'Hast du das Video gesehen?'],
+    tesla: ['0 auf 100 in 3,1!', 'Reichweite, Christian!', 'Update über Nacht!', 'Der parkt allein ein.', 'Hast du das Video gesehen?', 'Elon würde das anders machen!', 'Mars, Christian, Mars!'],
     nix: ['Genau.', 'Bin gleich bei dir.', 'Erst mal Kaffee.', 'Viel los heute, ne?', 'Ich warte auf Rückmeldung.'],
     italien: ['Mamma mia, die Pasta!', 'Heute Bruschetta!', 'Espresso? Espresso.', 'In Italien ist jetzt Pause.', 'Meine Nonna sagt ...'],
     itchefin: ['Ebene 3!', 'Denk an die Pyramide!', 'Feld, Steuerung, ...', 'Wo ist das MES? Na?', 'Ich hab Folien dabei.']
@@ -234,7 +235,7 @@ window.SC = window.SC || {};
     'Herzlichen Glückwunsch an die Extrusion: drei Tage ohne Etikettenstau! Der Rekord liegt bei vier.',
     'Das Meeting zur Reduzierung von Durchsagen beginnt in fünf Minuten im Besprechungsraum.',
     'Wer hat den Tacker aus der Werkleitung? Er wird vermisst. Bitte keine Fragen stellen, einfach zurückbringen.',
-    'Probealarm der Sirene. Bitte nicht in Panik verfallen. Der echte Schichtwechsel ist erst um 14:00.',
+    'Probealarm der Sirene. Bitte nicht in Panik verfallen. Der Schichtwechsel ist wie immer um 14:00.',
     'Parkplatz P3 wird heute neu markiert. Bitte nicht auf den frischen Linien parken. Wie gestern.'
   ];
   SC.SCHLAGZEILEN = [
@@ -276,7 +277,7 @@ window.SC = window.SC || {};
 
   // v0.3 aus Sender-Chef übertragen: aktive Rivalen mit Image, Zusagen an die Werkleitung
   SC.RIVAL_EVT = [
-    { who: 'Werk Nord (Anruf aus der Personalabteilung)', text: 'Werk Nord wirbt einen erfahrenen Bediener der Extrusion ab. Mit Dienstwagen. Ohne Testläufe wird es hier zwei Tage lang zäh.',
+    { who: 'Werk Nord (Anruf aus der Personalabteilung)', text: 'Werk Nord wirbt einen erfahrenen Bediener der Extrusion ab. Mit Dienstwagen. Ohne ihn werden die Testläufe drei Tage lang zäh.',
       gegen: 'Bediener mit Zulage halten ({k} k€, 10 Min.)', hin: 'Ziehen lassen (Testläufe 3 Tage deutlich langsamer)' },
     { who: 'Werk Süd (Flurfunk aus dem Vorstand)', text: 'Werk Süd erzählt dem Vorstand, Werk Mitte habe »noch nicht mal eine Excel-Liste«. Die Werkleitung hat es gehört.',
       gegen: 'Gegendarstellung mit KPI-Folien ({k} k€ Grafikagentur, 10 Min.)', hin: 'Ignorieren (Werkleitung −5, Image −7, nächste Tranche −{t} k€)' }
@@ -299,6 +300,29 @@ window.SC = window.SC || {};
   ];
   // v0.4 Running Gag: Reichweitenanzeige des Tesla-Kollegen (sinkt jeden Tag, er lädt trotzdem nie)
   SC.TESLA_KM = d => Math.max(12, 430 - 11 * d);
+  // v0.5 Running Gag: Der Tesla-Kollege ist großer Fan von »Elon«. Nur vage Umschreibungen in seinen eigenen Worten,
+  // klar als seine Übertreibung, keine Zitate und keine Behauptungen über die reale Person, nichts Politisches.
+  SC.ELON = [
+    'Elon sagt sinngemäß, Meetings sind ineffizient. Hab ich irgendwo gelesen. Oder geträumt.',
+    'Elon würde dieses Werk in zwei Wochen hochziehen. Mindestens. Behaupte ich jetzt mal.',
+    'Wenn es nach mir ginge, fliegt das Werk bald zum Mars. Elon fände das bestimmt super.',
+    'Elon hat gestern angeblich wieder was gepostet. Was genau, weiß ich nicht mehr, aber es war groß.',
+    'Ich wette, Elon hätte das MES längst eingeführt. Mit einem einzigen Knopf.',
+    'Wäre Elon hier Werkleiter, gäbe es keine Schichtleiter-Meetings. Glaube ich. Hoffe ich.',
+    'Ich stelle mir vor, Elon würde die Kantine in eine Rakete verlegen. Currywurst in der Schwerelosigkeit!',
+    'Ich wette, Elon würde den Gabelstapler allein fahren lassen. Also noch alleiner.',
+    'Ich hab dir einen Link zu Elons neuestem Post geschickt. Nicht geöffnet? Ich erzähl ihn dir, so ungefähr.',
+    'Ich bin sicher, Elon fände, Reichweite ist Einstellungssache. So ungefähr jedenfalls.'
+  ];
+  SC.ELON_AKKU = 'Ich lade inzwischen dauernd Elon-Posts. Den Akku leider nicht.';
+  SC.ELON_THEMA = [
+    '»Und wie ist der Reifendruck?« Er redet zwei Minuten über Reifen. Elon kommt darin nur einmal vor.',
+    '»Gibt es heute Kuchen in der Kantine?« Er vergisst Elon. Für drei Sekunden.',
+    '»Wie weit kommst du heute noch?« Er schaut aufs Display, wird still und wechselt das Thema selbst.'
+  ];
+  SC.ELON_THEMA_NEIN = 'Du versuchst es mit dem Wetter. Er: »Apropos Wetter, Elon ...« Das dauert jetzt länger.';
+  SC.ELON_MEETING = 'Der Tesla-Kollege sitzt mit im Meeting und erklärt bei jedem Punkt, was Elon an dieser Stelle angeblich anders machen würde.';
+  SC.ELON_EGG = 'Elon-Zähler {n}: Der Tesla-Kollege hat dir ein Abo für seine tägliche Elon-Zusammenfassung eingerichtet. Mit Reichweitenangabe. Kündigen geht nur per Fax.';
   // v0.4 SAP-Hotline (Büro, nur während der Migration): Warteschleife mit Ansage
   SC.HOTLINE = [
     'Ihr Anruf ist uns wichtig. Sie sind Nummer 47 in der Warteschleife. Bitte halten Sie Ihre Materialnummer bereit.',
@@ -308,9 +332,9 @@ window.SC = window.SC || {};
   ];
   // v0.5 Ausschreibung: ein Los je Woche (nicht in der Übernahme-Woche), Richtpreis base in k€
   SC.AUKTION = [
-    { id: 'teile', label: 'Rahmenvertrag Ersatzteile (ab Zuschlag 5 Tage Reparatur für 2 k€)', short: 'Ersatzteile', base: 10 },
+    { id: 'teile', label: 'Rahmenvertrag Ersatzteile (5 Arbeitstage ab Zuschlag: Reparatur für 2 k€)', short: 'Ersatzteile', base: 10 },
     { id: 'kontingent', label: 'Beraterkontingent (2 Pakete Requirements/Spezifikation)', short: 'Beraterkontingent', base: 22 },
-    { id: 'wartung', label: 'Wartungspaket Server und Verpackungsautomat (ab Zuschlag 5 Tage)', short: 'Wartungspaket', base: 12 }
+    { id: 'wartung', label: 'Wartungspaket Server und Verpackungsautomat (5 Arbeitstage ab Zuschlag)', short: 'Wartungspaket', base: 12 }
   ];
   SC.AUKTION_BIDS = ['Gebot knapp', 'Gebot zum Richtpreis', 'Gebot großzügig'];
   // Satire: Werk Nord bietet immer etwas dazu
@@ -340,19 +364,19 @@ window.SC = window.SC || {};
   // v0.5 Süßigkeitenbox im Büro: Christian bringt immer etwas mit. Jeden Tag schaut ein Stammgast vorbei.
   SC.SORTEN = { schoko: 'Schoko-Mix', gummi: 'Gummibärchen', lakritz: 'Lakritz' };
   SC.NASCHER = [
-    { id: 'schicht', who: 'Der Schichtleiter', mag: 'schoko', gut: 'nimmt sich zwei Stück, lobt »den vom MES« vor der Schicht und gibt die Teststation heute schneller frei (Schichtleiter +1, ein Testlauf 10 Min. kürzer).', meck: '»Lakritz? Das ist ja wie meine Montagsrunde: keiner will es, alle müssen.«', leer: '»Wer hat die Schokolade alle gemacht? Das ist ein Meeting wert.«' },
+    { id: 'schicht', who: 'Der Schichtleiter', mag: 'schoko', gut: 'nimmt sich zwei Stück, lobt »den vom MES« vor der Schicht und gibt die Teststation heute schneller frei (Schichtleiter +1, ein Testlauf 10 Min. kürzer).', meck: { gummi: '»Gummibärchen? Ich leite eine Schicht, keinen Kindergarten.«', lakritz: '»Lakritz? Das ist ja wie meine Montagsrunde: keiner will es, alle müssen.«' }, leer: '»Die Box ist leer. Das ist ein Meeting wert.«' },
     { id: 'chef', who: 'Die Werkleitung', mag: 'schoko', gut: 'nimmt ein Stück »für den Vorstand«. Die Stimmung oben ist gut (Werkleitung +1, ein Termin bei der Werkleitung 10 Min. kürzer).', meck: '»Pralinen wären angemessen. Wir sind ein Konzern, keine Kantine.«', leer: '»Eine leere Box ist ein schlechtes Signal an die Mannschaft. Schreiben Sie das in die Excel-Liste.«' },
     { id: 'controlling', who: 'Die Controlling-Abteilung', mag: 'schoko', gut: 'bucht die Schokolade als »Motivation, Kostenstelle 4711« und stempelt heute dein nächstes Formular schneller (eine Aktion im Controlling 10 Min. kürzer).', meck: '»Die Box kostet. Ich hab es in Zeile 14 gebucht. Unter Fehlinvestition.«', leer: '»Leere Box, volle Kostenstelle. Typisch Projekt.«' },
     { id: 'werkstatt', who: 'Die Instandhaltung', mag: 'gummi', gut: 'kaut zufrieden auf einem Gummibärchen und kommt heute sofort, wenn etwas klemmt (eine Reparatur 10 Min. kürzer).', meck: '»Gummibärchen oder ich lass den Automaten stehen.«', leer: '»Keine Gummibärchen, keine Gewährleistung.«' },
-    { id: 'kantine', who: 'Die Kantinenkraft', mag: 'gummi', gut: 'schiebt dir zum Dank das Tablett schon hin (Mittagessen heute 10 Min. kürzer).', meck: '»Wer klebt mir hier die Papierchen ans Tablettband?«', leer: '»Die Box ist leer. Wie die Kaffeemaschine nach dem SAP-Umstieg.«' },
-    { id: 'it', who: 'Die IT-Chefin', mag: 'lakritz', gut: 'strahlt: »Lakritz ist die Pyramide unter den Süßigkeiten: schwarz, hart, notwendig.« Das Review heute geht schneller (10 Min. kürzer).', meck: '»Schokolade? Das ist so 2010. Industrie 5.0 isst Lakritz.«', leer: '»Eine leere Box. Das ist Ebene 0: Feld. Nichts drin.«' }
+    { id: 'kantine', who: 'Die Kantinenkraft', mag: 'gummi', gut: 'schiebt dir zum Dank das Tablett schon hin (Mittagessen heute 10 Min. kürzer).', meck: { schoko: '»Schoko-Mix? Der schmilzt mir am Tablettband.«', lakritz: '»Lakritz? Davon bleiben schwarze Finger am Tablettband.«' }, leer: '»Die Box ist leer. Wie die Kaffeemaschine nach dem SAP-Umstieg.«' },
+    { id: 'it', who: 'Die IT-Chefin', mag: 'lakritz', gut: 'strahlt: »Lakritz ist die Pyramide unter den Süßigkeiten: schwarz, hart, notwendig.« Das Review heute geht schneller (10 Min. kürzer).', meck: { schoko: '»Schokolade? Das ist so 2010. Industrie 5.0 isst Lakritz.«', gummi: '»Gummibärchen? Die sind so bunt wie eine Folie vom Berater. Industrie 5.0 isst Lakritz.«' }, leer: '»Eine leere Box. Das ist Ebene 0: Feld. Nichts drin.«' }
   ];
   SC.LETZTES = [
     'Da liegt es wieder: das letzte Stück. Seit Montag. Niemand traut sich.',
     'Das letzte Stück in der Box hat inzwischen eine eigene Materialnummer im SAP.',
     'Jemand hat einen Zettel an das letzte Stück geklebt: »Reserviert. Für den Go-Live.«'
   ];
-  SC.LETZTES_EGG = 'Fünfmal hast du das letzte Stück selbst gegessen. Die Kollegen nennen dich jetzt »den Entsorger«. Der Schichtleiter will dazu ein Meeting.';
+  SC.LETZTES_EGG = 'Dreimal hast du das letzte Stück selbst gegessen. Die Kollegen nennen dich jetzt »den Entsorger«. Der Schichtleiter will dazu ein Meeting.';
   SC.PROGNOSE = [
     { id: 'p_lo', label: 'Prognose: KPI-Index Freitag unter Plan', k: 0 },
     { id: 'p_mid', label: 'Prognose: KPI-Index Freitag im Plan', k: 1 },

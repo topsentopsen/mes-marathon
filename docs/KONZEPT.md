@@ -1,5 +1,7 @@
 # MES-Marathon – Konzept v0.2.0
 
+> **Historisch (Planung v0.2.0).** Die Zahlen hier sind Startwerte von damals. Maßgeblich ist heute `SC.TUNE` und die übrigen Konstanten in `js/data.js`, gemessen in `docs/BALANCE-v0.5.md`. Wichtige Änderungen seither (Stand v0.5.0): Startbudget 110 k€; Berater 25 k€, 1 bis 2 Pakete, nur wenn Requirements oder Spezifikation offen sind; SAP-Kick-off 11:00; SAP-Chaos Werkleitung −8 und Hallenarbeit ×1,4; Tesla-Kollege zuhören Energie +4 (Duo 25 Min.); italienischer Kollege Energie +6; Kollege ohne Ahnung 15 Min.; Reparatur 35 Min. (mit Rückverfolgung 20); Lieferant: Reparaturen drei Tage lang pauschal 2 k€. Neu seit v0.3 bis v0.5: Zusagen, Rivalen, Markt, Leitstand mit Prognose, Ausschreibung, Vorzeigewerk, Süßigkeitenbox, Kopfhörer (siehe `docs/RELEASE-v0.3.md` bis `-v0.5.md`).
+
 Stand: Planung nach v0.1.1. Umsetzungsschritte stehen in `docs/PHASEN.md`.
 Dieses Dokument beschreibt, **was** das Spiel in v0.2.0 sein soll. Alle Zahlen sind Startwerte, die der Balance-Bot (`tools/bot.js`) nachjustiert.
 

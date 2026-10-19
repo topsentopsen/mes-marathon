@@ -1,5 +1,7 @@
 # MES-Marathon – Umsetzungsplan v0.2.0
 
+> **Historisch (Planung v0.2.0).** Zahlen und Uhrzeiten haben sich seither geändert (z. B. SAP-Kick-off 11:00). Maßgeblich ist `js/data.js`.
+
 Grundlage: `docs/KONZEPT.md` (Kapitelverweise „K x“). Ziel: an einem Abend umsetzbar, **ca. 600–900 geänderte Zeilen**, auf der vorhandenen Struktur (`js/data.js`, `sim.js`, `building.js`, `ui.js`, `audio.js`, `tools/bot.js`, `test/`).
 
 Arbeitsregeln:

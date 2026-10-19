@@ -159,5 +159,49 @@ t('v0.5 Süßigkeitenbox: passende Sorte hilft genau dieser Rolle einmal am Tag,
   assert.ok(gut > 20 && meck > 30, gut + ' ' + meck);
   const W = sim.newGame(72); clearDay(W); W.box = { n: 6, sorte: 'gummi', week: 0, day: W.day, gast: 'werkstatt', stand: 'gut', used: false }; sim.stationOf(W, 'inpack').fault = { at: W.minute }; sim.stationOf(W, 'dea').fault = { at: W.minute };
   let m0 = W.minute; sim.act(W, 'werkstatt', 'repair'); const d1 = W.minute - m0; m0 = W.minute; sim.act(W, 'werkstatt', 'repair'); const d2 = W.minute - m0; assert.strictEqual(d2 - d1, SC.TUNE.suess.zeit, d1 + ' ' + d2); });
-t('v0.5 Süßigkeitenbox: vor Tag 3 nichts, keine alten Würfe verändert, letztes Stück fünfmal selbst gegessen = Ei', () => { const S = sim.newGame(73); assert.strictEqual(S.box.stand, null); clearDay(S); for (let w = 0; w < 5; w++) { S.box.n = 1; S.box.week = -1; sim.act(S, 'kantine', 'box_lakritz'); } assert.ok(S.eggs.letztes); assert.strictEqual(S.stats.suessLetztes, 5); });
+t('v0.5 Süßigkeitenbox: vor Tag 3 nichts, keine alten Würfe verändert, letztes Stück dreimal selbst gegessen = Ei', () => { const S = sim.newGame(73); assert.strictEqual(S.box.stand, null); clearDay(S); for (let w = 0; w < 3; w++) { S.box.n = 1; S.box.week = -1; sim.act(S, 'kantine', 'box_lakritz'); } assert.ok(S.eggs.letztes); assert.strictEqual(S.stats.suessLetztes, 3); });
+
+// Gesamtprüfung v0.5
+t('Gesamtprüfung: Ei »letztes Stück« ist im normalen Spiel erreichbar (mittwochs auffüllen)', () => { for (const seed of [5, 77, 4343]) { const S = sim.newGame(seed); clearDay(S); assert.ok(sim.act(S, 'kantine', 'box_gummi').ok);
+  while (S.day < 18) { toDay(S, S.day + 1); clearDay(S); S.budget = 80; if (sim.weekday(S) === 2 && S.day > 3) { assert.strictEqual(S.box.n, 1, 'Mittwoch nur noch das letzte Stück'); assert.ok(sim.act(S, 'kantine', 'box_gummi').ok); } }
+  assert.strictEqual(S.stats.suessLetztes, 3); assert.ok(S.eggs.letztes, 'Ei bis Tag 18'); } });
+t('Gesamtprüfung: Gemecker nennt die Sorte, die wirklich in der Box ist', () => { for (const g of SC.NASCHER) for (const k of Object.keys(SC.SORTEN)) { if (k === g.mag) continue; const txt = typeof g.meck === 'string' ? g.meck : g.meck[k]; assert.ok(txt, g.id + ' ' + k);
+  for (const [k2, n2] of [['schoko', /Schok/], ['gummi', /Gummi/], ['lakritz', /Lakritz/]]) if (k2 !== k && k2 !== g.mag) assert.ok(!n2.test(txt), g.id + ' meckert bei ' + k + ' über ' + k2); }
+  let seen = 0; for (let s = 900; s < 1100 && seen < 30; s++) { const S = sim.newGame(s); clearDay(S); sim.act(S, 'kantine', 'box_lakritz'); toDay(S, 3); const m = S.msgs.find(x => /Süßigkeitenbox/.test(x.t) && x.bad && S.box.stand === 'falsch'); if (m) { seen++; assert.ok(!/Lakritz\?/.test(m.t) || S.box.sorte === 'lakritz'); assert.ok(!/Schokolade\?|Schoko-Mix\?|Gummibärchen\?/.test(m.t), m.t); } } assert.ok(seen > 0); });
+t('Gesamtprüfung: angezeigte Dauer = echte Dauer, Box-Hilfe nur verbraucht, wenn sie wirkt', () => { const S = sim.newGame(81); clearDay(S); S.minute = 12 * 60; Object.assign(S.box, { stand: 'gut', gast: 'kantine', used: false, day: S.day });
+  S.box.used = true; const cNo = sim.actCost(S, 'kantine', 'lunch'); S.box.used = false; const c = sim.actCost(S, 'kantine', 'lunch'), m = S.minute; assert.ok(sim.act(S, 'kantine', 'lunch').ok); assert.ok(S.minute - m >= c && S.minute - m <= c + 2, 'höchstens ein Zuruf im Vorbeigehen (2 Min.) dazu'); assert.strictEqual(c, cNo - 10); assert.ok(S.box.used);
+  let blk = 0; for (let k = 0; k < 60; k++) { const E = sim.newGame(82 + k); clearDay(E); Object.assign(E.modules[0], { req: 9, spec: 9, impl: 9, deployed: true }); Object.assign(E.box, { stand: 'gut', gast: 'schicht', used: false, day: E.day }); E.schicht = 10;
+    assert.ok(sim.act(E, 'halle', 'test').ok); if (E.msgs.some(x => /nicht frei/.test(x.t))) { blk++; assert.ok(!E.box.used, 'blockierter Testlauf verbraucht die Hilfe nicht'); } else assert.ok(E.box.used); } assert.ok(blk > 10); });
+t('Gesamtprüfung: Berater nur, wenn Requirements oder Spezifikation offen sind', () => { const S = sim.newGame(83); clearDay(S); for (const m of S.modules) { m.req = m.need.req; m.spec = m.need.spec; } const b = S.budget; const r = sim.act(S, 'controlling', 'berater'); assert.ok(!r.ok); assert.ok(/nichts für Berater offen/.test(r.why)); assert.strictEqual(S.budget, b); });
+t('Gesamtprüfung: Burnout am Donnerstag holt Tageskosten und Freitagszinsen nach', () => { const S = sim.newGame(84); toDay(S, 4); clearDay(S); assert.strictEqual(sim.weekday(S), 3); S.kredit = 40; S.burnout = true; S.minute = SC.DAY_END; const R = sim.endDay(S);
+  assert.strictEqual(S.day, 5); assert.ok(R.lines.some(l => /Kreditzinsen/.test(l[1])), 'Zinsen am übersprungenen Freitag'); assert.ok(R.lines.some(l => /Wochenrückblick/.test(l[1]))); });
+t('Gesamtprüfung: Spielstand derselben Version mit fehlenden Feldern wird ergänzt', () => { const mem = {}; global.localStorage = { getItem: k => (k in mem ? mem[k] : null), setItem: (k, v) => { mem[k] = String(v); } };
+  const S = sim.newGame(85); delete S.box; delete S.audit; delete S.stats.suess; sim.save(S); const L = sim.load(); assert.ok(L && L.box && L.audit); assert.strictEqual(L.stats.suess, 0); L.day = 3; sim.planDay ? sim.planDay(L) : null;
+  mem['mesmarathon-save'] = JSON.stringify(Object.assign({}, S, { v: '0.4.0' })); assert.strictEqual(sim.load(), null); assert.strictEqual(sim.oldSave(), '0.4.0'); delete global.localStorage; });
+t('Gesamtprüfung: Laufzeiten stimmen mit den Texten (Lieferant 3 Tage, Ausschreibung 5 Arbeitstage)', () => { assert.ok(/5 Arbeitstage ab Zuschlag/.test(SC.AUKTION.find(l => l.id === 'teile').label)); assert.ok(/drei Tage/.test(SC.RIVAL_EVT[0].text)); });
+
+// v0.5 Running Gag Elon (Tesla-Kollege)
+const ELON_ALL = () => [...SC.ELON, SC.ELON_AKKU, ...SC.ELON_THEMA, SC.ELON_THEMA_NEIN, SC.ELON_MEETING, SC.ELON_EGG, ...SC.BUBBLES.tesla];
+t('v0.5 Elon: nur vage Umschreibungen des Kollegen, kein Nachname, kein Zitatformat, nichts Politisches', () => {
+  const nach = String.fromCharCode(77, 117, 115, 107); const all = ELON_ALL().join(' ');
+  assert.ok(!new RegExp('\\b' + nach + '\\b', 'i').test(all)); assert.ok(!/Elon\s*:/.test(all), 'kein »Elon: «-Zitat'); assert.ok(!/Elon (sagt|schreibt|postet|meint)\s*[:»]/.test(all), 'keine wörtliche Rede von Elon');
+  for (const x of SC.ELON) { assert.ok(/Elon/.test(x)); assert.ok(/sinngemäß|würde|hätte|fände|angeblich|glaube|wette|stelle mir vor|bestimmt|sicher|so ungefähr|wenn es nach mir ginge|wäre/i.test(x), 'Umschreibung: ' + x); assert.ok(/\b(ich|mir|mich)\b/i.test(x), 'in seinen eigenen Worten: ' + x); }
+  assert.ok(!/(Wahl|Partei|Regierung|Steuer|Politik|Präsident|Idiot|Narr|dumm|Lüge)/i.test(all));
+  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', 'sim.js'), 'utf8'); const salts = [...src.matchAll(/rngA\(S, (\d+)/g)].map(m => +m[1]); for (const k of salts) assert.ok(k < 9000 || k >= 20000 || (k >= 9000 && k < 10000), 'Salz ' + k);
+  assert.ok(src.match(/elon[\s\S]{0,400}rngA\(S, 2\d{4}/i), 'Elon-Zufälle mit Salzen ab 20000'); });
+t('v0.5 Elon: Besuch zählt, Text nennt Reichweite und Zähler, Thema wechseln kostet 8 oder 12 Min.', () => { let ok = 0, nein = 0;
+  for (let s = 0; s < 200; s++) { const S = sim.newGame(3000 + s); clearDay(S); S.pending = { id: 'tesla', duo: false, t: s }; const vt = sim.visitText(S); assert.ok(/Elon/.test(vt.text) && /Reichweite/.test(vt.text) && /Elon-Zähler heute: 1\./.test(vt.text));
+    assert.deepStrictEqual(sim.visitOptions(S).map(o => o.id), ['zuhoeren', 'abwimmeln', 'thema']); const m = S.minute, e = S.energy; sim.choose(S, 'thema'); const d = S.minute - m; assert.ok(d === 8 || d === 12 || d === 10 || d === 14, 'Dauer ' + d); if (d >= 12) nein++; else ok++; assert.strictEqual(sim.elonHeute(S), 1); assert.strictEqual(S.stats.elonThema, 1); }
+  assert.ok(nein > 20 && nein < 70, 'klappt meistens: ' + nein + ' von 200');
+  const A = sim.newGame(5); clearDay(A); A.day = 16; A.pending = { id: 'tesla', t: 0 }; assert.ok(sim.visitText(A).text.includes(SC.ELON_AKKU));
+  const K = sim.newGame(6); clearDay(K); sim.kopfhoerer(K); K.pending = { id: 'tesla', t: 0 }; sim.choose(K, 'kopf'); assert.strictEqual(sim.elonHeute(K), 1, 'auch mit Kopfhörern redet er von Elon'); });
+t('v0.5 Elon: Schichtleiter-Meeting höchstens einmal am Tag +3 Min., Chef-Meetings nie, Zähler setzt sich täglich zurück, Ei erreichbar', () => { let hit = 0;
+  for (let s = 0; s < 200; s++) { const S = sim.newGame(4000 + s); clearDay(S); S.meetings = [{ start: S.minute, dur: 30, kind: 'schicht', title: 'Runde', state: 'open' }, { start: S.minute + 40, dur: 30, kind: 'schicht', title: 'Runde 2', state: 'open' }];
+    const m = S.minute; sim.act(S, 'meeting', 'attend'); const d1 = S.minute - m; S.minute = S.meetings[1].start; const m2 = S.minute; sim.act(S, 'meeting', 'attend'); const d2 = S.minute - m2;
+    assert.ok(d1 === 30 || d1 === 33); assert.strictEqual(d2, 30, 'höchstens einmal am Tag'); if (d1 === 33) { hit++; assert.strictEqual(sim.elonHeute(S), 1); assert.strictEqual(S.uselessMin, 60, 'Elon-Minuten zählen nicht in die Meeting-Quote'); } }
+  assert.ok(hit > 25 && hit < 80, 'etwa ein Viertel: ' + hit);
+  const C = sim.newGame(7); clearDay(C); C.meetings = [{ start: C.minute, dur: 30, kind: 'chef', title: 'Daily', state: 'open' }]; const mc = C.minute; sim.act(C, 'meeting', 'attend'); assert.strictEqual(C.minute - mc, 30);
+  const D = sim.newGame(8); clearDay(D); D.pending = { id: 'tesla', t: 0 }; sim.choose(D, 'abwimmeln'); assert.strictEqual(sim.elonHeute(D), 1); toDay(D, 2); assert.strictEqual(sim.elonHeute(D), 0, 'neuer Tag');
+  for (let i = 0; i < SC.TUNE.elon.egg; i++) { D.pending = { id: 'tesla', t: i }; sim.choose(D, 'abwimmeln'); } assert.ok(D.eggs.elon);
+  let reach = 0; for (let s = 0; s < 100; s++) { const S = sim.newGame(5000 + s); reach += S.visits.filter(v => v.id === 'tesla').length > 0 ? 1 : 0; } assert.ok(reach > 40, 'Tesla-Kollege kommt oft genug vorbei'); });
 console.log(n + ' Tests ok');

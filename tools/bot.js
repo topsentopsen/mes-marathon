@@ -24,6 +24,7 @@ function resolveVisit(S, P) {
   else if (p.id === 'kreis') c = P.visit === 'skip' ? 'spaeter' : 'meeting';
   else if (p.id === 'raetsel') c = P.visit === 'skip' ? 'ticket' : S.budget >= 15 ? 'service' : 'aus';
   else if (p.id === 'party') c = opts[S.seed % opts.length];
+  else if (p.id === 'tesla' && P.elon && opts.includes('thema')) c = 'thema';
   else if (P.visit === 'listen') c = opts[0];
   else if (P.visit === 'smart') c = (p.id === 'italien' && (S.energy < 60 || S.itStreak > 0)) || p.id === 'altwerk' ? opts[0] : opts[1];
   else c = opts[1];
@@ -129,6 +130,7 @@ const POL = {
   naschbox: P({ care: true, suess: 'schoko' }),
   lakritz: P({ care: true, suess: 'lakritz' }),
   naschWeg: P({ care: true, suess: 'schoko', suessWeg: true }),
+  elonThema: P({ care: true, elon: true }),
   // Referenz (v0.5 gefunden, gilt schon für v0.4): wie gut, aber jeden Tag bis 17:30 (maßvolle Überstunden)
   gut1730: P({ care: true, leave: 17 * 60 + 30 }),
   vorzeig: P({ care: true, markt: 'image', auktion: 'mittel' }),
@@ -186,6 +188,7 @@ if (require.main === module) {
     if (R.vorzeig.pfad < 10) errs.push('Vorzeigewerk kaum erreichbar (vorzeig Vorzeig% < 10)');
     if (R.gut.pfad > 12) errs.push('Vorzeigewerk zu häufig nebenbei (gut Vorzeig% > 12)');
     for (const k of ['meetingfan', 'passiv', 'workaholic', 'sapChaos']) if (R[k].pfad > 3) errs.push(k + ' erreicht das Vorzeigewerk zu oft');
+    if (R.elonThema && R.elonThema.win > R.gut.win + 4) errs.push('Thema wechseln beim Tesla-Kollegen lohnt sich zu sehr (elonThema > gut + 4)');
     if (R.bieter.win > R.gut.win + 8) errs.push('Ausschreibung lohnt sich zu sehr (bieter > gut + 8)');
     // v0.5 Süßigkeitenbox: ignorieren (gut) darf nicht klar besser sein, Pflege nicht dominant
     if (R.gut.win > R.naschbox.win + 4) errs.push('Süßigkeitenbox ignorieren lohnt sich (gut > naschbox + 4)');
