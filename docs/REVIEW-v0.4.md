@@ -230,3 +230,23 @@ Insgesamt ehrlich: Der Abschnitt nennt die fehlende Gerätprüfung und die Neben
 - 4 Diese Datei.
 - 5 MES-Draufsicht: alle sieben Stationen liegen jetzt in den sichtbaren Scheiben.
 - 6 Release-Notes: »vermutete Ursachen«, »nicht am echten Gerät verifiziert«, Nachstellung nur in headless Chrome.
+
+## Review 3 (kurz, nur der letzte Diff)
+**Befunde (offen)**
+
+1. **Ton-Knopf, kleiner Randfall** (`js/audio.js:389`, `js/ui.js:264`): Der Zeitstempel `_gestureUnlockAt` wird bei *jeder* Geste im Dokument gesetzt, solange der Kontext nicht läuft. Er wird nur im Knopf-Klick zurückgesetzt. Tippt jemand auf eine beliebige Stelle, der Kontext läuft dann aber wieder, und tippt innerhalb von 1,5 s auf den Ton-Knopf, wird dieser Tipp als „frisch entsperrt“ gewertet. Der Ton wird dann nicht abgeschaltet. Das tritt kaum auf und ist harmlos, der Knopf funktioniert beim zweiten Tipp. Es blockiert die Freigabe nicht.
+
+**Zu Ihren Fragen**
+
+- **Ton-Knopf-Race:** Gelöst. Die Capture-Listener auf `pointerdown`, `touchstart` und weitere laufen vor dem Klick. Spätere Tipps nach Tab-Wechsel, Anruf oder Sperrbildschirm setzen den Stempel neu, solange der Kontext nicht „running“ ist. Der Tipp entsperrt dann nur und schaltet nicht ab. Läuft der Kontext, schaltet der Knopf normal um. Das entfernte `dataset.ctx` wird nirgends mehr gelesen (grep).
+- **`wochenRueckblick`:** Korrekt und ohne Doppelauswertung am echten Freitag.
+  - Der Burnout-Zweig greift nur, wenn der Burnout-Tag ein Donnerstag war. Dort ist die Bedingung `weekday===4` bei `js/sim.js:639` falsch, der Rückblick läuft also nicht doppelt.
+  - Danach ist der Freitag übersprungen, die nächste Auswertung kommt erst eine Woche später.
+  - Bei Burnout an einem Freitag läuft der Rückblick nur einmal bei `js/sim.js:639`.
+  - `wochenAuswertung` ist über `prog.k = null` und `melone = -2` idempotent.
+  - Die Werte für Werkleitung und Image werden danach geklemmt.
+
+**Urteil:** Freigabefähig als 0.4.0 lokal: **ja**. Ich habe nur den Diff gelesen und die Tests nicht ausgeführt.
+
+### Umsetzung zu Review 3
+- Randfall bewusst gelassen (harmlos, der zweite Tipp schaltet). In docs/PLAN-v0.5.md vermerkt.

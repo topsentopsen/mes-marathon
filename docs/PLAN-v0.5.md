@@ -13,7 +13,7 @@ Stand 19.10.2026. Nichts davon ist in v0.4.0 enthalten.
 ## Offene Punkte aus v0.4
 - ablenkbar liegt nur knapp im Zielband (31). Kandidat: ein neuer Hebel an den Besuchen selbst, etwa eine Option »Kopfhörer auf« im Büro, statt alte Raten zu drehen.
 - Prognose: Der Spieler sieht »Stand heute«. Eine echte Vorschau (Trend der letzten Tage) würde die Planung spannender machen.
-- Echte Gerätetests für den Handy-Ton (iPhone mit Stummschalter, Android).
+- Echte Gerätetests für den Handy-Ton (iPhone mit Stummschalter, Android). Randfall aus Review 3: Tippt man irgendwo und binnen 1,5 s auf den Ton-Knopf, schaltet erst der zweite Tipp ab.
 - Ein Handspiel-Bot, der Markt und Prognose bewusst nutzt (der jetzige Klick-Bot verliert meist an Tag 15 über die Werkleitung, weil er Meetings verpasst).
 
 ## Ideensammlung
