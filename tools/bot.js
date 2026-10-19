@@ -29,6 +29,16 @@ function resolveVisit(S, P) {
   else c = opts[1];
   sim.choose(S, c);
 }
+// v0.4 Markt: nur sichtbare Angebote und Preise, keine versteckten Felder
+function marktWahl(S, P) {
+  if (!P.markt || !S.markt || S.markt.bought) return -1;
+  const O = S.markt.offers, idx = id => O.findIndex(o => o.id === id);
+  const paper = !!(sim.targets.req(S) || sim.targets.spec(S));
+  if (P.markt === 'spar') { const l = idx('lizenz'); if (l >= 0 && S.budget < 70) return l; return -1; }
+  if (P.markt === 'klug') { const l = idx('lizenz'); if (l >= 0 && S.budget < 20) return l; const k = idx('paket'); if (k >= 0 && paper && O[k].price <= 15 && S.budget > 50) return k; return -1; }
+  if (P.markt === 'fan') { let best = -1; O.forEach((o, i) => { const it = SC.MARKT.find(x => x.id === o.id); if (it.sell || o.price > S.budget - 10 || (o.id === 'paket' && !paper)) return; if (best < 0 || o.price < O[best].price) best = i; }); return best; }
+  return -1;
+}
 function playDay(S, P) {
   S.at = 'pforte';
   let guard = 0;
@@ -50,6 +60,10 @@ function playDay(S, P) {
     if (P.tranche && S.trancheWeek !== sim.week(S) && tryAct(S, 'controlling', 'tranche')) continue;
     if (P.kredit && S.budget < 10 && tryAct(S, 'controlling', 'kredit')) continue;
     if (P.kredit && S.budget > 40 && S.kredit > 0 && tryAct(S, 'controlling', 'tilgen')) continue;
+    // v0.4 Prognose (nur aus HUD-Werten: KPI-Index und Plan stehen im Leitstand) und Wassermelone
+    if (P.plan && S.at === 'leitstand' && sim.weekday(S) <= 1 && S.prog.week !== sim.week(S) && tryAct(S, 'leitstand', ['p_lo', 'p_mid', 'p_hi'][sim.prognoseBand(S)])) continue;
+    if (P.melone && S.prog.melone !== sim.week(S) && tryAct(S, 'leitstand', 'melone')) continue;
+    { const i = marktWahl(S, P); if (i >= 0 && tryAct(S, 'controlling', 'm' + i)) continue; }
     if (P.zusage && !S.zusage && S.day >= 3 && tryAct(S, 'chef', 'z_' + P.zusage)) continue;
     if (P.berater && S.budget > 45 && tryAct(S, 'controlling', 'berater')) continue;
     if (!S.server.up && tryAct(S, 'server', 'restart')) continue;
@@ -72,7 +86,7 @@ function playDay(S, P) {
   if (S.phase === 'wochenende') sim.weekend(S, P.we(S));
   if (S.phase !== 'ende') sim.startDay(S);
 }
-const BASE = { repairAll: true, excel: true, report: true, bericht: true, tranche: true, repair: 'repair', visit: 'smart', pyr: 0.8, care: false, review: true, meet: 'smart', schichtplan: true, we: S => (S.sap.cutover ? 1 : S.family > 55 ? 1 : 0) };
+const BASE = { plan: true, markt: 'klug', repairAll: true, excel: true, report: true, bericht: true, tranche: true, repair: 'repair', visit: 'smart', pyr: 0.8, care: false, review: true, meet: 'smart', schichtplan: true, we: S => (S.sap.cutover ? 1 : S.family > 55 ? 1 : 0) };
 const P = o => Object.assign({}, BASE, o);
 const POL = {
   passiv: { meet: 'none', excel: false, report: false, bericht: false, tranche: false, repair: false, review: false, schichtplan: false, visit: 'skip', leave: 15 * 60, we: () => 0 },
@@ -85,7 +99,11 @@ const POL = {
   berater: P({ care: true, berater: true, kredit: true }),
   workaholic: P({ meet: 'chef', we: () => 2, leave: 19 * 60 + 30 }),
   fleissig: P({ care: true, we: S => (S.sap.cutover || S.family > 60 ? 1 : 0), leave: 18 * 60 }),
+  // sparfuchs: holt nie die Tranche (wie v0.3); seit v0.4 verkauft er wie alle bei Ebbe (< 20 k€) eine alte Lizenz im Markt
   sparfuchs: P({ care: true, tranche: false }),
+  marktfan: P({ care: true, markt: 'fan' }),
+  ohnePlan: P({ care: true, plan: false, markt: false }),
+  melone: P({ care: true, melone: true }),
   // Chaos-Pfad: migriert keine SAP-Stammdaten und nimmt beim Cutover frei (we: 0)
   ohneGegen: P({ care: true, gegen: false }),
   zusager: P({ care: true, zusage: 'mittel' }),
@@ -95,24 +113,24 @@ const POL = {
 function run(n) {
   const rows = {};
   for (const [k, pol] of Object.entries(POL)) {
-    const r = { win: 0, chef: 0, fam: 0, dead: 0, budget: 0, days: [], prog: [], bud: [], kpi: [], meet: [], useless: [], chaos: 0 };
+    const r = { win: 0, chef: 0, fam: 0, dead: 0, budget: 0, days: [], prog: [], bud: [], kpi: [], meet: [], useless: [], chaos: 0, titel: 0 };
     for (let i = 0; i < n; i++) {
       const S = sim.newGame(1000 + i * 7919);
       let g = 0; while (S.phase !== 'ende' && g++ < 40) playDay(S, pol);
       const w = S.result.why;
       if (S.result.win) { r.win++; r.days.push(S.day); } else if (/Werkleitung zieht/.test(w)) r.chef++; else if (/Imker/.test(w)) r.fam++; else if (/Controlling/.test(w)) r.budget++; else r.dead++;
-      r.prog.push(sim.progress(S)); r.bud.push(S.budget); r.kpi.push(sim.kpiIndex(S)); r.meet.push(S.stats.meetings); r.useless.push(S.stats.useless); if (S.stats.chaosDays) r.chaos++;
+      r.prog.push(sim.progress(S)); r.bud.push(S.budget); r.kpi.push(sim.kpiIndex(S)); r.meet.push(S.stats.meetings); r.useless.push(S.stats.useless); if (S.stats.chaosDays) r.chaos++; if (S.titel) r.titel++;
     }
     const med = a => a.length ? a.slice().sort((x, y) => x - y)[Math.floor(a.length / 2)] : '-';
-    rows[k] = { win: Math.round(r.win / n * 100), winDay: med(r.days), chef: r.chef, fam: r.fam, termin: r.dead, budget: r.budget, prog: med(r.prog), bud: med(r.bud), kpi: med(r.kpi), meet: med(r.meet), useless: med(r.useless), chaos: Math.round(r.chaos / n * 100) };
+    rows[k] = { win: Math.round(r.win / n * 100), winDay: med(r.days), chef: r.chef, fam: r.fam, termin: r.dead, budget: r.budget, prog: med(r.prog), bud: med(r.bud), kpi: med(r.kpi), meet: med(r.meet), useless: med(r.useless), chaos: Math.round(r.chaos / n * 100), titel: Math.round(r.titel / n * 100) };
   }
   return rows;
 }
 if (require.main === module) {
   const n = +process.argv[2] || 200;
   const rows = run(n);
-  console.log('Strategie        Sieg%  Siegtag | Werkl. Familie Termin Budget | Fortschr. Budget KPI Meet(nutzlos) Chaos%');
-  for (const [k, x] of Object.entries(rows)) console.log(k.padEnd(16), String(x.win).padStart(5), String(x.winDay).padStart(8), '|', String(x.chef).padStart(6), String(x.fam).padStart(7), String(x.termin).padStart(6), String(x.budget).padStart(6), '|', String(x.prog).padStart(9), String(x.bud).padStart(6), String(x.kpi).padStart(3), (x.meet + '(' + x.useless + ')').padStart(13), String(x.chaos).padStart(6));
+  console.log('Strategie        Sieg%  Siegtag | Werkl. Familie Termin Budget | Fortschr. Budget KPI Meet(nutzlos) Chaos% Titel%');
+  for (const [k, x] of Object.entries(rows)) console.log(k.padEnd(16), String(x.win).padStart(5), String(x.winDay).padStart(8), '|', String(x.chef).padStart(6), String(x.fam).padStart(7), String(x.termin).padStart(6), String(x.budget).padStart(6), '|', String(x.prog).padStart(9), String(x.bud).padStart(6), String(x.kpi).padStart(3), (x.meet + '(' + x.useless + ')').padStart(13), String(x.chaos).padStart(6), String(x.titel).padStart(6));
   if (process.argv.includes('--check')) {
     const R = rows, errs = [], warn = [];
     const best = Math.max(...Object.values(R).map(x => x.win));
@@ -130,6 +148,10 @@ if (require.main === module) {
     if (best > 75) errs.push('Spiel zu leicht (> 75 %)');
     if (R.sapChaos.chaos < 90) errs.push('Chaos-Pfad nicht abgedeckt (sapChaos Chaos% ' + R.sapChaos.chaos + ')');
     if (R.sapChaos.win > R.gut.win - 8) errs.push('SAP-Chaos lohnt sich (sapChaos nicht >= 8 PP unter gut)');
+    // v0.4: Wassermelone und Marktfan dürfen sich nicht lohnen, der Titel ist selten, aber erreichbar
+    if (R.melone.win > R.gut.win + 3) errs.push('Wassermelonen-Bericht lohnt sich (melone > gut + 3)');
+    if (R.marktfan.win > R.gut.win) errs.push('Markt-Dauerkauf lohnt sich (marktfan > gut)');
+    if (R.gut.titel > 40) errs.push('Werk des Jahres zu leicht (gut Titel% > 40)');
     // Zielbereiche aus docs/PHASEN.md 10.2 (Abweichungen als Warnung)
     const Z = { einfach: [20, 40], gut: [55, 70], ohneSchichtplan: [45, 62], meetingfan: [8, 30], ablenkbar: [30, 50], berater: [50, 68], workaholic: [0, 5], sparfuchs: [35, 55] };
     for (const [k, [lo, hi]] of Object.entries(Z)) if (R[k].win < lo || R[k].win > hi) warn.push(k + ' ' + R[k].win + ' % (Ziel ' + lo + '–' + hi + ')');

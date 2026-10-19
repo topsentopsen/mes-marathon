@@ -111,11 +111,10 @@
     rect(BX0 + 4, bot - 9, BX1 - BX0 - 8, 9, shade(WALLS[f], -40)); // Sockel
     rect(BX0 + 4, bot - 10, BX1 - BX0 - 8, 1, shade(WALLS[f], 30));
     for (let x = BX0 + 30; x < BX1 - 20; x += 70) { rect(x, top, 12, 2, '#555'); rect(x + 2, top + 2, 8, 2, min > 17 * 60 ? '#fff8c0' : '#ddd'); } // Lampen
-    // Bilder und Pflanzen
-    if (f !== 2) { rect(262, top + 10, 18, 12, '#402010'); rect(264, top + 12, 14, 8, ['#60a0ff', '#ff8040', '#80e080', '#e0e060', '#c080ff'][f]); }
-    if (f !== 0 && f !== 2) { rect(372, top + 10, 18, 12, '#402010'); rect(374, top + 12, 14, 8, ['#ff6060', '#60e0e0', '#ffffff', '#ff80c0', '#80ff80'][f]); }
-    // v0.3: Panoramafenster der Leitebene mit Blick in die Produktion (zwei Scheiben, eine durchgehende Szene)
+    // v0.4: jede Etage hat ihr eigenes Fenster in die Produktion, mit eigener Ansicht (die Türen bleiben, wo sie sind)
+    // EG Feld: nur eine Scheibe (rechts stehen Förderband und Presse), sonst zwei Scheiben mit einer durchgehenden Szene
     if (f === 2) { prodWindow(259, top + 5, 42, h - 17, 0); prodWindow(360, top + 5, 44, h - 17, 101); }
+    else { floorWindow(f, 259, top + 5, 42, h - 17, 0, min); if (f !== 0) floorWindow(f, 360, top + 5, 44, h - 17, 101, min); }
     plant(BX0 + 16, bot); plant(BX1 - 16, bot);
     // Türen
     SC.FLOORS[f].doors.forEach(d => {
@@ -169,6 +168,40 @@
     ctx.restore();
     rect(x0 + Math.floor(w / 2), y0, 1, h, '#2a2a30'); rect(x0, y0 + Math.floor(h / 2), w, 1, 'rgba(42,42,48,0.6)'); // Sprossen
     rect(x0, y0, w, 1, 'rgba(255,255,255,0.25)');
+  }
+  // v0.4 Fensteransichten je Etage: 0 Feld (Lichtschranke am Band), 1 Steuerung (Schaltschränke, SPS), 3 MES (Blick von oben mit Tracking), 4 ERP (Laderampe, Lkw, Parkplatz)
+  function floorWindow(f, x0, y0, w, h, sx, min) {
+    const S = SC.S, X = v => x0 + v - sx;
+    rect(x0 - 2, y0 - 2, w + 4, h + 4, '#2a2a30');
+    ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, w, h); ctx.clip();
+    if (f === 0) {
+      rect(x0, y0, w, h, '#2c3440'); const belt = y0 + h - 8; rect(x0, belt, w, 4, '#505860'); for (let k = 0; k < w; k += 6) rect(x0 + k + (tick >> 1) % 6, belt + 1, 2, 1, '#383e46');
+      rect(x0 + 18, y0 + 6, 3, belt - y0 - 6, '#e0c020'); rect(x0 + 30, y0 + 6, 3, belt - y0 - 6, '#e0c020'); // Lichtschranke (Sender, Empfänger)
+      let cut = false; for (let bx = -((tick * 0.7) % 22); bx < w; bx += 22) { const xx = x0 + bx; rect(xx, belt - 7, 9, 7, '#c09060'); rect(xx + 3, belt - 6, 3, 2, '#ffffff'); if (xx + 9 > x0 + 21 && xx < x0 + 30) cut = true; }
+      rect(x0 + 21, belt - 4, 9, 1, cut ? 'rgba(255,40,40,0.4)' : '#ff3030'); rect(x0 + 18, y0 + 4, 3, 2, cut ? '#ffd040' : '#30e030');
+      text('B12', x0 + 25, y0 + 6, '#fff', 5);
+    } else if (f === 1) {
+      rect(x0, y0, w, h, '#3a4048'); const bad = !!(S && S.stations && S.stations.some(st => st.fault));
+      for (let c = 0; c < 6; c++) { const cx = X(c * 25 + 4); if (cx > x0 + w || cx + 20 < x0) continue; rect(cx, y0 + 3, 20, h - 6, '#7a8a96'); rect(cx + 1, y0 + 4, 18, h - 8, '#c8ccd0'); rect(cx + 9, y0 + 4, 1, h - 8, '#7a8a96');
+        for (let r = 0; r < 3; r++) for (let l = 0; l < 3; l++) { const red = bad && (c === 1 || c === 4) && r === 0 && l === 1; rect(cx + 2 + l * 2, y0 + 7 + r * 5, 1, 1, red ? ((blink >> 3) % 2 ? '#ff2020' : '#500000') : ((tick + c * 7 + r * 3 + l * 5) % 40 < 30 ? '#30e030' : '#104010')); }
+        rect(cx + 11, y0 + 6, 7, 5, '#204060'); text(['S7', 'IO', 'PLC', 'HMI', 'NOT', 'BUS'][c], cx + 14, y0 + 6, '#80e0ff', 4); rect(cx + 12, y0 + 14, 5, 7, '#303840'); }
+      rect(x0, y0 + h - 3, w, 3, '#e0c020'); // Kabelkanal
+    } else if (f === 3) {
+      rect(x0, y0, w, h, '#2a2e34'); for (let gx = -sx % 8; gx < w; gx += 8) rect(x0 + gx, y0, 1, h, '#30353c');
+      const lines = [y0 + 7, y0 + h - 9]; lines.forEach((ly, li) => { rect(x0, ly, w, 3, '#505860'); for (let bx = -((tick * (0.5 + li * 0.2)) % 16); bx < 160; bx += 16) { const xx = X(bx); if (xx > x0 - 6 && xx < x0 + w) { rect(xx, ly - 1, 5, 5, '#c09060'); rect(xx + 1, ly - 3, 3, 1, '#40ff80'); } } });
+      SC.STATIONS.forEach((d, i) => { const st = S && S.stations && S.stations[i], xx = X(4 + i * 21), yy = i < 3 ? lines[0] + 5 : lines[1] - 8; rect(xx, yy, 8, 4, st && st.fault ? ((blink >> 3) % 2 ? '#ff2020' : '#802020') : '#5a7a9a'); });
+      rect(x0 + 2, y0 + h / 2 - 4, 30, 7, 'rgba(0,0,0,0.55)'); text((sx ? 'OEE ' + (S && S.kpi ? S.kpi.oee.toFixed(0) : '62') + '%' : 'MES ' + (S && SC.sim ? SC.sim.progress(S) : 0) + '%'), x0 + 17, y0 + h / 2 - 3, '#40ff80', 5);
+    } else {
+      const sk = skyCols(min); rect(x0, y0, w, h, sk[1]); rect(x0, y0, w, 6, sk[0]);
+      rect(x0, y0 + h - 10, w, 10, '#404448'); for (let k = -sx % 12; k < w; k += 12) rect(x0 + k, y0 + h - 5, 6, 1, '#e0e0e0');
+      rect(X(4), y0 + h - 20, 40, 10, '#6a6e74'); rect(X(4), y0 + h - 21, 40, 1, '#e0c020'); // Laderampe
+      const lx = X(46 + Math.sin(tick / 90) * 6); rect(lx, y0 + h - 21, 34, 13, '#e8e8e8'); rect(lx + 34, y0 + h - 18, 12, 10, '#2060c0'); rect(lx + 40, y0 + h - 16, 5, 4, '#a0d8ff'); rect(lx + 4, y0 + h - 8, 5, 3, '#202020'); rect(lx + 36, y0 + h - 8, 5, 3, '#202020'); text('MES', lx + 17, y0 + h - 19, '#2060c0', 5);
+      const tx = X(116); rect(tx, y0 + h - 14, 18, 5, '#d03030'); rect(tx + 4, y0 + h - 17, 10, 3, '#a0d8ff'); rect(tx + 2, y0 + h - 9, 3, 2, '#202020'); rect(tx + 13, y0 + h - 9, 3, 2, '#202020');
+      rect(X(140), y0 + h - 22, 3, 12, '#30a030'); rect(X(139), y0 + h - 22, 5, 3, (blink >> 4) % 2 ? '#40ff40' : '#208020'); // Ladesäule, nicht eingesteckt
+      if (min > 17 * 60) for (let k = 0; k < 3; k++) rect(X(20 + k * 40), y0 + 2, 1, 6, '#ffd860');
+    }
+    ctx.restore();
+    rect(x0 + Math.floor(w / 2), y0, 1, h, '#2a2a30'); rect(x0, y0, w, 1, 'rgba(255,255,255,0.25)');
   }
   // Kulisse: große Produktionshalle mit Sheddach und Hallenkran hinter dem Turm
   function drawHall(min) {

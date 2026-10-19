@@ -3,7 +3,7 @@
 'use strict';
 window.SC = window.SC || {};
 (function (SC) {
-  SC.VERSION = '0.3.0';
+  SC.VERSION = '0.4.0';
   SC.DAY_START = 7 * 60 + 30;   // 07:30 Frühschicht-Beginn im Büro
   SC.DAY_END = 17 * 60;         // 17:00 regulärer Feierabend
   SC.LATEST = 20 * 60;          // 20:00 der Pförtner schließt ab
@@ -64,8 +64,13 @@ window.SC = window.SC || {};
     rival: { p: 0.2, lead: 0.1, from: 4, cost: 5, cut: 15 },
     cost: { test: 2, repair: 3, care: 2, toner: 1, weekend: 8, sap: 10, fusion: 12, daily: 1 },
     fault: { inpack: 0.40, auspack: 0.15, other: 0.04 },
-    visit: { tesla: 0.55, duo: 0.6, italienHour: 0.30, italienMax: 3, itEven: 0.85, itOdd: 0.25, ahnungslos: 0.5, altwerk: 0.5, glueck: 0.08 },
+    visit: { tesla: 0.5, duo: 0.5, italienHour: 0.30, italienMax: 3, itEven: 0.85, itOdd: 0.25, ahnungslos: 0.5, altwerk: 0.5, glueck: 0.08 },
     flur: 0.35, bingoScore: 50, tiramisu: 0.15,
+    // v0.4: Markt im Controlling, Prognose im Leitstand, SAP-Hotline, Titel »Werk des Jahres«
+    markt: { n: 3, lo: 0.8, hi: 1.3, lizenzen: 3 },
+    prognose: { band: 0.06, hit: 4, hitImage: 2, miss2: 3, melone: 3, meloneP: 0.35, meloneMinus: 6 },
+    hotline: { p: 0.5, min: 30, max: 60 },
+    titel: { kpi: 90, image: 75, score: 300 },
     meet: { gain: 8, step: 2, cap: 80, quotaMin: 90, quotaPen: 1, spiral: 0.35, spiral2: 0.5, testFactor: 0.75, reqDouble: 0.35 }
   };
   SC.KPI = {
@@ -271,5 +276,30 @@ window.SC = window.SC || {};
     { id: 'kurz', label: 'Zusage »kurz«: 1 Modul in 4 Tagen', need: 1, days: 4, praemie: 10, chef: 4, image: 3, strafe: 8, chefMinus: 6, imageMinus: 5 },
     { id: 'mittel', label: 'Zusage »mittel«: 2 Module in 8 Tagen', need: 2, days: 8, praemie: 20, chef: 6, image: 4, strafe: 15, chefMinus: 8, imageMinus: 6 },
     { id: 'lang', label: 'Zusage »lang«: 3 Module in 12 Tagen', need: 3, days: 12, praemie: 28, chef: 8, image: 5, strafe: 20, chefMinus: 10, imageMinus: 8 }
+  ];
+  // v0.4 Markt im Controlling: jeden Tag drei Angebote (eigener Zufallsstrom), höchstens ein Kauf am Tag
+  // sell: true = Christian verkauft etwas und bekommt Geld
+  SC.MARKT = [
+    { id: 'paket', label: 'Berater-Tagespaket (1 Paket Requirements/Spezifikation)', base: 15, msg: 'Ein Berater kommt für einen Tag. Er bringt Folien und tatsächlich ein Arbeitspaket mit.' },
+    { id: 'teile', label: 'Ersatzteile für den Verpackungsautomaten (3 Tage Reparatur 2 k€)', base: 8, msg: 'Ersatzteile im Lager: Reparaturen kosten drei Tage lang nur 2 k€. Die Instandhaltung streichelt die Kiste.' },
+    { id: 'lizenz', label: 'Alte MES-Lizenz von 2009 verkaufen (noch in Folie, Image −1)', base: 14, sell: true, msg: 'Ein Werk in Übersee kauft die Lizenz von 2009. Die Werkleitung fragt nicht, warum wir die noch hatten.' },
+    { id: 'kampagne', label: 'Imagekampagne der Agentur »Synergie & Söhne« (Image +4)', base: 15, msg: 'Die Agentur dreht ein Video: Drohnenflug über den Parkplatz, dazu »Wir sind Industrie 4.0«. Image +4.' },
+    { id: 'presse', label: 'Pressemitteilung über die Nachrichtenagentur (Image +2, Werkleitung +2)', base: 6, msg: 'Die Agenturmeldung: »Werk Mitte führt MES ein.« Wieder. Die Werkleitung schneidet sie trotzdem aus (+2).' },
+    { id: 'toner', label: 'Toner auf Vorrat (3 Tage weniger Papierstau)', base: 4, msg: 'Zwölf Tonerkartuschen. Der Drucker wirkt eingeschüchtert.' },
+    { id: 'wartung', label: 'Wartungsvertrag für Rack 4 (3 Tage weniger Abstürze)', base: 7, msg: 'Ein Techniker klebt einen Aufkleber »gewartet« auf Rack 4. Es scheint zu helfen.' }
+  ];
+  // v0.4 Running Gag: Reichweitenanzeige des Tesla-Kollegen (sinkt jeden Tag, er lädt trotzdem nie)
+  SC.TESLA_KM = d => Math.max(12, 430 - 11 * d);
+  // v0.4 SAP-Hotline (Büro, nur während der Migration): Warteschleife mit Ansage
+  SC.HOTLINE = [
+    'Ihr Anruf ist uns wichtig. Sie sind Nummer 47 in der Warteschleife. Bitte halten Sie Ihre Materialnummer bereit.',
+    'Für Fragen zur Migration drücken Sie die 1. Für Fragen zur Migration der Migration drücken Sie die 2.',
+    'Die Hotline spielt »Für Elise« in Endlosschleife. Nach dem dritten Durchlauf summst du mit.',
+    'Eine freundliche Stimme: »Haben Sie es schon mit Aus- und wieder Einschalten versucht?« Es ist ein SAP-System.'
+  ];
+  SC.PROGNOSE = [
+    { id: 'p_lo', label: 'Prognose: KPI-Index Freitag unter Plan', k: 0 },
+    { id: 'p_mid', label: 'Prognose: KPI-Index Freitag im Plan', k: 1 },
+    { id: 'p_hi', label: 'Prognose: KPI-Index Freitag über Plan', k: 2 }
   ];
 })(window.SC);

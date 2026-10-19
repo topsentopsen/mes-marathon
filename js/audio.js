@@ -295,11 +295,33 @@
     A._voices = [];
   }
 
+  // v0.4 Handy-Ton: iOS spielt Web Audio in der Audio-Session »ambient« ab, die der Stummschalter stummschaltet.
+  // Ein stummes, geloopt laufendes <audio>-Element (und navigator.audioSession, wo vorhanden) schaltet auf »playback«.
+  function silentWav() {
+    const n = 800, b = new Uint8Array(44 + n), v = new DataView(b.buffer), w = (o, t) => { for (let i = 0; i < t.length; i++) b[o + i] = t.charCodeAt(i); };
+    w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, 'data'); v.setUint32(40, n, true);
+    for (let i = 0; i < n; i++) b[44 + i] = 128;
+    let str = ''; for (let i = 0; i < b.length; i++) str += String.fromCharCode(b[i]);
+    return 'data:audio/wav;base64,' + btoa(str);
+  }
+  function sessionPlayback() {
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* */ }
+    try {
+      if (!A._el) { const el = document.createElement('audio'); el.src = silentWav(); el.loop = true; el.setAttribute('playsinline', ''); el.setAttribute('webkit-playsinline', ''); el.preload = 'auto'; A._el = el; }
+      if (A._el.paused && !A.muted) { const pr = A._el.play(); if (pr && pr.catch) pr.catch(() => { /* ohne Geste: beim nächsten Tippen */ }); }
+    } catch (e) { /* */ }
+  }
+  A.isIOS = () => { try { return /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); } catch (e) { return false; } };
   A.unlock = function () {
     load();
     const ctx = ensureCtx();
     if (!ctx) return;
-    if (ctx.state === 'suspended') ctx.resume();
+    // in der Nutzer-Geste: resume() und ein 1-Sample-Puffer (ältere WebKit-Versionen entsperren erst damit)
+    if (ctx.state !== 'running') { try { const pr = ctx.resume(); if (pr && pr.catch) pr.catch(() => { /* */ }); } catch (e) { /* */ } }
+    if (!A._kicked) { try { const src = ctx.createBufferSource(); src.buffer = ctx.createBuffer(1, 1, 22050); src.connect(ctx.destination); src.start(0); A._kicked = true; } catch (e) { /* */ } }
+    sessionPlayback();
+    if (!A.ready && A.onFirstUnlock) { try { A.onFirstUnlock(); } catch (e) { /* */ } }
     A.ready = true;
     setMasterGain();
     if (A._pending) { const id = A._pending; A._pending = null; A.play(id); }
@@ -344,6 +366,7 @@
     A.muted = !!m;
     setMasterGain();
     save();
+    if (A._el) { try { if (A.muted) A._el.pause(); else sessionPlayback(); } catch (e) { /* */ } }
     if (A.muted) { stopScheduler(); killVoices(); if (A._ambNodes) { A._ambNodes.g.gain.value = 0; A._ambNodes.hg.gain.value = 0; } }
     else if (A._amb > 0) A.ambient(A._amb);
     else if (A._track && A.ready) { A._nextNote = A._ctx.currentTime + 0.05; startScheduler(); }
@@ -355,15 +378,20 @@
     save();
   };
   A.getVolume = () => A.volume;
-  A.state = () => ({ muted: A.muted, volume: A.volume, ready: A.ready, track: A._track });
+  A.state = () => ({ muted: A.muted, volume: A.volume, ready: A.ready, track: A._track, ctx: A._ctx ? A._ctx.state : 'none', el: A._el ? !A._el.paused : false });
 
   A.init = function () {
     load();
+    // Jede echte Berührung, jeder Klick und jede Taste entsperrt den Ton (erneut), solange der AudioContext nicht läuft:
+    // nach Tab-Wechsel, Anruf oder Sperrbildschirm bleibt er auf iOS sonst »suspended« oder »interrupted«.
+    const gesture = () => { if (A.muted && A._ctx) return; if (!A._ctx || A._ctx.state !== 'running' || (A._el && A._el.paused && !A.muted)) A.unlock(); };
+    ['pointerdown', 'touchstart', 'touchend', 'mousedown', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, gesture, { capture: true, passive: true }));
     document.addEventListener('visibilitychange', () => {
       if (!A._ctx) return;
-      if (document.hidden) A._ctx.suspend();
-      else if (A.ready && !A.muted) A._ctx.resume();
+      if (document.hidden) { A._ctx.suspend(); if (A._el) try { A._el.pause(); } catch (e) { /* */ } }
+      else if (A.ready && !A.muted) { const pr = A._ctx.resume(); if (pr && pr.catch) pr.catch(() => { /* nächste Geste */ }); sessionPlayback(); }
     });
+    window.addEventListener('pageshow', () => { if (A._ctx && A.ready && !A.muted && A._ctx.state !== 'running') { const pr = A._ctx.resume(); if (pr && pr.catch) pr.catch(() => { /* */ }); } });
   };
 
   // Hilfsfunktion für Tests ohne AudioContext

@@ -1,0 +1,46 @@
+// Handy-Ton (v0.4): headless Chrome mit Mobile-Emulation (iPhone und Android, Touch-Events) und Standard-Autoplay-Sperre.
+// Prüft: vor der ersten Berührung läuft kein Ton, nach dem ersten Tippen ist der AudioContext »running«,
+// nach einem Unterbruch (suspend wie beim Tab-Wechsel) entsperrt die nächste Berührung wieder, Ton-Knopf schaltet.
+// Aufruf: NODE_PATH=/workspace/tmp-check/node_modules node test/mobile-audio.js
+'use strict';
+const puppeteer = require('puppeteer-core');
+const path = require('path');
+const url = 'file://' + path.resolve(__dirname, '..', 'index.html');
+const out = process.env.SHOTS || '/workspace/mes-marathon-v04-mobil';
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const DEV = [
+  { name: 'iphone', ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1', w: 390, h: 844 },
+  { name: 'android', ua: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Mobile Safari/537.36', w: 412, h: 915 }
+];
+async function tapSel(page, sel) { const r = await page.evaluate(s => { const e = document.querySelector(s); if (!e) return null; const b = e.getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; }, sel); if (!r) throw new Error('fehlt: ' + sel); await page.touchscreen.tap(r.x, r.y); }
+(async () => {
+  // bewusst OHNE --autoplay-policy=no-user-gesture-required: wie ein echtes Handy
+  const browser = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome', headless: 'new', args: ['--no-sandbox'] });
+  const res = [];
+  for (const d of DEV) {
+    const page = await browser.newPage();
+    const errs = []; page.on('pageerror', e => errs.push(e.message)); page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+    await page.setUserAgent(d.ua);
+    await page.setViewport({ width: d.w, height: d.h, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+    await page.goto(url, { waitUntil: 'load' }); await page.evaluate(() => localStorage.clear()); await page.reload({ waitUntil: 'load' }); await wait(500);
+    const st = () => page.evaluate(() => Object.assign(window.SC.audio.state(), { btn: document.getElementById('btn-sound').textContent, ticker: document.getElementById('ticker').innerText }));
+    const before = await st();
+    await tapSel(page, 'button[data-o="new"]'); await wait(500);
+    const after = await st();
+    await page.screenshot({ path: out + '-' + d.name + '.png' });
+    // Unterbruch wie beim Tab-Wechsel oder Anruf: Kontext angehalten, die nächste Berührung (auf das Spielfeld) entsperrt wieder
+    await page.evaluate(() => window.SC.audio._ctx.suspend()); await wait(200);
+    const susp = await st();
+    await tapSel(page, '#cv'); await wait(400);
+    const again = await st();
+    await tapSel(page, '#btn-sound'); await wait(200); const muted = await st();
+    await tapSel(page, '#btn-sound'); await wait(300); const unmuted = await st();
+    const ok = before.ctx !== 'running' && after.ctx === 'running' && after.ready && susp.ctx === 'suspended' && again.ctx === 'running' && muted.muted && /aus/.test(muted.btn) && !unmuted.muted && unmuted.ctx === 'running' && /Ton an/.test(unmuted.btn) && !errs.length &&
+      (d.name !== 'iphone' || /Stummschalter/.test(after.ticker));
+    res.push({ dev: d.name, before: before.ctx, btnBefore: before.btn, after: after.ctx, el: after.el, btnAfter: after.btn, iosHint: /Stummschalter/.test(after.ticker), susp: susp.ctx, again: again.ctx, muted: muted.btn, unmuted: unmuted.btn, errs, ok });
+    await page.close();
+  }
+  console.log(JSON.stringify(res, null, 1));
+  if (res.some(r => !r.ok)) process.exitCode = 1;
+  await browser.close();
+})();

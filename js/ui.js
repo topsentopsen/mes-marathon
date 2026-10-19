@@ -8,6 +8,7 @@
   const bar = (v, cls) => '<span class="moodbar ' + (cls || '') + '"><span style="width:' + Math.max(0, Math.min(100, v)) + '%"></span></span>';
   const UI = SC.ui = { paused: false, speed: 1, room: null, _ov: false };
   let shown = 0;
+  const SND_HINT = 'Ton an. Kein Ton? Stummschalter am iPhone prüfen und Lautstärke hoch.';
 
   UI.overlayOpen = () => UI._ov;
   function overlay(html) { $('overlay').innerHTML = '<div class="box">' + html + '</div>'; $('overlay').classList.remove('hidden'); UI._ov = true; }
@@ -38,7 +39,7 @@
     $('calendar').innerHTML = (act ? '<b class="blink">JETZT ' + hm(act.start) + ' ' + esc(act.title) + ' → MEETING (2. OG)</b>' : nm ? 'Nächster Termin: <b>' + hm(nm.start) + '</b> ' + esc(nm.title) + ' <span class="dim">(' + nm.dur + ' Min.)</span>' : '<span class="dim">Keine Termine mehr heute.</span>') +
       ' · Server: ' + (s.server.up ? '<span class="good">läuft</span>' : '<span class="bad">DOWN</span>') + (s.printer.jam ? ' · <span class="bad">Drucker: Papierstau</span>' : '') +
       (s.stations.some(x => x.fault) ? ' · <span class="bad">Störung: ' + s.stations.filter(x => x.fault).map(x => sim().stName(x.id)).join(', ') + '</span>' : '') +
-      (s.sap.state === 'migration' || s.sap.state === 'nacharbeit' ? ' · <span class="warn">SAP-' + (s.sap.state === 'nacharbeit' ? 'Nacharbeit ' : 'Migration ') + s.sap.pk + '/' + s.sap.need + '</span>' : '') + (s.chaosUntil >= s.day ? ' · <span class="bad">SAP-Chaos</span>' : '') + (s.excel ? '' : ' · <span class="bad">Excel-Liste offen</span>') + (s.tiramisu === s.day ? ' · <span class="good">Tiramisu: nächster Testlauf −15 % Fehlerrisiko</span>' : s.itStreak > 0 ? ' · <span class="dim">Tiramisu ' + s.itStreak + '/3</span>' : '') + (s.kaffeeDef === s.day ? ' · <span class="bad">Kaffeeautomat defekt</span>' : '') + (s.nordUntil >= s.day ? ' · <span class="bad">Bediener fehlt (Werk Nord)</span>' : '') + (s.zusage ? ' · <span class="warn">Zusage bis Tag ' + s.zusage.until + '</span>' : '');
+      (s.sap.state === 'migration' || s.sap.state === 'nacharbeit' ? ' · <span class="warn">SAP-' + (s.sap.state === 'nacharbeit' ? 'Nacharbeit ' : 'Migration ') + s.sap.pk + '/' + s.sap.need + '</span>' : '') + (s.chaosUntil >= s.day ? ' · <span class="bad">SAP-Chaos</span>' : '') + (s.excel ? '' : ' · <span class="bad">Excel-Liste offen</span>') + (s.tiramisu === s.day ? ' · <span class="good">Tiramisu: nächster Testlauf −15 % Fehlerrisiko</span>' : s.itStreak > 0 ? ' · <span class="dim">Tiramisu ' + s.itStreak + '/3</span>' : '') + (s.kaffeeDef === s.day ? ' · <span class="bad">Kaffeeautomat defekt</span>' : '') + (s.nordUntil >= s.day ? ' · <span class="bad">Bediener fehlt (Werk Nord)</span>' : '') + (s.zusage ? ' · <span class="warn">Zusage bis Tag ' + s.zusage.until + '</span>' : '') + (s.prog && s.prog.week === sim().week(s) && s.prog.k !== null ? ' · <span class="dim">Prognose: ' + ['unter', 'im', 'über'][s.prog.k] + ' Plan</span>' : '');
     if (UI.room && UI._lastMin !== Math.floor(s.minute / 5)) { UI._lastMin = Math.floor(s.minute / 5); renderRoom(); }
   };
 
@@ -75,18 +76,27 @@
     if (room === 'schicht') h += '<div class="say">' + schichtSays(s) + '</div>';
     if (room === 'halle') h += stationTable(s);
     if (room === 'werkstatt') h += '<div class="say">' + (s.stations.some(x => x.fault) ? 'Die Instandhaltung: »' + s.stations.filter(x => x.fault).map(x => sim().stName(x.id)).join(', ') + ' steht. Wie immer zuerst der Verpackungsautomat?«' : 'Die Instandhaltung: »Alles läuft. Das macht mich nervös.«') + (s.partsUntil >= s.day ? ' <span class="good">Ersatzteile im Lager (Reparatur 2 k€).</span>' : '') + '</div>';
-    if (room === 'leitstand') h += kpiTable(s);
-    if (room === 'controlling') h += '<p>Budget: <b class="' + (s.budget < 0 ? 'bad' : '') + '">' + Math.round(s.budget) + ' k€</b> · ausgegeben: ' + Math.round(s.stats.budgetSpent) + ' k€ · Tranche diese Woche: ' + (s.trancheWeek === sim().week(s) ? '<span class="good">beantragt</span>' : '<span class="warn">offen</span>') + ' · Kredit: ' + (s.kredit ? '<span class="warn">' + s.kredit + ' k€</span>' : '0 k€') + ' von ' + sim().rahmen(s) + ' k€ Rahmen (8 % Zins freitags) · Image: <b>' + Math.round(s.image) + '</b>' + '</p><p class="small dim">Unter 0 k€: Budgetsperre. Unter −40 k€ stoppt das Controlling das Projekt.</p>';
+    if (room === 'leitstand') h += kpiTable(s) + progHtml(s);
+    if (room === 'controlling') h += '<p>Budget: <b class="' + (s.budget < 0 ? 'bad' : '') + '">' + Math.round(s.budget) + ' k€</b> · ausgegeben: ' + Math.round(s.stats.budgetSpent) + ' k€ · Tranche diese Woche: ' + (s.trancheWeek === sim().week(s) ? '<span class="good">beantragt</span>' : '<span class="warn">offen</span>') + ' · Kredit: ' + (s.kredit ? '<span class="warn">' + s.kredit + ' k€</span>' : '0 k€') + ' von ' + sim().rahmen(s) + ' k€ Rahmen (8 % Zins freitags) · Image: <b>' + Math.round(s.image) + '</b>' + '</p><p class="small dim">Unter 0 k€: Budgetsperre. Unter −40 k€ stoppt das Controlling das Projekt.</p>' + marktHtml(s);
     if (room === 'it') h += pyramidHtml(null) + '<div class="say">Die IT-Chefin: »' + esc(SC.VISIT_TEXT.itchefin[s.day % SC.VISIT_TEXT.itchefin.length]) + ' Hast du gesehen? Jede Etage hier ist eine Ebene. Das hab ich durchgesetzt.«</div>';
     if (room === 'server') h += '<p>Status: ' + (s.server.up ? '<span class="good">MES-Server läuft</span>' : '<span class="bad">MES-Server DOWN</span>') + (s.server.careUntil >= s.day ? ' · <span class="good">frisch gewartet</span>' : '') + '</p>';
     h += '<h3>Was tun?</h3><div class="acts">';
     for (const a of acts) {
-      const why = a.check(s); let cost = Math.round(a.cost * sim().slow(s));
-      h += '<button data-a="' + a.id + '"' + (why ? ' disabled title="' + esc(why) + '"' : '') + '>' + esc(a.label) + (cost ? ' <span class="small">(' + cost + ' Min.)</span>' : '') + '</button>' + (why ? '<div class="small dim why">' + esc(why) + '</div>' : '');
+      const why = a.check(s); let cost = Math.round(a.cost * sim().slow(s)); const label = typeof a.label === 'function' ? a.label(s) : a.label;
+      h += '<button data-a="' + a.id + '"' + (why ? ' disabled title="' + esc(why) + '"' : '') + '>' + esc(label) + (cost ? ' <span class="small">(' + cost + ' Min.)</span>' : '') + '</button>' + (why ? '<div class="small dim why">' + esc(why) + '</div>' : '');
     }
     h += '</div>';
     if (room === 'halle' || room === 'buero') h += '<p class="small dim">Ablauf je Modul: Requirements (Hallen, Station) → Spezifikation → Implementierung (Büro) → Deployment (Serverraum) → Testlauf (Hallen, Teststation) → Ausdruck (Drucker) → Abnahme (Werkleitung).</p>';
     $('room').innerHTML = h;
+  }
+  // v0.4 Markt und Prognose
+  function marktHtml(s) {
+    if (!s.markt) return '';
+    return '<h3>Markt heute (ein Geschäft am Tag)</h3><table>' + s.markt.offers.map(o => { const it = SC.MARKT.find(x => x.id === o.id); return '<tr><td>' + esc(it.label) + '</td><td class="' + (it.sell ? 'good">+' : '">') + o.price + ' k€</td></tr>'; }).join('') + '</table><p class="small dim">' + (s.markt.bought ? 'Heute schon gehandelt.' : 'Die Angebote wechseln jeden Tag. Alte Lizenzen im Schrank: ' + s.lizenzen + '.') + '</p>';
+  }
+  function progHtml(s) {
+    const names = ['unter Plan', 'im Plan', 'über Plan'], wk = sim().week(s), now = names[sim().prognoseBand(s)];
+    return '<h3>Planung</h3><p>' + (s.prog.week === wk && s.prog.k !== null ? 'Prognose dieser Woche: <b>' + names[s.prog.k] + '</b>. Stand heute: ' + now + '. Auswertung im Wochenrückblick am Freitag.' : 'Noch keine Prognose diese Woche (Montag oder Dienstag). Stand heute: <b>' + now + '</b>.') + (s.prog.melone === wk ? ' <span class="warn">Wassermelonen-Bericht ist raus.</span>' : '') + ' Treffer bisher: ' + s.prog.hits + '.</p><p class="small dim">Treffer: Werkleitung +' + SC.TUNE.prognose.hit + ', Image +' + SC.TUNE.prognose.hitImage + '. Zwei Stufen daneben: Werkleitung −' + SC.TUNE.prognose.miss2 + '.</p>';
   }
   function rivals(s) {
     const me = sim().progress(s);
@@ -169,7 +179,7 @@
     overlay(h);
   }
   function endHtml(s) {
-    return '<div class="end ' + (s.result.win ? 'good' : 'bad') + '"><h2>' + (s.result.win ? 'GO-LIVE!' : 'PROJEKT GESCHEITERT') + '</h2><p>' + esc(s.result.why) + '</p><p>Punkte: <b>' + s.result.score + '</b></p>' +
+    return '<div class="end ' + (s.result.win ? 'good' : 'bad') + '"><h2>' + (s.result.win ? (s.result.titel ? 'GO-LIVE! WERK DES JAHRES!' : 'GO-LIVE!') : 'PROJEKT GESCHEITERT') + '</h2><p>' + esc(s.result.why) + '</p><p>Punkte: <b>' + s.result.score + '</b></p>' +
       '<p class="small">KPI-Index: ' + sim().kpiIndex(s) + ' % · Budget: ' + Math.round(s.budget) + ' k€ · Besuche: ' + s.stats.visits + ' · Pyramiden-Fragen richtig: ' + s.stats.pyrRight + '/' + (s.stats.pyrRight + s.stats.pyrWrong) + ' · Störungen: ' + s.stats.faults + '</p>' + highHtml(s) +
       '<p class="small">Meetings besucht: ' + s.stats.meetings + ' (davon nutzlos: ' + s.stats.useless + ') · verpasst: ' + s.stats.missed + ' · Wochenendschichten: ' + s.stats.weekend + ' · Bugs: ' + s.stats.bugs + ' · Kaffee: ' + s.stats.coffee + ' · Überstunden: ' + s.stats.overtime + ' Min.</p></div>';
   }
@@ -181,7 +191,8 @@
   function next() { const s = S(); sim().startDay(s); s._warned = false; shown = 0; closeOverlay(); SC.building.reset(); aud('play', 'tower'); morning(); sim().save(s); }
   function morning() {
     const s = S();
-    UI.toast('Guten Morgen! ' + SC.WEEKDAYS[sim().weekday(s)] + ', Tag ' + s.day + '. Erster Termin: ' + (s.meetings[0] ? hm(s.meetings[0].start) + ' ' + s.meetings[0].title : 'keiner'));
+    UI.toast('Guten Morgen! ' + SC.WEEKDAYS[sim().weekday(s)] + ', Tag ' + s.day + '. Erster Termin: ' + (s.meetings[0] ? hm(s.meetings[0].start) + ' ' + s.meetings[0].title : 'keiner') + (UI._sndHint ? ' · ' + SND_HINT : ''));
+    UI._sndHint = false;
   }
 
   UI.newGame = function (seed) {
@@ -207,10 +218,11 @@
       '<li><b>Budget</b> im Controlling: Tranche einmal pro Woche, Kredit (Rahmen 60 k€, ab Image 60 mehr, 8 % Zins jeden Freitag), Berater. Testläufe, Reparaturen, Toner und Wochenendschichten kosten. Unter −40 k€ ist Schluss.</li>' +
       '<li><b>Großereignisse:</b> Tag 6 kommt ein neues SAP (Stammdaten migrieren, Cutover Freitag). Tag 13 kauft die Firma die Konkurrenz (Systemfusion als sechstes Modul, Go-Live Tag 22).</li>' +
       '<li><b>Neu in 0.3:</b> Werk Nord und Werk Süd greifen ein (Abwerbung, Gerüchte beim Vorstand). Gegenmaßnahmen kosten Geld, Ignorieren kostet Image. Das Image im Konzern beeinflusst Tranche, Kreditrahmen und das Tempo der Rivalen. In der Werkleitung kannst du Zusagen machen (Module bis zu einer Frist): gehalten gibt Prämie, gebrochen kostet. Dazu Pflichttermine: Kaffeeautomat zum SAP-Cutover, die IT-Chefin mit Industrie 5.0 als Kreis, ein Morse-Rätsel am Verpackungsautomaten und die Kostümparty ab Tag 14 (Feierabend erst nach der Party). Wer dem italienischen Kollegen dreimal in Folge zuhört, bekommt Tiramisu.</li>' +
+      '<li><b>Neu in 0.4:</b> Markt im Controlling (drei Angebote am Tag, ein Geschäft: Berater-Paket, Ersatzteile, Agentur-Kampagne, Pressemitteilung, Toner, Wartungsvertrag oder eine alte Lizenz verkaufen). Im Leitstand Montag oder Dienstag eine Prognose für den KPI-Index am Freitag abgeben (Treffer: Werkleitung und Image). Der Wassermelonen-Bericht meldet »alles grün«, bis das Audit nachschaut. Während der SAP-Migration gibt es die SAP-Hotline. Go-Live mit KPI-Index ab 90 % und Image ab 75: Titel »Werk des Jahres«. Jede Etage hat ein Fenster in die Produktion.</li>' +
       '<li><b>Flurfunk (neu in 0.3):</b> Brandschutzübungen, Beamer-Kabel, Überraschungsgerichte und mehr. Die Werkleitung streut Buzzwords: fünf verschiedene sind ein Bingo (Punkte). Werksdurchsagen, die Werkszeitung am Abend und ein paar Easter Eggs.</li>' +
       '<li><b>Excel-Liste</b> jeden Tag pflegen. Server und Drucker zicken. Kaffee und Mittagessen in der Kantine geben Energie.</li>' +
       '<li><b>Feierabend</b> über die Pforte ab 15:00. Überstunden bis 20:00 kosten Familie. Sirene um 14:00: Schichtwechsel.</li>' +
-      '<li>Verloren: Werkleitung oder Familie auf null, Budget unter −40 k€ oder Go-Live-Termin verpasst.</li></ul><p class="small">Tasten: Leertaste Pause, + Tempo, Esc Raum verlassen, M Ton.</p><p><button data-o="back">Zurück</button></p>');
+      '<li><b>Ton auf dem Handy:</b> Der Ton startet mit der ersten Berührung. Oben rechts schaltet der Ton-Knopf an und aus. Auf dem iPhone den Stummschalter prüfen.</li><li>Verloren: Werkleitung oder Familie auf null, Budget unter −40 k€ oder Go-Live-Termin verpasst.</li></ul><p class="small">Tasten: Leertaste Pause, + Tempo, Esc Raum verlassen, M Ton.</p><p><button data-o="back">Zurück</button></p>');
   }
 
   UI.init = function () {
@@ -242,7 +254,10 @@
     $('btn-speed').onclick = () => { UI.speed = UI.speed >= 4 ? 1 : UI.speed * 2; $('btn-speed').textContent = 'Tempo ' + UI.speed + 'x'; };
     $('btn-menu').onclick = () => { UI.paused = true; $('btn-pause').textContent = 'Weiter'; UI.showTitle(); };
     if (SC.audio) { SC.audio.init(); }
-    const syncSnd = () => { $('btn-sound').textContent = SC.audio && SC.audio.isMuted() ? 'Ton aus' : 'Ton an'; };
+    // v0.4: Ton-Knopf zeigt auch »Ton: tippen«, solange der Browser den Ton noch sperrt (Handy)
+    const syncSnd = () => { const A = SC.audio, st = A && A.state ? A.state() : {}; $('btn-sound').textContent = A && A.isMuted() ? '🔇 Ton aus' : st.ctx === 'running' ? '🔊 Ton an' : '🔈 Ton: tippen'; };
+    UI.syncSnd = syncSnd; setInterval(syncSnd, 1000);
+    if (SC.audio) SC.audio.onFirstUnlock = () => { if (SC.audio.isIOS && SC.audio.isIOS()) { UI._sndHint = true; UI.toast(SND_HINT); } };
     $('btn-sound').onclick = () => { aud('unlock'); aud('setMuted', !(SC.audio && SC.audio.isMuted())); syncSnd(); if (SC.audio && !SC.audio.isMuted()) aud('play', S() && S().phase === 'tag' ? 'tower' : 'title'); };
     $('vol').oninput = e => aud('setVolume', e.target.value / 100);
     syncSnd();
