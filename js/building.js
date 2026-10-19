@@ -72,6 +72,15 @@
     const m = c.match(/\d+/g).map(Number); return '#' + m.map(v => v.toString(16).padStart(2, '0')).join('');
   }
 
+  const partyDay = () => { const S = SC.S; return !!(S && S.ev && S.day >= 14 && (!S.ev.party || S.ev.party === S.day)); };
+  // v0.3 Kostümparty: die Rollenfiguren tauchen verkleidet auf (nur Grafik)
+  function costume(x, y, role) {
+    if (role === 'schicht') { rect(x - 5, y - 17, 10, 9, '#ffffff'); rect(x - 5, y - 17, 10, 2, '#d02020'); for (let i = 0; i < 3; i++) rect(x - 4 + i * 3, y - 14, 2, 2, '#202020'); }
+    else if (role === 'tesla') { rect(x - 3, y - 30, 7, 5, '#20c040'); rect(x + 4, y - 29, 1, 3, '#20c040'); rect(x - 2, y - 29, 3, 3, '#a0ffa0'); }
+    else if (role === 'nix') { rect(x - 4, y - 26, 9, 3, '#ffd000'); rect(x - 2, y - 28, 5, 2, '#ffd000'); }
+    else if (role === 'italien') { rect(x - 5, y - 16, 10, 8, '#f0c060'); rect(x - 4, y - 15, 8, 6, '#e03020'); rect(x - 2, y - 14, 2, 2, '#ffffff'); rect(x + 1, y - 12, 2, 2, '#ffffff'); rect(x - 1, y - 11, 1, 1, '#20a040'); }
+    else if (role === 'itchefin') { rect(x - 6, y - 32, 13, 1, '#40e0ff'); rect(x - 6, y - 32, 1, 6, '#40e0ff'); rect(x + 6, y - 32, 1, 6, '#40e0ff'); rect(x - 6, y - 27, 13, 1, '#40e0ff'); }
+  }
   function drawMan(x, y, col, anim, moving, dir, me, role) {
     x = Math.round(x); y = Math.round(y);
     const s = moving ? Math.round(Math.sin(anim) * 2) : 0;
@@ -91,6 +100,7 @@
     else if (role === 'itchefin') { rect(x - 3, y - 23, 7, 2, '#603020'); rect(x - 3, y - 21, 1, 5, '#603020'); rect(x + 3, y - 21, 1, 5, '#603020'); }
     else rect(x - 2, y - 23, 5, 2, role === 'italien' ? '#201008' : '#402010');
     rect(x + (dir < 0 ? -2 : 2), y - 21, 1, 1, '#000');
+    if (!me && role && partyDay()) costume(x, y, role);
     if (role === 'itchefin') { rect(x + 5, y - 18, 6, 1, '#ff8040'); rect(x + 6, y - 20, 4, 1, '#80e080'); rect(x + 7, y - 22, 2, 1, '#40e0ff'); } // Pyramide unter dem Arm
   }
 
@@ -101,8 +111,10 @@
     rect(BX0 + 4, bot - 10, BX1 - BX0 - 8, 1, shade(WALLS[f], 30));
     for (let x = BX0 + 30; x < BX1 - 20; x += 70) { rect(x, top, 12, 2, '#555'); rect(x + 2, top + 2, 8, 2, min > 17 * 60 ? '#fff8c0' : '#ddd'); } // Lampen
     // Bilder und Pflanzen
-    rect(262, top + 10, 18, 12, '#402010'); rect(264, top + 12, 14, 8, ['#60a0ff', '#ff8040', '#80e080', '#e0e060', '#c080ff'][f]);
-    rect(372, top + 10, 18, 12, '#402010'); rect(374, top + 12, 14, 8, ['#ff6060', '#60e0e0', '#ffffff', '#ff80c0', '#80ff80'][f]);
+    if (f !== 2) { rect(262, top + 10, 18, 12, '#402010'); rect(264, top + 12, 14, 8, ['#60a0ff', '#ff8040', '#80e080', '#e0e060', '#c080ff'][f]); }
+    if (f !== 0 && f !== 2) { rect(372, top + 10, 18, 12, '#402010'); rect(374, top + 12, 14, 8, ['#ff6060', '#60e0e0', '#ffffff', '#ff80c0', '#80ff80'][f]); }
+    // v0.3: Panoramafenster der Leitebene mit Blick in die Produktion (zwei Scheiben, eine durchgehende Szene)
+    if (f === 2) { prodWindow(259, top + 5, 42, h - 17, 0); prodWindow(360, top + 5, 44, h - 17, 101); }
     plant(BX0 + 16, bot); plant(BX1 - 16, bot);
     // Türen
     SC.FLOORS[f].doors.forEach(d => {
@@ -122,7 +134,48 @@
       const off = Math.floor(tick / 3) % 12;
       rect(BX0 + 250, bot - 14, 100, 4, '#404040');
       for (let x = BX0 + 250 + off; x < BX0 + 346; x += 24) rect(x, bot - 20, 8, 6, '#b08850');
+      press(364, bot - 10);
     }
+  }
+  // v0.3: animierte Stanzpresse im EG (Stößel fährt auf und ab, Funken beim Aufschlag)
+  function press(x, y) {
+    const ph = (tick % 60) / 60, down = ph < 0.5 ? Math.sin(ph * Math.PI * 2) : 0, ram = Math.round(down * 9);
+    rect(x, y - 30, 4, 30, '#4a5a6a'); rect(x + 22, y - 30, 4, 30, '#4a5a6a'); rect(x - 2, y - 33, 30, 5, '#2e3a46'); rect(x + 2, y - 32, 22, 1, '#ffcc00');
+    rect(x + 11, y - 28, 4, 4 + ram, '#a0a8b0'); rect(x + 6, y - 24 + ram, 14, 5, '#d04020'); rect(x + 6, y - 24 + ram, 14, 1, '#ff8060');
+    rect(x + 3, y - 6, 20, 6, '#303840'); rect(x + 4, y - 7, 18, 1, '#e0c020');
+    if (ram >= 8) { rect(x + 3, y - 9, 1, 1, '#ffff80'); rect(x + 23, y - 10, 1, 1, '#ffff80'); rect(x + 1, y - 12, 1, 1, '#ffd040'); rect(x + 25, y - 8, 1, 1, '#ffd040'); }
+    const S = SC.S, jam = S && S.stations && S.stations.some(st => st.fault && (st.id === 'inpack' || st.id === 'auspack'));
+    rect(x + 24, y - 38, 3, 3, jam ? ((Math.floor(blink / 6) % 2) ? '#ff2020' : '#600000') : '#30e030');
+  }
+  // Blick durchs Fenster in die Produktionshalle: Rückwand, Roboterarm, Förderband mit Kartons, Hallenkran
+  function prodWindow(x0, y0, w, h, sx) {
+    rect(x0 - 2, y0 - 2, w + 4, h + 4, '#2a2a30'); rect(x0, y0, w, h, '#1c2a3a');
+    ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, w, h); ctx.clip();
+    const X = v => x0 + v - sx; // gemeinsame Szene über beide Scheiben
+    for (let gx = -sx % 10; gx < w; gx += 10) rect(x0 + gx, y0, 1, h, '#22344a');
+    rect(x0, y0 + 4, w, 2, '#3a4a5a'); // Kranbahn
+    const cr = (tick * 0.4) % 160; rect(X(cr), y0 + 3, 12, 4, '#e0a020'); rect(X(cr) + 5, y0 + 7, 1, 8, '#888'); rect(X(cr) + 3, y0 + 15, 5, 3, '#806040');
+    const belt = y0 + h - 7; rect(x0, belt, w, 3, '#505860');
+    for (let bx = -((tick * 0.6) % 18); bx < 160; bx += 18) { const xx = X(bx); if (xx > x0 - 8 && xx < x0 + w) rect(xx, belt - 5, 7, 5, '#c09060'); }
+    // Roboterarm an Station »Scheibe 1«
+    const bxr = X(22), by = belt, a1 = -1.2 + Math.sin(tick / 25) * 0.5, a2 = a1 + 1.1 + Math.sin(tick / 17) * 0.6;
+    rect(bxr - 3, by - 3, 7, 3, '#ff8000');
+    const ex = bxr + Math.cos(a1) * 9, ey = by - 3 + Math.sin(a1) * 9, hx = ex + Math.cos(a2) * 7, hy = ey + Math.sin(a2) * 7;
+    ctx.strokeStyle = '#ff9a20'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(bxr, by - 3); ctx.lineTo(ex, ey); ctx.lineTo(hx, hy); ctx.stroke();
+    rect(Math.round(hx) - 1, Math.round(hy) - 1, 3, 3, '#d0d0d0'); if (Math.sin(tick / 17) > 0.9) rect(Math.round(hx) + 2, Math.round(hy), 1, 1, '#ffff80');
+    // Extruder mit Lauflicht in Scheibe 2
+    const ex0 = X(120); rect(ex0, by - 12, 26, 12, '#5a6a7a'); rect(ex0 + 2, by - 10, 22, 3, '#2a3038'); rect(ex0 + 2 + (tick >> 2) % 20, by - 10, 3, 3, '#40e0ff'); rect(ex0 + 26, by - 6, 8, 2, '#c0c0c0');
+    ctx.restore();
+    rect(x0 + Math.floor(w / 2), y0, 1, h, '#2a2a30'); rect(x0, y0 + Math.floor(h / 2), w, 1, 'rgba(42,42,48,0.6)'); // Sprossen
+    rect(x0, y0, w, 1, 'rgba(255,255,255,0.25)');
+  }
+  // Kulisse: große Produktionshalle mit Sheddach und Hallenkran hinter dem Turm
+  function drawHall(min) {
+    const top = 120, night = min >= 18 * 60 + 30;
+    rect(0, top, W, GROUND - top, night ? '#22262e' : '#3c424e');
+    for (let x = 0; x < W; x += 30) { for (let k = 0; k < 10; k++) rect(x + k * 3, top - k, 30 - k * 3, 1, night ? '#2a2e38' : '#4a5060'); rect(x + 27, top - 10, 3, 10, night ? '#ffd860' : '#a0d8ff'); }
+    for (let x = 6; x < W; x += 22) rect(x, top + 10, 12, 8, night || min > 17 * 60 ? '#ffd860' : '#7090b0');
+    rect(0, top + 24, W, 2, '#2a2e36'); const cr = (tick * 0.25) % (W + 40) - 20; rect(cr, top + 22, 34, 4, '#e0a020'); rect(cr + 16, top + 26, 1, 10, '#999'); rect(cr + 13, top + 36, 7, 4, '#806040');
   }
   function machine(x, y, label, st, lampOn) {
     rect(x, y - 20, 24, 20, '#5a6470'); rect(x + 2, y - 18, 20, 7, '#2a3038'); rect(x + 3, y - 17, 18, 5, st ? '#401010' : '#103020');
@@ -194,7 +247,7 @@
     const here = npcs.filter(n => n.f === P.f && SC.BUBBLES && SC.BUBBLES[n.role]);
     const pool = here.length && Math.random() < 0.7 ? here : npcs.filter(n => SC.BUBBLES && SC.BUBBLES[n.role]);
     if (!pool.length) return;
-    const n = pool[Math.floor(Math.random() * pool.length)], L = SC.BUBBLES[n.role];
+    const n = pool[Math.floor(Math.random() * pool.length)], L = partyDay() && SC.PARTY_BUBBLES && SC.PARTY_BUBBLES[n.role] && Math.random() < 0.6 ? SC.PARTY_BUBBLES[n.role] : SC.BUBBLES[n.role];
     bub.n = n; bub.t = L[Math.floor(Math.random() * L.length)]; bub.ttl = 3;
   }
   function drawBubble() {
@@ -268,6 +321,7 @@
     },
     draw(min) {
       drawSky(min);
+      drawHall(min);
       drawBuilding(min);
       npcs.forEach(n => drawMan(n.x, floorY(n.f), n.col, n.anim || 0, n.moving, n.dir, false, n.role));
       drawBubble();

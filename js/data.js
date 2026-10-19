@@ -241,7 +241,7 @@ window.SC = window.SC || {};
     'Der Schornstein ist denkmalgeschützt. Das MES leider nicht.'
   ];
 
-  // v0.3 Pflicht-Ereignisse (Tobi): Kaffeeautomat, Kreis-Pyramide, Morse-Rätsel, Kostümparty
+  // v0.3 Pflicht-Ereignisse: Kaffeeautomat, Kreis-Pyramide, Morse-Rätsel, Kostümparty
   SC.KOSTUEME = [
     { label: 'Pappe-Pyramide (50 Min.)', min: 50, energy: -4, chef: 3, msg: 'Du kommst als Automatisierungspyramide. Die IT-Chefin weint vor Rührung. Die Werkleitung findet es »strategisch« (+3).' },
     { label: 'Kaffeemaschine »Fehler 42« (40 Min.)', min: 40, energy: 4, schicht: 2, msg: 'Du piepst den ganzen Abend und gibst niemandem Kaffee. Die Schicht feiert dich (+2). Irgendwie erholsam.' },
