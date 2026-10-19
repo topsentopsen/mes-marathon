@@ -33,11 +33,15 @@ async function tapSel(page, sel) { const r = await page.evaluate(s => { const e 
     const susp = await st();
     await tapSel(page, '#cv'); await wait(400);
     const again = await st();
+    // Ton-Knopf als allererste Berührung (Review-Befund): darf den Ton nicht abschalten, sondern nur entsperren
+    const p2 = await browser.newPage(); await p2.setUserAgent(d.ua); await p2.setViewport({ width: d.w, height: d.h, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+    await p2.goto(url, { waitUntil: 'load' }); await wait(1300); await tapSel(p2, '#btn-sound'); await wait(400);
+    const first = await p2.evaluate(() => Object.assign(window.SC.audio.state(), { btn: document.getElementById('btn-sound').textContent })); await p2.close();
     await tapSel(page, '#btn-sound'); await wait(200); const muted = await st();
     await tapSel(page, '#btn-sound'); await wait(300); const unmuted = await st();
-    const ok = before.ctx !== 'running' && after.ctx === 'running' && after.ready && susp.ctx === 'suspended' && again.ctx === 'running' && muted.muted && /aus/.test(muted.btn) && !unmuted.muted && unmuted.ctx === 'running' && /Ton an/.test(unmuted.btn) && !errs.length &&
+    const ok = before.ctx !== 'running' && after.ctx === 'running' && after.ready && susp.ctx === 'suspended' && again.ctx === 'running' && muted.muted && /aus/.test(muted.btn) && !unmuted.muted && unmuted.ctx === 'running' && /Ton an/.test(unmuted.btn) && !first.muted && first.ctx === 'running' && !errs.length &&
       (d.name !== 'iphone' || /Stummschalter/.test(after.ticker));
-    res.push({ dev: d.name, before: before.ctx, btnBefore: before.btn, after: after.ctx, el: after.el, btnAfter: after.btn, iosHint: /Stummschalter/.test(after.ticker), susp: susp.ctx, again: again.ctx, muted: muted.btn, unmuted: unmuted.btn, errs, ok });
+    res.push({ dev: d.name, before: before.ctx, btnBefore: before.btn, after: after.ctx, el: after.el, btnAfter: after.btn, iosHint: /Stummschalter/.test(after.ticker), susp: susp.ctx, again: again.ctx, muted: muted.btn, unmuted: unmuted.btn, firstTapButton: first.btn, first, errs, ok });
     await page.close();
   }
   console.log(JSON.stringify(res, null, 1));

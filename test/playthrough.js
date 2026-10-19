@@ -36,8 +36,8 @@ const click = (page, sel) => page.evaluate(s => { const b = document.querySelect
         const order = [];
         if (am && (am.kind !== 'schicht' || S.schicht < 60)) order.push(['meeting', 'attend']);
         if (S.minute >= 15 * 60 + 30) order.push(['buero', 'excel'], ['pforte', 'home']);
-        order.push(['buero', 'excel'], ['controlling', 'tranche'], ['kantine', 'lunch'], ['server', 'restart'], ['werkstatt', 'repair'], ['drucker', 'fix'],
-          ['chef', 'abnahme'], ['drucker', 'print'], ['server', 'deploy'], ['halle', 'test'], ['buero', 'migrate'], ['buero', 'impl'], ['buero', 'spec'], ['halle', 'req'], ['leitstand', 'bericht'], ['chef', 'report']);
+        order.push(['buero', 'excel'], ['controlling', 'tranche'], ['leitstand', 'p_mid'], ['controlling', 'm0'], ['kantine', 'lunch'], ['server', 'restart'], ['werkstatt', 'repair'], ['drucker', 'fix'],
+          ['chef', 'abnahme'], ['drucker', 'print'], ['server', 'deploy'], ['halle', 'test'], ['buero', 'migrate'], ['buero', 'impl'], ['buero', 'spec'], ['halle', 'req'], ['leitstand', 'bericht'], ['leitstand', 'p_mid'], ['chef', 'report'], ['controlling', 'm0']);
         if (S.energy < 40) order.unshift(['kantine', 'coffee']);
         want = order.find(([r, i]) => ok(r, i)) || ['pforte', S.minute >= 15 * 60 ? 'home' : null];
       }

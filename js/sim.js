@@ -115,6 +115,8 @@
 
   // v0.4 Markt: drei verschiedene Angebote am Tag, Preise im Korridor base × (lo … hi)
   function planMarkt(S) {
+    // Tages-Seed: die Angebote hängen nur von Seed und Tag ab, nicht davon, ob vorher Hotline oder Audit gewürfelt haben
+    S.rm = ((S.seed ^ Math.imul(S.day, 0x9e3779b1)) & 0x7fffffff) || 11;
     const M = T().markt, pool = SC.MARKT.filter(x => x.id !== 'lizenz' || S.lizenzen > 0).map(x => x.id), offers = [];
     while (offers.length < M.n && pool.length) { const id = pool.splice(Math.floor(rngM(S) * pool.length), 1)[0], it = SC.MARKT.find(x => x.id === id); offers.push({ id, price: Math.round(it.base * (M.lo + rngM(S) * (M.hi - M.lo))) }); }
     S.markt = { day: S.day, offers, bought: false };
@@ -125,11 +127,11 @@
     if (it.sell) { S.budget += o.price; S.lizenzen--; S.image -= 1; }
     else spend(S, o.price);
     if (o.id === 'paket') { const m = onePaper(S); say(S, it.msg + (m ? ' ' + m.name + ' +1 Paket.' : ' Nur leider ist gerade nichts offen.') + ' (−' + o.price + ' k€)'); return; }
-    if (o.id === 'teile') S.partsUntil = S.day + 3;
+    if (o.id === 'teile') S.partsUntil = Math.max(S.partsUntil, S.day + 2);
     if (o.id === 'kampagne') S.image += 4;
     if (o.id === 'presse') { S.image += 2; S.chef += 2; }
-    if (o.id === 'toner') S.tonerUntil = S.day + 3;
-    if (o.id === 'wartung') { S.server.careUntil = Math.max(S.server.careUntil, S.day + 3); }
+    if (o.id === 'toner') S.tonerUntil = S.day + 2;
+    if (o.id === 'wartung') { S.server.careUntil = Math.max(S.server.careUntil, S.day + 2); }
     S.image = clamp(S.image, 0, 100);
     say(S, it.msg + (it.sell ? ' (+' + o.price + ' k€)' : ' (−' + o.price + ' k€)'));
   }
@@ -415,7 +417,7 @@
         run: S => { S.beraterWeek = week(S); spend(S, T().berater); const k = rng(S) < 0.4 ? 1 : 2; for (let i = 0; i < k; i++) onePaper(S); say(S, k === 2 ? 'Die Berater liefern tatsächlich: +2 Pakete Requirements/Spezifikation. Und 80 Folien.' : 'Die Berater liefern 120 Folien und 1 Paket Spezifikation. Die Folien haben schöne Farben.', k === 1); } },
       // v0.4 Markt: drei Angebote am Tag, ein Kauf oder Verkauf am Tag
       ...[0, 1, 2].map(i => ({ id: 'm' + i, cost: 15, energy: 1,
-        label: S => { const o = S && S.markt && S.markt.offers[i]; if (!o) return 'Marktplatz: kein Angebot'; const it = SC.MARKT.find(x => x.id === o.id); return 'Markt: ' + it.label + (it.sell ? ' für +' : ' für ') + o.price + ' k€'; },
+        label: S => { const o = S && S.markt && S.markt.offers[i]; if (!o) return 'Marktplatz: kein Angebot'; const it = SC.MARKT.find(x => x.id === o.id); return 'Markt: ' + (it.short || it.label) + (it.sell ? ' (+' : ' (') + o.price + ' k€)'; },
         check: S => { const o = S.markt && S.markt.offers[i]; if (!o) return 'Heute nur zwei Angebote. Der Markt ist auch nur ein Mensch.'; if (S.markt.bought) return 'Heute schon gehandelt. Die Controlling-Abteilung erlaubt ein Geschäft am Tag.'; const it = SC.MARKT.find(x => x.id === o.id); if (it.sell && S.lizenzen <= 0) return 'Keine alten Lizenzen mehr im Schrank.'; if (!it.sell && S.budget < o.price) return 'Dafür reicht das Budget nicht.'; if (o.id === 'paket' && !onePaperTarget(S)) return 'Gerade nichts für einen Berater offen (Requirements und Spezifikation sind durch).'; return null; },
         run: S => buy(S, i) }))
     ],
@@ -595,6 +597,19 @@
     if (S.kpiHist.length > 30) S.kpiHist.shift();
   }
 
+  // v0.4: Prognose und Wassermelone am Freitag auswerten (idempotent: k = null, melone = -2; auch nach einem Burnout-Sprung auf den Freitag)
+  function wochenAuswertung(S, R) {
+        // v0.4 Prognose-Auswertung
+    const PG = T().prognose, names = ['unter Plan', 'im Plan', 'über Plan'];
+    if (S.prog.week === week(S) && S.prog.k !== null) { const ist = prognoseBand(S), off = Math.abs(ist - S.prog.k);
+      if (off === 0) { S.chef += PG.hit; S.image += PG.hitImage; S.prog.hits++; S.stats.treffer++; R.lines.push(['good', 'Prognose getroffen (' + names[ist] + '): Werkleitung +' + PG.hit + ', Image +' + PG.hitImage + '. Die Werkleitung nennt dich »unseren Planer«.']); }
+      else if (off === 1) { S.chef -= PG.miss1; R.lines.push(['info', 'Prognose knapp daneben (gesagt: ' + names[S.prog.k] + ', ist: ' + names[ist] + '). Die Werkleitung zuckt mit den Schultern (−' + PG.miss1 + ').']); }
+      else { S.chef -= PG.miss2; R.lines.push(['bad', 'Prognose klar daneben (gesagt: ' + names[S.prog.k] + ', ist: ' + names[ist] + '): Werkleitung −' + PG.miss2]); }
+      S.prog.k = null; }
+    // Wassermelone: war es innen rot, kommt mit etwas Pech das Audit
+    if (S.prog.melone === week(S)) { if (kpiScore(S) < kpiPath(S) && rngM(S) < PG.meloneP) { S.chef -= PG.meloneMinus; S.image -= PG.meloneMinus; R.lines.push(['bad', 'Das Audit schneidet die Wassermelone auf: innen rot. Werkleitung −' + PG.meloneMinus + ', Image −' + PG.meloneMinus + '. Die Werkszeitung titelt »Grün ist relativ«.']); }
+      else R.lines.push(['info', 'Wassermelonen-Bericht: Niemand hat nachgeschaut. Diesmal.']); S.prog.melone = -2; }
+  }
   // Abend: Bilanz, KPIs, Budget, Rivalen, Familie, Sieg/Niederlage
   function endDay(S) {
     const R = { day: S.day, weekday: SC.WEEKDAYS[weekday(S)], lines: [], log: S.dayLog.slice() };
@@ -621,16 +636,7 @@
     if (weekday(S) === 4) {
       if (S.reportWeek !== week(S)) { S.chef -= 4; R.lines.push(['bad', 'Wochenrückblick ohne KPI-Bericht: Werkleitung −4']); }
       else { const d = clamp(Math.round((kpiScore(S) - kpiPath(S)) * 20), -5, 5); S.chef += d; R.lines.push([d >= 0 ? 'good' : 'bad', 'Wochenrückblick KPI-Index ' + kpiIndex(S) + ' %: Werkleitung ' + (d >= 0 ? '+' : '') + d]); }
-      // v0.4 Prognose-Auswertung
-      const PG = T().prognose, names = ['unter Plan', 'im Plan', 'über Plan'];
-      if (S.prog.week === week(S) && S.prog.k !== null) { const ist = prognoseBand(S), off = Math.abs(ist - S.prog.k);
-        if (off === 0) { S.chef += PG.hit; S.image += PG.hitImage; S.prog.hits++; S.stats.treffer++; R.lines.push(['good', 'Prognose getroffen (' + names[ist] + '): Werkleitung +' + PG.hit + ', Image +' + PG.hitImage + '. Die Werkleitung nennt dich »unseren Planer«.']); }
-        else if (off === 1) R.lines.push(['info', 'Prognose knapp daneben (gesagt: ' + names[S.prog.k] + ', ist: ' + names[ist] + '). Die Werkleitung zuckt mit den Schultern.']);
-        else { S.chef -= PG.miss2; R.lines.push(['bad', 'Prognose klar daneben (gesagt: ' + names[S.prog.k] + ', ist: ' + names[ist] + '): Werkleitung −' + PG.miss2]); }
-        S.prog.k = null; }
-      // Wassermelone: war es innen rot, kommt mit etwas Pech das Audit
-      if (S.prog.melone === week(S)) { if (kpiScore(S) < kpiPath(S) && rngM(S) < PG.meloneP) { S.chef -= PG.meloneMinus; S.image -= PG.meloneMinus; R.lines.push(['bad', 'Das Audit schneidet die Wassermelone auf: innen rot. Werkleitung −' + PG.meloneMinus + ', Image −' + PG.meloneMinus + '. Die Werkszeitung titelt »Grün ist relativ«.']); }
-        else R.lines.push(['info', 'Wassermelonen-Bericht: Niemand hat nachgeschaut. Diesmal.']); S.prog.melone = -2; }
+      wochenAuswertung(S, R);
     }
     // Budget
     if (T().cost.daily) spend(S, T().cost.daily);
@@ -665,7 +671,7 @@
     const rest = 55 - Math.round(over / 6);
     S.energy = clamp(S.energy + rest, 15, 100);
     let fri = weekday(S) === 4;
-    if (S.burnout) { S.burnout = false; S.chef -= 8; S.family -= 4; S.energy = 70; R.lines.push(['bad', 'Am Schreibtisch eingeschlafen, Kopf auf der Tastatur. Ein Tag krank: Werkleitung −8.']); S.day++; if (weekday(S) === 4) fri = true; }
+    if (S.burnout) { S.burnout = false; S.chef -= 8; S.family -= 4; S.energy = 70; R.lines.push(['bad', 'Am Schreibtisch eingeschlafen, Kopf auf der Tastatur. Ein Tag krank: Werkleitung −8.']); S.day++; if (weekday(S) === 4) { fri = true; wochenAuswertung(S, R); } }
     S.chef = clamp(S.chef, 0, 100); S.family = clamp(S.family, 0, 100); S.schicht = clamp(S.schicht, 0, 100);
     R.progress = me; R.rivals = S.rivals.map(r => ({ name: r.name, prog: r.prog })); R.budget = S.budget; R.kpiIndex = kpiIndex(S);
     R.friday = fri;
@@ -723,6 +729,8 @@
   }
   const SAVE = 'mesmarathon-save';
   function save(S) { try { localStorage.setItem(SAVE, JSON.stringify(S)); } catch (e) { /* */ } }
+  // v0.4: alter Spielstand einer anderen Version (für einen Hinweis im Titel)
+  function oldSave() { try { const s = JSON.parse(localStorage.getItem(SAVE)); return s && s.v !== SC.VERSION ? s.v : null; } catch (e) { return null; } }
   function load() { try { const s = JSON.parse(localStorage.getItem(SAVE)); return s && s.v === SC.VERSION ? s : null; } catch (e) { return null; } }
   // Highscore (lokal, Top 5) wie bei Mad TV
   function addScore(S) {
@@ -731,5 +739,5 @@
   function highscores() { try { return JSON.parse(localStorage.getItem('mesmarathon-highscore') || '[]'); } catch (e) { return []; } }
 
   SC.sim = { newGame, act, advance, events, endDay, weekend, startDay, progress, nextMeeting, activeMeeting, actions: A, targets, hm, weekday, week, save, load, slow,
-    choose, visitOptions, visitText, rngF, rngM, prognoseBand, rahmen, kpiScore, kpiIndex, kpiPath, kpiTarget, autoWork, addScore, highscores, stationOf, stName, rng };
+    choose, visitOptions, visitText, oldSave, rngF, rngM, prognoseBand, rahmen, kpiScore, kpiIndex, kpiPath, kpiTarget, autoWork, addScore, highscores, stationOf, stName, rng };
 })(window.SC);

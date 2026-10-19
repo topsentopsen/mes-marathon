@@ -203,6 +203,7 @@
     const sv = sim().load();
     overlay('<div class="title"><h1 class="logo">MES-MARATHON</h1><p class="dim">Ein Werk. Sieben Stationen. Fünf Module. Zwanzig Tage. Unendlich viele Meetings.</p>' +
       '<img src="img/portrait.png" alt="Christian" class="pt big"><p>Du bist <b>Christian</b>, ca. 40, MES-Projektleiter in ' + SC.PLANT + '. Seit Jahren führst du das MES ein. Diesmal wirklich.</p>' +
+      (sim().oldSave && sim().oldSave() ? '<p class="small warn">Dein Spielstand stammt aus Version ' + esc(sim().oldSave()) + ' und passt nicht zu ' + SC.VERSION + '. Bitte neu starten.</p>' : '') +
       '<p><button data-o="new">Neues Spiel</button> ' + (sv && sv.phase !== 'ende' ? '<button data-o="cont">Weiterspielen (Tag ' + sv.day + ')</button> ' : '') + '<button data-o="help">Anleitung</button></p>' +
       '<p class="small dim">Inspiriert von Mad TV (1991). Eigenes Fanprojekt, alle Figuren frei erfunden. Version ' + SC.VERSION + '</p>' + (sim().highscores().length ? '<p class="small">Bestenliste: ' + sim().highscores().map((x, i) => (i + 1) + '. ' + x.score).join(' · ') + '</p>' : '') + '</div>');
   };
@@ -255,10 +256,12 @@
     $('btn-menu').onclick = () => { UI.paused = true; $('btn-pause').textContent = 'Weiter'; UI.showTitle(); };
     if (SC.audio) { SC.audio.init(); }
     // v0.4: Ton-Knopf zeigt auch »Ton: tippen«, solange der Browser den Ton noch sperrt (Handy)
-    const syncSnd = () => { const A = SC.audio, st = A && A.state ? A.state() : {}; $('btn-sound').textContent = A && A.isMuted() ? '🔇 Ton aus' : st.ctx === 'running' ? '🔊 Ton an' : '🔈 Ton: tippen'; };
-    UI.syncSnd = syncSnd; setInterval(syncSnd, 1000);
-    if (SC.audio) SC.audio.onFirstUnlock = () => { if (SC.audio.isIOS && SC.audio.isIOS()) { UI._sndHint = true; UI.toast(SND_HINT); } };
-    $('btn-sound').onclick = () => { aud('unlock'); aud('setMuted', !(SC.audio && SC.audio.isMuted())); syncSnd(); if (SC.audio && !SC.audio.isMuted()) aud('play', S() && S().phase === 'tag' ? 'tower' : 'title'); };
+    const syncSnd = () => { const A = SC.audio, st = A && A.state ? A.state() : {}; $('btn-sound').dataset.ctx = st.ctx || 'none'; $('btn-sound').textContent = A && A.isMuted() ? '🔇 Ton aus' : st.ctx === 'running' ? '🔊 Ton an' : '🔈 Ton: tippen'; };
+    UI.syncSnd = syncSnd; setInterval(syncSnd, 1000); if (SC.audio) SC.audio.onState = syncSnd;
+    // iOS-Hinweis einmal je Gerät (nicht bei jedem Seitenaufruf)
+    if (SC.audio) SC.audio.onFirstUnlock = () => { let seen = false; try { seen = !!localStorage.getItem('mesmarathon-sndhint'); localStorage.setItem('mesmarathon-sndhint', '1'); } catch (e) { /* */ } if (!seen && SC.audio.isIOS && SC.audio.isIOS()) { UI._sndHint = true; UI.toast(SND_HINT); } };
+    // Erster Tipp auf »Ton: tippen« entsperrt nur, er schaltet den Ton nicht ab (dataset.ctx ist der Zustand vor dem Tipp)
+    $('btn-sound').onclick = () => { const A = SC.audio, was = $('btn-sound').dataset.ctx; aud('unlock'); if (A && !A.isMuted() && was !== 'running') { syncSnd(); aud('play', S() && S().phase === 'tag' ? 'tower' : 'title'); return; } aud('setMuted', !(A && A.isMuted())); syncSnd(); if (SC.audio && !SC.audio.isMuted()) aud('play', S() && S().phase === 'tag' ? 'tower' : 'title'); };
     $('vol').oninput = e => aud('setVolume', e.target.value / 100);
     syncSnd();
     document.addEventListener('keydown', e => {

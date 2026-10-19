@@ -66,7 +66,7 @@ button.on, .tag.on { background: #40c040; }
 .tag { display: inline-block; padding: 3px 8px; border: 2px solid; border-color: #fff #000 #000 #fff; color: #000; font-size: 14px; }
 
 #vol { width: 70px; vertical-align: middle; accent-color: #ff8800; }
-#btn-sound { min-width: 72px; }
+#btn-sound { min-width: 112px; white-space: nowrap; }
 @media (max-width: 640px) { #vol { display: none; } }
 
 /* MES-Marathon */

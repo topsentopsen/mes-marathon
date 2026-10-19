@@ -64,11 +64,11 @@ window.SC = window.SC || {};
     rival: { p: 0.2, lead: 0.1, from: 4, cost: 5, cut: 15 },
     cost: { test: 2, repair: 3, care: 2, toner: 1, weekend: 8, sap: 10, fusion: 12, daily: 1 },
     fault: { inpack: 0.40, auspack: 0.15, other: 0.04 },
-    visit: { tesla: 0.5, duo: 0.5, italienHour: 0.30, italienMax: 3, itEven: 0.85, itOdd: 0.25, ahnungslos: 0.5, altwerk: 0.5, glueck: 0.08 },
+    visit: { tesla: 0.55, duo: 0.6, italienHour: 0.30, italienMax: 3, itEven: 0.85, itOdd: 0.25, ahnungslos: 0.5, altwerk: 0.5, glueck: 0.08 },
     flur: 0.35, bingoScore: 50, tiramisu: 0.15,
     // v0.4: Markt im Controlling, Prognose im Leitstand, SAP-Hotline, Titel »Werk des Jahres«
     markt: { n: 3, lo: 0.8, hi: 1.3, lizenzen: 3 },
-    prognose: { band: 0.06, hit: 4, hitImage: 2, miss2: 3, melone: 3, meloneP: 0.35, meloneMinus: 6 },
+    prognose: { band: 0.06, hit: 4, hitImage: 2, miss1: 1, miss2: 3, melone: 3, meloneP: 0.35, meloneMinus: 6 },
     hotline: { p: 0.5, min: 30, max: 60 },
     titel: { kpi: 90, image: 75, score: 300 },
     meet: { gain: 8, step: 2, cap: 80, quotaMin: 90, quotaPen: 1, spiral: 0.35, spiral2: 0.5, testFactor: 0.75, reqDouble: 0.35 }
@@ -280,13 +280,13 @@ window.SC = window.SC || {};
   // v0.4 Markt im Controlling: jeden Tag drei Angebote (eigener Zufallsstrom), höchstens ein Kauf am Tag
   // sell: true = Christian verkauft etwas und bekommt Geld
   SC.MARKT = [
-    { id: 'paket', label: 'Berater-Tagespaket (1 Paket Requirements/Spezifikation)', base: 15, msg: 'Ein Berater kommt für einen Tag. Er bringt Folien und tatsächlich ein Arbeitspaket mit.' },
-    { id: 'teile', label: 'Ersatzteile für den Verpackungsautomaten (3 Tage Reparatur 2 k€)', base: 8, msg: 'Ersatzteile im Lager: Reparaturen kosten drei Tage lang nur 2 k€. Die Instandhaltung streichelt die Kiste.' },
-    { id: 'lizenz', label: 'Alte MES-Lizenz von 2009 verkaufen (noch in Folie, Image −1)', base: 14, sell: true, msg: 'Ein Werk in Übersee kauft die Lizenz von 2009. Die Werkleitung fragt nicht, warum wir die noch hatten.' },
-    { id: 'kampagne', label: 'Imagekampagne der Agentur »Synergie & Söhne« (Image +4)', base: 15, msg: 'Die Agentur dreht ein Video: Drohnenflug über den Parkplatz, dazu »Wir sind Industrie 4.0«. Image +4.' },
-    { id: 'presse', label: 'Pressemitteilung über die Nachrichtenagentur (Image +2, Werkleitung +2)', base: 6, msg: 'Die Agenturmeldung: »Werk Mitte führt MES ein.« Wieder. Die Werkleitung schneidet sie trotzdem aus (+2).' },
-    { id: 'toner', label: 'Toner auf Vorrat (3 Tage weniger Papierstau)', base: 4, msg: 'Zwölf Tonerkartuschen. Der Drucker wirkt eingeschüchtert.' },
-    { id: 'wartung', label: 'Wartungsvertrag für Rack 4 (3 Tage weniger Abstürze)', base: 7, msg: 'Ein Techniker klebt einen Aufkleber »gewartet« auf Rack 4. Es scheint zu helfen.' }
+    { id: 'paket', label: 'Berater-Tagespaket (1 Paket Requirements/Spezifikation)', short: 'Berater-Paket', base: 15, msg: 'Ein Berater kommt für einen Tag. Er bringt Folien und tatsächlich ein Arbeitspaket mit.' },
+    { id: 'teile', label: 'Ersatzteile für den Verpackungsautomaten (3 Tage Reparatur 2 k€)', short: 'Ersatzteile', base: 8, msg: 'Ersatzteile im Lager: Reparaturen kosten heute und die nächsten zwei Tage nur 2 k€. Die Instandhaltung streichelt die Kiste.' },
+    { id: 'lizenz', label: 'Alte MES-Lizenz von 2009 verkaufen (noch in Folie, Image −1)', short: 'Lizenz 2009 verkaufen', base: 14, sell: true, msg: 'Ein Werk in Übersee kauft die Lizenz von 2009. Die Werkleitung fragt nicht, warum wir die noch hatten.' },
+    { id: 'kampagne', label: 'Imagekampagne der Agentur »Synergie & Söhne« (Image +4)', short: 'Agentur-Kampagne', base: 15, msg: 'Die Agentur dreht ein Video: Drohnenflug über den Parkplatz, dazu »Wir sind Industrie 4.0«. Image +4.' },
+    { id: 'presse', label: 'Pressemitteilung über die Nachrichtenagentur (Image +2, Werkleitung +2)', short: 'Pressemitteilung', base: 6, msg: 'Die Agenturmeldung: »Werk Mitte führt MES ein.« Wieder. Die Werkleitung schneidet sie trotzdem aus (+2).' },
+    { id: 'toner', label: 'Toner auf Vorrat (3 Tage weniger Papierstau)', short: 'Toner', base: 4, msg: 'Zwölf Tonerkartuschen. Der Drucker wirkt eingeschüchtert.' },
+    { id: 'wartung', label: 'Wartungsvertrag für Rack 4 (3 Tage weniger Abstürze)', short: 'Wartungsvertrag Rack 4', base: 7, msg: 'Ein Techniker klebt einen Aufkleber »gewartet« auf Rack 4. Es scheint zu helfen.' }
   ];
   // v0.4 Running Gag: Reichweitenanzeige des Tesla-Kollegen (sinkt jeden Tag, er lädt trotzdem nie)
   SC.TESLA_KM = d => Math.max(12, 430 - 11 * d);

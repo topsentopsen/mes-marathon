@@ -138,6 +138,7 @@
     comp.attack.value = 0.01; comp.release.value = 0.2;
     master.connect(comp); comp.connect(ctx.destination);
     A._ctx = ctx; A._master = master; A._comp = comp;
+    ctx.onstatechange = () => { if (A.onState) try { A.onState(ctx.state); } catch (e) { /* */ } };
     return ctx;
   }
 

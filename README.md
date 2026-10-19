@@ -4,6 +4,12 @@ Retro-Managerspiel im Browser, inspiriert von **Mad TV** (1991) und abgeleitet a
 
 **Spielen:** https://topsentopsen.github.io/mes-marathon/
 
+## Neu in v0.4.0 »Leitstand«
+- Jede Etage hat ein eigenes Fenster in die Produktion (Lichtschranke, Schaltschränke, Panorama, MES-Draufsicht, Laderampe). Türen unverändert.
+- Markt im Controlling (mit Agentur und Nachrichtenagentur), Prognose mit Freitagsauswertung, Wassermelonen-Bericht, SAP-Hotline, Tesla-Reichweite, Titel »Werk des Jahres«.
+- Ton auf dem Handy behoben (Entsperren bei jeder Berührung, iPhone-Stummschalter, Ton-Knopf mit Zustand).
+- Details: `docs/RELEASE-v0.4.md`, Balance: `docs/BALANCE-v0.4.md`, Review: `docs/REVIEW-v0.4.md`, Ausblick: `docs/PLAN-v0.5.md`.
+
 ## Neu in v0.3.0 »Flurfunk«
 - Pflicht-Ereignisse (Kaffeeautomat zum Cutover, Industrie 5.0 als Kreis, Morse-Rätsel, Kostümparty), Tiramisu, aktive Rivalen mit Image, Kredit, Zusagen an die Werkleitung, Flurfunk mit Sprechblasen, Buzzword-Bingo, Durchsagen, Werkszeitung, Running Gags und Easter Eggs.
 - Fabrik-Optik: Panoramafenster in die Produktion, animierte Stanzpresse, Hallenkulisse mit Kran.
@@ -23,11 +29,11 @@ Retro-Managerspiel im Browser, inspiriert von **Mad TV** (1991) und abgeleitet a
 Vanilla JavaScript ohne Build, Canvas-Pixelgrafik, Musik und Fabriklärm per Web Audio. `index.html` öffnen genügt.
 
 - `js/data.js` Daten und Balance-Hebel (`SC.TUNE`), `js/sim.js` Spiellogik (läuft auch in Node), `js/ui.js` Oberfläche, `js/building.js` Fabrik, Aufzug und Figuren, `js/audio.js` Musik und Fabriklärm.
-- Tests: `node test/sim.test.js`, `node test/names.test.js`, Browser: `node test/browser-check.js [url]` und `node test/playthrough.js [tage] [seed]` (puppeteer-core).
+- Tests: `node test/sim.test.js`, `node test/names.test.js`, Browser: `node test/browser-check.js [url]`, `node test/playthrough.js [tage] [seed]` und Handy-Ton `node test/mobile-audio.js` (puppeteer-core).
 - Balance-Bot: `node tools/bot.js 300 --check`.
 - Konzept und Plan: `docs/KONZEPT.md`, `docs/PHASEN.md`.
 
 Eigenes Fanprojekt, keine Original-Inhalte von Mad TV. Alle Figuren, Werke und Firmen sind frei erfunden.
 
-## Balance (v0.3.0, `node tools/bot.js 300`)
-Siehe `docs/BALANCE-v0.3.md` (v0.2: `docs/BALANCE-v0.2.md`). Kurz: Meeting-Marathon ist weiterhin deutlich schwächer als planvolles Arbeiten. Am stärksten ist jetzt maßvoller Fleiß (Überstunden bis 18:00, Samstagsschicht), der aber fast ein Drittel der Partien über die Familie verliert.
+## Balance (v0.4.0, `node tools/bot.js 300`)
+Siehe `docs/BALANCE-v0.4.md` (v0.3: `docs/BALANCE-v0.3.md`, v0.2: `docs/BALANCE-v0.2.md`). sparfuchs und ablenkbar liegen seit v0.4 wieder in ihren Zielbändern. Kurz: Meeting-Marathon ist weiterhin deutlich schwächer als planvolles Arbeiten. Am stärksten ist jetzt maßvoller Fleiß (Überstunden bis 18:00, Samstagsschicht), der aber fast ein Drittel der Partien über die Familie verliert.
