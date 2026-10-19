@@ -72,7 +72,8 @@
     const m = c.match(/\d+/g).map(Number); return '#' + m.map(v => v.toString(16).padStart(2, '0')).join('');
   }
 
-  const partyDay = () => { const S = SC.S; return !!(S && S.ev && S.day >= 14 && (!S.ev.party || S.ev.party === S.day)); };
+  // Kostüme ab 16:00 am Party-Tag (Umziehen vor der Party) und danach bis Feierabend
+  const partyDay = () => { const S = SC.S; return !!(S && S.ev && S.day >= 14 && S.minute >= 16 * 60 && (!S.ev.party || S.ev.party === S.day)); };
   // v0.3 Kostümparty: die Rollenfiguren tauchen verkleidet auf (nur Grafik)
   function costume(x, y, role) {
     if (role === 'schicht') { rect(x - 5, y - 17, 10, 9, '#ffffff'); rect(x - 5, y - 17, 10, 2, '#d02020'); for (let i = 0; i < 3; i++) rect(x - 4 + i * 3, y - 14, 2, 2, '#202020'); }

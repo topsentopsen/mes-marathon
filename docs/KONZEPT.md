@@ -150,7 +150,7 @@ Jeden Abend läuft der Ist-Wert 35 % in Richtung „Modulziel minus Abzüge heut
 **Budget als Dauerbrenner** (Controlling, ERP-Etage; Anzeige im HUD):
 
 - Start 90 k€. **Quartalsfreigabe** („Tranche“) einmal je Woche beantragen: +30 k€ (Werkleitung ≥ 40) sonst +15 k€; 30 Min.
-- **Vorschuss**: +25 k€ sofort, −30 k€ automatisch fünf Tage später; nur einer gleichzeitig.
+- **Vorschuss**: +25 k€ sofort, −30 k€ automatisch fünf Tage später; nur einer gleichzeitig. *(Seit v0.3.0 ersetzt durch einen Kredit mit Rahmen, Zins und Tilgung, siehe docs/RELEASE-v0.3.md.)*
 - **Externe Berater**: 15 k€, 30 Min, +3 Arbeitspakete (25 %: nur +1, „Folien statt Ergebnis“).
 - Ausgaben: Testlauf 2, Reparatur 3, Wartung Server/Station 2, Druck-Toner 1, Wochenendschicht 8/Tag, SAP-Lizenz 10 (Tag 6), Systemfusion 12 (Tag 13).
 - Budget < 0: Budgetsperre (Werkleitung −2 pro Abend, keine Berater, Testläufe +30 % Zeit „wegen Freigabe“). < −40: Niederlage.

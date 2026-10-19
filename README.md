@@ -16,7 +16,7 @@ Retro-Managerspiel im Browser, inspiriert von **Mad TV** (1991) und abgeleitet a
 - **Figuren (nur Rollen, nur Christian hat einen Namen):** der Schichtleiter mit seinen unnötigen Meetings, die IT-Chefin, die immer mit der Automatisierungspyramide kommt (Pyramiden-Quiz), der Tesla-Kollege, der Kollege, der nichts arbeitet und nur mit dem Tesla-Kollegen redet, der italienische Kollege mit stündlichen Geschichten aus Italien und vom Essen, Kollegen ohne Ahnung, die Werkleitung, die Controlling-Abteilung, die Instandhaltung, der Pförtner, die Kantinenkraft.
 - **Großereignisse:** Tag 6 neues SAP-System mit Stammdatenmigration und Cutover am Freitag (sonst drei Tage Chaos). Tag 13 Firmenübernahme mit Systemfusion als sechstem Modul, Go-Live rückt auf Tag 22.
 - **KPIs:** OEE, Ausschuss, Durchsatz, Liefertreue mit Zielwerten, Verlauf im Leitstand, täglicher KPI-Bericht und Wochenrückblick am Freitag.
-- **Budget als Dauerbrenner:** wöchentliche Tranche, Vorschuss, externe Berater; Testläufe, Reparaturen, Toner und Wochenendschichten kosten.
+- **Budget als Dauerbrenner:** wöchentliche Tranche, Kredit (seit v0.3, vorher Vorschuss), externe Berater; Testläufe, Reparaturen, Toner und Wochenendschichten kosten.
 - **Aus Mad TV/Sender-Chef:** Gebäude im Querschnitt mit Aufzug, Echtzeit-Tag mit Tempo und Pause, Besucher mit Entscheidung, Konkurrenz (Werk Nord, Werk Süd), Abendbilanz, Wochenende, lokale Bestenliste, Chiptune-Musik.
 
 ## Technik

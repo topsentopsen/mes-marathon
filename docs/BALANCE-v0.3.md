@@ -27,9 +27,9 @@ CHECK OK (harte Invarianten)
 | Strategie | v0.2.0 | v0.3.0 | Kommentar |
 |---|---|---|---|
 | gut | 62 | 60 | rund 2 h feste Zusatzzeit (Kreis 45 Min., Party, Kaffee, Rätsel, Rivalen) |
-| meetingfan | 23 | 12 | Meeting-Marathon bleibt klar schwächste »aktive« Strategie |
+| meetingfan | 23 | 12 | Meeting-Marathon bleibt deutlich schwächer als gut (nur meetingfan_plus, passiv und workaholic liegen darunter) |
 | meetingfan_plus | 7 | 5 | |
-| berater | 68 | 53 | Budget ist knapper (Rivalen-Gegenmaßnahmen, Techniker, Kreditzins) |
+| berater | 68 | 52 | Budget ist knapper (Rivalen-Gegenmaßnahmen, Techniker, Kreditzins) |
 | fleissig | 65 | 70 | **jetzt beste Strategie**, verliert aber 87/300 (29 %) über die Familie |
 | sparfuchs | 42 | 26 | ohne Tranche reicht das Budget seltener |
 | workaholic | 0 | 0 | gewollt (»du wirst Imker«) |
