@@ -36,7 +36,7 @@
       msgs: [], result: null, dayLog: [], bingo: [], eggs: {}, durchsageAt: null, ev: {}, itStreak: 0, tiramisu: 0, kaffeeDef: 0, partyMin: 0, immerToday: 0,
       markt: null, lizenzen: T().markt.lizenzen, tonerUntil: 0, prog: { week: -1, k: null, melone: -1, hits: 0 }, hotlineDay: 0, titel: null,
       auktion: null, nordLast: null, nordLastR: null, box: { n: 0, sorte: null, week: -1, day: 0, gast: null, stand: null, used: false }, audit: { streak: 0, day: 0 }, elon: { day: 0, n: 0, meet: 0 }, kopf: 0, vDay: 0, vN: 0, pfad: null,
-      stats: { elon: 0, elonThema: 0, meetings: 0, useless: 0, missed: 0, weekend: 0, overtime: 0, bugs: 0, coffee: 0, visits: 0, pyrRight: 0, pyrWrong: 0, faults: 0, repairs: 0, budgetSpent: 0, chaosDays: 0, flur: 0, bingo: 0, eggs: 0, immer: 0, tiramisu: 0, markt: 0, prognose: 0, treffer: 0, melone: 0, hotline: 0, auktion: 0, auktionWin: 0, kopf: 0, zwilling: 0, archiv: 0, suess: 0, suessGut: 0, suessMeck: 0, suessLetztes: 0 }
+      stats: { pappe: 0, aufzug: 0, fax: 0, elon: 0, elonThema: 0, meetings: 0, useless: 0, missed: 0, weekend: 0, overtime: 0, bugs: 0, coffee: 0, visits: 0, pyrRight: 0, pyrWrong: 0, faults: 0, repairs: 0, budgetSpent: 0, chaosDays: 0, flur: 0, bingo: 0, eggs: 0, immer: 0, tiramisu: 0, markt: 0, prognose: 0, treffer: 0, melone: 0, hotline: 0, auktion: 0, auktionWin: 0, kopf: 0, zwilling: 0, archiv: 0, suess: 0, suessGut: 0, suessMeck: 0, suessLetztes: 0 }
     };
     planDay(S);
     return S;
@@ -144,10 +144,11 @@
   function planAuktion(S) {
     const AU = T().auktion, w = week(S);
     if (S.auktion && !S.auktion.res && S.day > S.auktion.closeDay) closeAuktion(S, null);
-    if (weekday(S) !== 1 || S.day < AU.from || w === 2 || (S.auktion && S.auktion.week === w)) return;
+    if ((weekday(S) !== 1 && weekday(S) !== 2) || S.day < AU.from || w === 2 || (S.auktion && S.auktion.week === w)) return;
+    const heute = weekday(S) === 2; // v0.6: Dienstag fiel aus (Krankheitstag), dann Mittwoch mit Frist heute 15:00
     const lot = Math.floor(rngA(S, 100 * w + 1) * SC.AUKTION.length), L = SC.AUKTION[lot];
-    S.auktion = { week: w, lot, closeDay: S.day + 1, bid: null, res: null, nord: Math.floor(L.base * nordRatio(S, w)) };
-    S.msgs.push({ t: 'Ausschreibung im Controlling: ' + L.label + '. Richtpreis ' + L.base + ' k€, Gebote bis morgen 15:00. Werk Nord bietet auch.', bad: false });
+    S.auktion = { week: w, lot, closeDay: S.day + (heute ? 0 : 1), bid: null, res: null, nord: Math.floor(L.base * nordRatio(S, w)) };
+    S.msgs.push({ t: 'Ausschreibung im Controlling: ' + L.label + '. Richtpreis ' + L.base + ' k€, Gebote bis ' + (heute ? 'heute' : 'morgen') + ' 15:00. Werk Nord bietet auch.', bad: false });
   }
   // Werk Nord bietet nicht blind: der Faktor zum Richtpreis wandert von Woche zu Woche nur wenig (wer das letzte Nord-Gebot kennt, kann besser bieten)
   function nordRatio(S, w) { const AU = T().auktion; let r = AU.nordLo + rngA(S, 2) * (AU.nordHi - AU.nordLo); for (let k = 1; k <= w; k++) r = clamp(r + (rngA(S, 100 * k + 2) - 0.5) * AU.drift, AU.nordLo, AU.nordHi); return r; }
@@ -403,6 +404,8 @@
           if (rngM(S) < H.p) { S.sap.pk++; say(S, 'SAP-Hotline: ' + t + ' Nach ' + S._cost + ' Minuten hilft dir tatsächlich jemand: Stammdaten ' + S.sap.pk + '/' + S.sap.need + '.'); if (S.sap.pk >= S.sap.need) { S.sap.state = 'done'; S.chef += 6; say(S, 'SAP-Cutover vorgezogen und geschafft! Die Werkleitung +6.'); } }
           else { S.energy -= 3; say(S, 'SAP-Hotline: ' + t + ' Nach ' + S._cost + ' Minuten: »Dafür ist ein anderes Team zuständig.« Aufgelegt. Energie −3.', true); } } },
       ...AUK_ACTS(5).map(a => Object.assign({}, a, { label: S => a.label(S).replace('Ausschreibung:', 'Gebot per Mail:') })),
+      { id: 'pappe', label: 'Den Pappkameraden anschauen', cost: 3, energy: 0, check: () => null,
+        run: S => { S.stats.pappe++; say(S, SC.PAPPE[(S.stats.pappe - 1) % SC.PAPPE.length]); if (S.stats.pappe >= 6) egg(S, 'pappe', SC.PAPPE_EGG); } },
       { id: 'mail', label: 'Postfach aufräumen', cost: 15, energy: 1, check: () => null,
         run: S => { if (rng(S) < 0.3) { S.chef += 2; say(S, 'Eine Mail der Werkleitung rechtzeitig beantwortet. Pluspunkt.'); } else say(S, '43 Mails, davon 41 Einladungen vom Schichtleiter in CC.'); } }
     ],
@@ -450,6 +453,8 @@
           spend(S, T().suess.cost[k]); B.n = T().suess.stk; B.sorte = k; B.week = week(S); S.stats.suess++; say(S, 'Süßigkeitenbox im Büro aufgefüllt: ' + SC.SORTEN[k] + ', ' + B.n + ' Stück.' + t + ' Wer was mag, steht auf dem Zettel am Kiosk.'); } }))
     ],
     drucker: [
+      { id: 'fax', label: S => S && S.eggs && S.eggs.elon ? 'Elon-Abo per Fax kündigen' : 'Das Fax-Gerät benutzen', cost: 5, energy: 0, check: () => null,
+        run: S => { S.stats.fax++; say(S, S.eggs.elon ? SC.FAX_ELON : SC.FAX[(S.stats.fax - 1) % SC.FAX.length]); if (S.stats.fax >= 5) egg(S, 'fax', SC.FAX_EGG); } },
       { id: 'print', label: 'Spezifikation zur Unterschrift ausdrucken', cost: 10, energy: 1,
         check: S => S.printer.jam ? 'Papierstau! Erst beheben.' : targets.print(S) ? null : 'Nichts zu drucken (Testläufe müssen bestanden sein).',
         run: S => { const m = targets.print(S); spend(S, T().cost.toner); if (rng(S) < (S.tonerUntil >= S.day ? 0.15 : 0.3)) { S.printer.jam = true; say(S, 'Der Drucker frisst Seite 14 von 62. Papierstau. ' + druckerFehler(S), true); return; } m.printed = true; say(S, 'Spezifikation ' + m.name + ' gedruckt und geheftet. Ab zur Werkleitung!'); } },
@@ -512,6 +517,10 @@
     ]
   };
 
+  // v0.6 Aufzugknopf (Klick auf den Schacht): zählt, beim 7. Mal Easter Egg
+  function aufzug(S) { S.stats.aufzug++; const n = S.stats.aufzug; if (n >= 7 && !S.eggs.aufzug) { egg(S, 'aufzug', SC.AUFZUG_EGG); return SC.AUFZUG_EGG; } return SC.AUFZUG[(n - 1) % SC.AUFZUG.length]; }
+  // v0.6 Wartezeit bis zur Schichtübergabe (für die Anzeige auf den Knöpfen)
+  const handoverWait = (S, room) => (room === 'halle' && S.minute >= SIREN && S.minute < HANDOVER ? HANDOVER - S.minute : 0);
   // v0.5 Elon-Zähler des Tages (Running Gag des Tesla-Kollegen); neue Zufälle nur über rngA mit Salzen ab 20000
   function elonPlus(S) { const E = S.elon; if (E.day !== S.day) { E.day = S.day; E.n = 0; } E.n++; S.stats.elon++; if (S.stats.elon >= T().elon.egg) egg(S, 'elon', SC.ELON_EGG.replace('{n}', S.stats.elon)); }
   const elonHeute = S => (S.elon && S.elon.day === S.day ? S.elon.n : 0);
@@ -553,6 +562,8 @@
     if (id === 'bericht' && isDone(S, 'bde')) cost = 15;
     if (S.lunch && S.minute < 15 * 60 && cost > 20) cost = Math.round(cost * 0.9);
     const r = cost > 0 ? boxRabatt(S, room, id) : 0; if (r) cost = Math.max(5, cost - r);
+    // v0.6 Spätzuschlag: wer nach Feierabend noch etwas anfängt, ist langsamer (Party-Minuten zählen nicht)
+    if (cost > 0 && T().ueber.spaet !== 1 && S.minute >= SC.DAY_END + (S.partyMin || 0)) cost = Math.round(cost * T().ueber.spaet);
     return { cost, rabatt: r > 0 };
   }
   const actCost = (S, room, id) => costOf(S, room, id).cost;
@@ -788,7 +799,7 @@
     R.lines.push(['info', 'Werkszeitung: ' + pickF(S, SC.SCHLAGZEILEN)]);
     S.schicht -= 3;
     if (S.schicht < 20) { S.chef -= 3; R.lines.push(['bad', 'Der Schichtleiter hat sich bei der Werkleitung über dich beschwert: Werkleitung −3']); }
-    const rest = 55 - Math.round(over / 6);
+    const rest = 55 - Math.round(over / T().ueber.rest);
     S.energy = clamp(S.energy + rest, 15, 100);
     let fri = weekday(S) === 4;
     if (S.burnout) { S.burnout = false; S.chef -= 8; S.family -= 4; S.energy = 70; R.lines.push(['bad', 'Am Schreibtisch eingeschlafen, Kopf auf der Tastatur. Ein Tag krank: Werkleitung −8.']); S.day++; if (T().cost.daily) spend(S, T().cost.daily); if (weekday(S) === 4 && S.kredit > 0) { const z = Math.max(1, Math.round(S.kredit * T().kredit.zins)); spend(S, z); R.lines.push(['bad', 'Kreditzinsen (Saldo ' + S.kredit + ' k€): −' + z + ' k€']); } if (S.auktion && !S.auktion.res && S.day >= S.auktion.closeDay) closeAuktion(S, R); if (weekday(S) === 4) { fri = true; wochenRueckblick(S, R); S.chef = clamp(S.chef, 0, 100); S.image = clamp(S.image, 0, 100); auditFreitag(S, R); } }
@@ -860,6 +871,6 @@
   }
   function highscores() { try { return JSON.parse(localStorage.getItem('mesmarathon-highscore') || '[]'); } catch (e) { return []; } }
 
-  SC.sim = { newGame, act, actCost, elonHeute, advance, events, endDay, weekend, startDay, progress, nextMeeting, activeMeeting, actions: A, targets, hm, weekday, week, save, load, slow,
+  SC.sim = { newGame, act, actCost, elonHeute, aufzug, handoverWait, advance, events, endDay, weekend, startDay, progress, nextMeeting, activeMeeting, actions: A, targets, hm, weekday, week, save, load, slow,
     choose, visitOptions, visitText, oldSave, archiv, kopfhoerer, kopfWhy, nordRatio, rngA, closeAuktion, auktionOpen, bidPrice, auditOk, rngF, rngM, prognoseBand, rahmen, kpiScore, kpiIndex, kpiPath, kpiTarget, autoWork, addScore, highscores, stationOf, stName, rng };
 })(window.SC);

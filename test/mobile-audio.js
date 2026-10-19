@@ -6,7 +6,7 @@
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 const url = 'file://' + path.resolve(__dirname, '..', 'index.html');
-const out = process.env.SHOTS || '/workspace/mes-marathon-v05-mobil';
+const out = process.env.SHOTS || '/workspace/mes-marathon-v06-mobil';
 const wait = ms => new Promise(r => setTimeout(r, ms));
 const DEV = [
   { name: 'iphone', ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1', w: 390, h: 844 },

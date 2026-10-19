@@ -69,6 +69,9 @@ function playDay(S, P) {
     if (short && P.report && S.excel && S.reported !== S.day && tryAct(S, 'chef', 'report')) continue;
     if (S.energy < 40 && S.coffee < 3 && tryAct(S, 'kantine', 'coffee')) continue;
     // v0.5 Süßigkeitenbox: nur sichtbare Werte (Box-Inhalt, Woche); 'mit' füllt auf, wenn er ohnehin in der Kantine steht, 'extra' geht dafür hin
+    // v0.6 Gag-Fan: Pappkamerad und Fax je dreimal, wenn er ohnehin im Raum ist
+    if (P.gag && S.at === 'buero' && S.stats.pappe < 3 && tryAct(S, 'buero', 'pappe')) continue;
+    if (P.gag && S.at === 'drucker' && S.stats.fax < 3 && tryAct(S, 'drucker', 'fax')) continue;
     if (P.suess && S.box.week !== sim.week(S) && S.box.n <= 3 && (S.at === 'kantine' || P.suessWeg) && tryAct(S, 'kantine', 'box_' + P.suess)) continue;
     if (!S.lunch && S.minute >= 11.5 * 60 && tryAct(S, 'kantine', 'lunch')) continue;
     if (P.suess && S.box.week !== sim.week(S) && S.box.n <= 3 && S.at === 'kantine' && tryAct(S, 'kantine', 'box_' + P.suess)) continue;
@@ -131,6 +134,7 @@ const POL = {
   lakritz: P({ care: true, suess: 'lakritz' }),
   naschWeg: P({ care: true, suess: 'schoko', suessWeg: true }),
   elonThema: P({ care: true, elon: true }),
+  gagfan: P({ care: true, gag: true }),
   // Referenz (v0.5 gefunden, gilt schon für v0.4): wie gut, aber jeden Tag bis 17:30 (maßvolle Überstunden)
   gut1730: P({ care: true, leave: 17 * 60 + 30 }),
   vorzeig: P({ care: true, markt: 'image', auktion: 'mittel' }),
@@ -170,7 +174,7 @@ if (require.main === module) {
     if (R.meetingfan_plus.win > R.gut.win - 8) errs.push('meetingfan_plus nicht >= 8 PP unter gut');
     // v0.3: Die beste Strategie muss eine »vernünftige« sein (keine Meeting-, Passiv- oder Chaos-Strategie).
     // fleissig (maßvolle Überstunden + Samstagsschicht) darf vorn liegen, muss aber mindestens 20 % der Partien über die Familie verlieren.
-    const SANE = ['gut', 'berater', 'fleissig', 'ohneGegen', 'zusager'];
+    const SANE = ['gut', 'berater', 'fleissig', 'ohneGegen', 'zusager', 'bieter', 'naschbox', 'lakritz', 'elonThema', 'melone', 'ohnePlan'];
     if (!SANE.some(k => R[k].win === best)) errs.push('beste Strategie ist keine der vernünftigen (' + SANE.join(', ') + ')');
     if (R.fleissig.fam < n * 0.2) errs.push('fleissig verliert zu selten über die Familie');
     const rank = Object.values(R).map(x => x.win).sort((a, b) => b - a).indexOf(R.meetingfan.win) + 1;
@@ -189,6 +193,8 @@ if (require.main === module) {
     if (R.gut.pfad > 12) errs.push('Vorzeigewerk zu häufig nebenbei (gut Vorzeig% > 12)');
     for (const k of ['meetingfan', 'passiv', 'workaholic', 'sapChaos']) if (R[k].pfad > 3) errs.push(k + ' erreicht das Vorzeigewerk zu oft');
     if (R.elonThema && R.elonThema.win > R.gut.win + 4) errs.push('Thema wechseln beim Tesla-Kollegen lohnt sich zu sehr (elonThema > gut + 4)');
+    if (R.gagfan && R.gagfan.win > R.gut.win + 3) errs.push('Gags lohnen sich (gagfan > gut + 3)');
+    if (R.gagfan && R.gagfan.meet !== undefined && Math.abs(R.gagfan.meet - R.gut.meet) > 1) errs.push('Gags ändern die Meetings');
     if (R.bieter.win > R.gut.win + 8) errs.push('Ausschreibung lohnt sich zu sehr (bieter > gut + 8)');
     // v0.5 Süßigkeitenbox: ignorieren (gut) darf nicht klar besser sein, Pflege nicht dominant
     if (R.gut.win > R.naschbox.win + 4) errs.push('Süßigkeitenbox ignorieren lohnt sich (gut > naschbox + 4)');

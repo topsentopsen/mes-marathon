@@ -3,7 +3,7 @@
 'use strict';
 window.SC = window.SC || {};
 (function (SC) {
-  SC.VERSION = '0.5.0';
+  SC.VERSION = '0.6.0';
   SC.DAY_START = 7 * 60 + 30;   // 07:30 Frühschicht-Beginn im Büro
   SC.DAY_END = 17 * 60;         // 17:00 regulärer Feierabend
   SC.LATEST = 20 * 60;          // 20:00 der Pförtner schließt ab
@@ -80,7 +80,7 @@ window.SC = window.SC || {};
     suess: { from: 3, stk: 6, cost: { schoko: 3, gummi: 2, lakritz: 1 }, beschwer: 0.5, schichtGut: 1, schichtLeer: 1, chefGut: 1, zeit: 10, egg: 3 },
     elon: { thema: 8, nein: 0.2, neinMin: 4, meet: 0.25, meetMin: 3, meetEnergie: 2, egg: 8, akkuDay: 15 },
     // Überstunden: Familie −over/div; ab »frei« Minuten mindestens »min« (das Abendessen ist dann kalt)
-    ueber: { div: 20, frei: 15, min: 0 },
+    ueber: { div: 20, frei: 15, min: 0, spaet: 1.2, rest: 6 },
     meet: { gain: 8, step: 2, cap: 80, quotaMin: 90, quotaPen: 1, spiral: 0.35, spiral2: 0.5, testFactor: 0.75, reqDouble: 0.35 }
   };
   SC.KPI = {
@@ -314,6 +314,32 @@ window.SC = window.SC || {};
     'Ich hab dir einen Link zu irgendwas mit Elon geschickt. Nicht geöffnet? Ich erzähl es dir, so ungefähr.',
     'Ich bin sicher, Elon fände, Reichweite ist Einstellungssache. So ungefähr jedenfalls.'
   ];
+  // v0.6 kleine Gags ohne Spielwirkung
+  SC.PAPPE = [
+    'Der Pappkamerad mit deinem Gesicht sitzt auf deinem Stuhl. Ein Kollege grüßt ihn. Seine Haltung ist besser als deine.',
+    'Der Schichtleiter hat den Pappkameraden zu einem Meeting eingeladen. Er kommt nicht. Die Einladung schon.',
+    'Jemand hat dem Pappkameraden einen Kaffee hingestellt. Er hat ihn nicht angerührt. Disziplin.',
+    'Der Pappkamerad trägt jetzt einen Besucherausweis. Gültig bis Go-Live.',
+    'Die IT-Chefin hat dem Pappkameraden eine Pyramide in die Hand gedrückt. Er hält sie richtig herum.'
+  ];
+  SC.PAPPE_EGG = 'Der Pappkamerad hat den besten Terminkalender im Werk: leer. Die Werkleitung fragt, ob er befördert werden kann.';
+  SC.AUFZUG = [
+    'Du drückst den Aufzugknopf. Der Aufzug ist schon da. Er war immer schon da.',
+    'Der Aufzug denkt nach. Dann fährt er in den Keller, den es nicht gibt.',
+    'Im Aufzug hängt ein Zettel: »Max. 8 Personen oder 1 Schichtleiter-Meeting.«',
+    'Aufzugmusik: die Warteschleife der SAP-Hotline, als Jazz.',
+    'Der Knopf leuchtet. Mehr passiert nicht. Wie beim letzten MES.',
+    'Jemand hat einen Aufkleber angebracht: »Ebene 2,5: Middleware«.'
+  ];
+  SC.AUFZUG_EGG = 'Die Tür geht auf, und du stehst im Aufzug-Studio: Scheinwerfer, ein Mikrofon, ein Publikum aus Paletten. »Heute zu Gast: niemand. Wir haben nur Zeit bis Ebene drei.«';
+  SC.FAX = [
+    'Du faxt der Werkleitung den Projektstand. Antwort per Fax: »Bitte per Mail.«',
+    'Das Fax-Gerät piept, kreischt und druckt dann ein Fax von 2009: »Lastenheft folgt.«',
+    'Du faxt Werk Nord einen Glückwunsch. Zurück kommt eine Folie. Folie 38 von 40.',
+    'Das Fax-Gerät meldet »Papierstau«. Der Drucker daneben fühlt sich verstanden.'
+  ];
+  SC.FAX_ELON = 'Du versuchst, das Elon-Abo des Tesla-Kollegen per Fax zu kündigen. Rückmeldung: »Empfänger unbekannt.« Das Abo läuft weiter, behauptet er jedenfalls.';
+  SC.FAX_EGG = 'Werk Nord faxt eine Entschuldigung für die letzte Ausschreibung. Auf Folie 39. Folie 40 fehlt. Das Fax-Gerät wird ab heute im Archiv geführt.';
   SC.ELON_AKKU = 'Ich lade inzwischen dauernd Elon-Posts. Den Akku leider nicht.';
   SC.ELON_THEMA = [
     '»Und wie ist der Reifendruck?« Er redet zwei Minuten über Reifen. Elon kommt darin nur einmal vor.',

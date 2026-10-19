@@ -86,7 +86,8 @@
     h += '<h3>Was tun?</h3><div class="acts">';
     for (const a of acts) {
       const why = a.check(s); let cost = sim().actCost(s, room, a.id); const label = typeof a.label === 'function' ? a.label(s) : a.label;
-      h += '<button data-a="' + a.id + '"' + (why ? ' disabled title="' + esc(why) + '"' : '') + '>' + esc(label) + (cost ? ' <span class="small">(' + cost + ' Min.)</span>' : '') + '</button>' + (why ? '<div class="small dim why">' + esc(why) + '</div>' : '');
+      const wait = sim().handoverWait(s, room), fertig = s.minute + wait + cost, spaet = fertig > SC.DAY_END;
+      h += '<button data-a="' + a.id + '"' + (why ? ' disabled title="' + esc(why) + '"' : '') + '>' + esc(label) + (cost ? ' <span class="small">(' + cost + ' Min.' + (wait ? ' + ' + wait + ' Wartezeit' : '') + ', fertig <span class="' + (spaet ? 'warn' : '') + '">' + hm(fertig) + '</span>)</span>' : '') + '</button>' + (why ? '<div class="small dim why">' + esc(why) + '</div>' : '');
     }
     h += '</div>';
     if (room === 'halle' || room === 'buero') h += '<p class="small dim">Ablauf je Modul: Requirements (Hallen, Station) → Spezifikation → Implementierung (Büro) → Deployment (Serverraum) → Testlauf (Hallen, Teststation) → Ausdruck (Drucker) → Abnahme (Werkleitung).</p>';
@@ -177,7 +178,7 @@
 
   UI.tick = function () {
     const s = S();
-    if (s.minute >= SC.DAY_END && !s._warned) { s._warned = true; UI.toast(s.day >= 14 && !s.ev.party ? '17:00, aber erst die Party in der Kantine! Verkleidungspflicht. Die Party zählt nicht als Überstunden.' : '17:00 Feierabend! Überstunden gehen bis 20:00, kosten aber Familie. Raus über die Pforte (EG).'); }
+    if (s.minute >= SC.DAY_END && !s._warned) { s._warned = true; UI.toast(s.day >= 14 && !s.ev.party ? '17:00, aber erst die Party in der Kantine! Verkleidungspflicht. Die Party zählt nicht als Überstunden.' : '17:00 Feierabend! Überstunden gehen bis 20:00, kosten aber Familie' + (SC.TUNE.ueber.spaet > 1 ? ', und was du jetzt noch anfängst, dauert länger (müde: ×' + String(SC.TUNE.ueber.spaet).replace('.', ',') + ')' : '') + '. Raus über die Pforte (EG).'); }
     if (s.minute >= SC.LATEST) { if (UI.room) UI.closeRoom(); UI.toast('20:00: Der Pförtner schließt ab.'); UI.endDay(); }
     if (s.burnout) { if (UI.room) UI.closeRoom(); UI.endDay(); }
   };
@@ -246,6 +247,7 @@
       '<li><b>Großereignisse:</b> Tag 6 kommt ein neues SAP (Stammdaten migrieren, Cutover Freitag). Tag 13 kauft die Firma die Konkurrenz (Systemfusion als sechstes Modul, Go-Live Tag 22).</li>' +
       '<li><b>Neu in 0.3:</b> Werk Nord und Werk Süd greifen ein (Abwerbung, Gerüchte beim Vorstand). Gegenmaßnahmen kosten Geld, Ignorieren kostet Image. Das Image im Konzern beeinflusst Tranche, Kreditrahmen und das Tempo der Rivalen. In der Werkleitung kannst du Zusagen machen (Module bis zu einer Frist): gehalten gibt Prämie, gebrochen kostet. Dazu Pflichttermine: Kaffeeautomat zum SAP-Cutover, die IT-Chefin mit Industrie 5.0 als Kreis, ein Morse-Rätsel am Verpackungsautomaten und die Kostümparty ab Tag 14 (Feierabend erst nach der Party). Wer dem italienischen Kollegen dreimal in Folge zuhört, bekommt Tiramisu.</li>' +
       '<li><b>Neu in 0.4:</b> Markt im Controlling (drei Angebote am Tag, ein Geschäft: Berater-Paket, Ersatzteile, Agentur-Kampagne, Pressemitteilung, Toner, Wartungsvertrag oder eine alte Lizenz verkaufen). Im Leitstand Montag oder Dienstag eine Prognose für den KPI-Index am Freitag abgeben (Treffer: Werkleitung und Image). Der Wassermelonen-Bericht meldet »alles grün«, bis das Audit nachschaut. Während der SAP-Migration gibt es die SAP-Hotline. Go-Live mit KPI-Index ab 90 % und Image ab 75: Titel »Werk des Jahres«. Jede Etage hat ein Fenster in die Produktion.</li>' +
+      '<li><b>Neu in 0.6:</b> Die Aktionsknöpfe zeigen, wann du fertig bist (gelb: nach Feierabend), in den Hallen auch die Wartezeit der Schichtübergabe. Wer nach 17:00 noch etwas anfängt, ist müde und braucht länger. Tasten: Leertaste Pause, + Tempo, M Ton, K Kopfhörer. Im Büro wartet ein Pappkamerad, im Druckerraum ein Fax-Gerät, und der Aufzugknopf (Klick auf den Schacht) hat ein Geheimnis. Fällt der Dienstag aus, hängt die Ausschreibung am Mittwoch aus.</li>' +
       '<li><b>Neu in 0.5:</b> Dienstags hängt im Controlling eine Ausschreibung aus (Ersatzteile, Beraterkontingent oder Wartungspaket). Gebote bis Mittwoch 15:00, im Controlling oder per Mail aus dem Büro. Werk Nord bietet verdeckt, gezahlt wird nur beim Zuschlag. Zweiter Weg zum Sieg: das Konzernaudit »Vorzeigewerk« (Freitag ab Tag 15, sehr hohes Image und KPI-Index, mindestens 3 Module). Der Knopf 🎧 setzt Kopfhörer auf: Tesla-Kollege, Ahnungslose und Altwerk halten sich dann kurz. Im Serverraum wohnt jetzt ein digitaler Zwilling, und das Archiv hat Fundstücke. Christian bringt immer Süßigkeiten mit: Die Box im Büro füllst du einmal pro Woche am Kiosk der Kantine auf (Schoko-Mix, Gummibärchen oder Lakritz). Jeden Tag schaut ein Stammgast vorbei. Passt die Sorte, hilft er dir (zum Beispiel eine Reparatur oder ein Testlauf 10 Min. kürzer), sonst wird gemeckert. Das letzte Stück nimmt niemand. Und der Tesla-Kollege erzählt dir jetzt dauernd, was »Elon« angeblich alles anders machen würde (Elon-Zähler oben). Thema wechseln geht meistens.</li>' +
       '<li><b>Flurfunk (neu in 0.3):</b> Brandschutzübungen, Beamer-Kabel, Überraschungsgerichte und mehr. Die Werkleitung streut Buzzwords: fünf verschiedene sind ein Bingo (Punkte). Werksdurchsagen, die Werkszeitung am Abend und ein paar Easter Eggs.</li>' +
       '<li><b>Excel-Liste</b> jeden Tag pflegen. Server und Drucker zicken. Kaffee und Mittagessen in der Kantine geben Energie. Bei Energie 0 schläfst du am Schreibtisch ein: Der nächste Tag fällt aus (krank, Werkleitung −8). Fällt so der Tag vor dem Go-Live-Termin aus, ist am Abend danach Schluss.</li>' +
@@ -264,7 +266,7 @@
       else if (o === 'help') help();
       else if (o === 'back' || o === 'title') UI.showTitle();
       else if (o === 'next') next();
-      else if (o.startsWith('we')) { const out = sim().weekend(S(), +o[2]); sim().save(S()); if (S().phase === 'ende') { overlay('<h2>Wochenende</h2><p>' + esc(out.join(' ')) + '</p>' + endHtml(S()) + '<p><button data-o="title">Zum Titel</button></p>'); } else { S().day += 0; next(); UI.toast(out.join(' ')); } }
+      else if (o.startsWith('we')) { const out = sim().weekend(S(), +o[2]); sim().save(S()); if (S().phase === 'ende') { overlay('<h2>Wochenende</h2><p>' + esc(out.join(' ')) + '</p>' + endHtml(S()) + '<p><button data-o="title">Zum Titel</button></p>'); } else { next(); UI.toast(out.join(' ')); } }
     });
     const nav = $('rooms');
     nav.innerHTML = SC.FLOORS.map((f, i) => '<span class="floor-grp"><span class="fl">' + (i === 0 ? 'EG' : i) + ' ' + f.name + '</span>' + f.doors.filter(d => d.room).map(d => '<button data-r="' + d.room + '">' + esc(SC.ROOMS[d.room].title.split(' (')[0]) + '</button>').join('') + '</span>').reverse().join('');
@@ -275,6 +277,7 @@
       if (!S() || S().phase !== 'tag') return;
       const [x, y] = SC.building.toLogical(e); const p = SC.building.pick(x, y);
       if (!p && SC.building.chimney && SC.building.chimney(x, y)) { const S0 = S(); S0.eggs.chN = (S0.eggs.chN || 0) + 1; UI.toast(SC.SCHORNSTEIN[(S0.eggs.chN - 1) % SC.SCHORNSTEIN.length]); if (S0.eggs.chN === 5 && !S0.eggs.schornstein) { S0.eggs.schornstein = S0.day; S0.stats.eggs++; UI.toast('Easter Egg! Fünfmal den Schornstein angeklickt. Die Werkleitung macht dich zum Schornsteinbeauftragten. Ehrenamtlich.'); } return; }
+      if (!p && SC.building.liftHit && SC.building.liftHit(x, y)) { UI.toast(sim().aufzug(S())); flushMsgs(); return; }
       if (p) { if (p.d.deco) { UI.toast(p.d.label === 'ARCHIV' ? sim().archiv(S()) : p.d.msg); flushMsgs(); SC.building.goTo(p.f, p.d.x, null); } else UI.walkTo(p.d.room); return; }
       const f = SC.building.floorAt(y); if (f !== null && x > 70 && x < 410) SC.building.goTo(f, Math.round(x), null);
     });
@@ -299,6 +302,7 @@
       if (e.key === ' ') { $('btn-pause').click(); e.preventDefault(); }
       if (e.key === '+') $('btn-speed').click();
       if (e.key === 'm' || e.key === 'M') $('btn-sound').click();
+      if ((e.key === 'k' || e.key === 'K') && S() && !sim().kopfWhy(S())) $('btn-kopf').click();
     });
     aud('play', 'title');
   };
