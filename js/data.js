@@ -353,7 +353,7 @@ window.SC = window.SC || {};
   ];
   SC.ABSCHLUSS = {
     win: ['Der Pappkamerad lässt ausrichten: Er hat das alles schon gewusst.', 'Der Pförtner stempelt dich aus und sagt: »Viertes MES. Das erste, das bleibt.«', 'Der Schichtleiter lädt zum Abschluss-Meeting. Diesmal gehst du gern hin. Es gibt Kuchen.'],
-    lose: ['Der Pappkamerad übernimmt dein Büro. Keiner merkt den Unterschied, sagt die Werkleitung.', 'Der Pförtner: »Das MES hab ich schon dreimal gehen sehen. Jetzt viermal.«', 'Der Tesla-Kollege meint, Elon hätte das bestimmt anders gemacht. Er weiß nur nicht, wie.']
+    lose: ['Der Pappkamerad übernimmt dein Büro. Keiner merkt den Unterschied, sagt die Werkleitung.', 'Der Pförtner: »Das MES hab ich schon zweimal gehen sehen. Jetzt dreimal.«', 'Der Tesla-Kollege meint, Elon hätte das bestimmt anders gemacht. Er weiß nur nicht, wie.']
   };
   SC.SAISON = 'Am Kiosk gibt es schon Lebkuchen. Seit September. Niemand weiß, ob das zu früh oder zu spät ist.';
   SC.ELON_AKKU = 'Ich lade inzwischen dauernd Elon-Posts. Den Akku leider nicht.';

@@ -167,7 +167,7 @@ if (require.main === module) {
   for (const [k, x] of Object.entries(rows)) console.log(k.padEnd(16), String(x.win).padStart(5), String(x.winDay).padStart(8), '|', String(x.chef).padStart(6), String(x.fam).padStart(7), String(x.termin).padStart(6), String(x.budget).padStart(6), '|', String(x.prog).padStart(9), String(x.bud).padStart(6), String(x.kpi).padStart(3), (x.meet + '(' + x.useless + ')').padStart(13), String(x.chaos).padStart(6), String(x.titel).padStart(6), String(x.pfad).padStart(8));
   if (process.argv.includes('--check')) {
     const R = rows, errs = [], warn = [];
-    // gut1730 ist eine Referenz für die offene Abweichung »maßvolle Überstunden« (docs/BALANCE-v0.5.md), sie zählt nur als Warnung
+    // gut1730 ist eine Referenz für die offene Abweichung »maßvolle Überstunden« (docs/BALANCE-v0.7.md), sie zählt nur als Warnung
     const best = Math.max(...Object.entries(R).filter(([k]) => k !== 'gut1730').map(([, x]) => x.win));
     // harte Invarianten (Auftrag: Meeting-Marathon ist nicht die stärkste Strategie)
     if (R.meetingfan.win > R.gut.win - 15) errs.push('meetingfan nicht >= 15 PP unter gut');

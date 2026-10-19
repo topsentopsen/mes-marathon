@@ -46,7 +46,10 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   await page.click('button[data-o="next"]'); await wait(300);
   const d2 = await page.evaluate(() => window.SC.S.day);
   const text = await page.evaluate(() => document.body.innerText);
-  console.log(JSON.stringify({ title: title.text.slice(0, 160), nameField: title.name, visitShown, st, d2, errs }, null, 1));
+  // v0.7: Kurzanleitung beim ersten Start, Abreißkalender, Dein Werk in Zahlen
+  const v07 = await page.evaluate(() => { const S = window.SC.S; S.pending = null; S.visits = []; window.SC.ui.openRoom('schicht'); const kal = /Abreißkalender/.test(document.getElementById('room').innerText); window.SC.ui.closeRoom(); return { kal }; });
+  v07.hint = /Erstes Mal hier/.test(title.text); if (!v07.hint || !v07.kal) errs.push('v0.7-Anzeige fehlt: ' + JSON.stringify(v07));
+  console.log(JSON.stringify({ title: title.text.slice(0, 160), nameField: title.name, visitShown, st, d2, v07, errs }, null, 1));
   if (errs.length || d2 !== 2 || !visitShown || title.name) process.exitCode = 1;
   await browser.close();
 })();
