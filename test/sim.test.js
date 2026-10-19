@@ -35,6 +35,26 @@ t('Feierabend erst ab 15 Uhr', () => { const S = sim.newGame(5); clearDay(S); as
 t('Wochenendschicht kostet Familie', () => { const S = sim.newGame(5); const f = S.family; sim.weekend(S, 2); assert.strictEqual(S.family, f - 26); });
 t('Spiel endet spätestens am Termin', () => { const S = sim.newGame(9); let g = 0; while (S.phase !== 'ende' && g++ < 40) { S.pending = null; S.minute = SC.DAY_END; sim.endDay(S); if (S.phase === 'wochenende') sim.weekend(S, 0); sim.startDay(S); } assert.strictEqual(S.phase, 'ende'); assert.ok(!S.result.win); });
 t('Speicherversion 0.2.0', () => { const store = {}; global.localStorage = { getItem: k => store[k] || null, setItem: (k, v) => { store[k] = v; } }; const S = sim.newGame(3); sim.save(S); assert.strictEqual(sim.load().v, '0.2.0'); store['mesmarathon-save'] = JSON.stringify(Object.assign({}, S, { v: '0.1.1' })); assert.strictEqual(sim.load(), null); });
+t('SAP-Chaos-Pfad: Cutover ohne Wochenendschicht, Nacharbeit sperrt ERP-Abnahme, Chaos bis sauber', () => {
+  const S = sim.newGame(12); toDay(S, 10); S.minute = SC.DAY_END; S.pending = null; S.sap.pk = 1; sim.endDay(S); assert.ok(S.sap.cutover); const c = S.chef;
+  const out = sim.weekend(S, 0); assert.strictEqual(S.sap.state, 'nacharbeit'); assert.ok(S.chaosUntil >= S.day + 3); assert.ok(S.chef <= c - 8 + 0.001 || S.chef === 0); assert.ok(/Nacharbeit|nachgearbeitet/.test(out.join(' ')));
+  sim.startDay(S); clearDay(S); const e = sim.targets.abnahme; const erp = S.modules.find(m => m.id === 'erp'); Object.assign(erp, { req: 3, spec: 3, impl: 4, deployed: true, test: 3, printed: true });
+  S.modules.forEach(m => { if (m !== erp) m.done = true; }); assert.ok(!e(S)); const r = sim.act(S, 'chef', 'abnahme'); assert.ok(!r.ok && /nachgearbeitet/.test(r.why), r.why);
+  // Chaos verlängert sich, solange Nacharbeit offen ist
+  S.chaosUntil = S.day; S.minute = SC.DAY_END; S.chef = 60; S.family = 70; sim.endDay(S); assert.ok(S.chaosUntil > S.day - (S.phase === 'ende' ? 1 : 0)); S.phase = 'tag'; S.result = null; S.minute = 8 * 60; clearDay(S);
+  const m0 = S.minute; S.energy = 100; assert.ok(sim.act(S, 'buero', 'migrate').ok); assert.ok(S.minute - m0 >= 75 && S.minute - m0 <= 77, S.minute - m0); while (S.sap.state === 'nacharbeit') { S.energy = 100; S.minute = 8 * 60; sim.act(S, 'buero', 'migrate'); }
+  assert.strictEqual(S.sap.state, 'done'); assert.ok(sim.act(S, 'chef', 'abnahme').ok);
+});
+t('SAP-Cutover am Wochenende: die Schicht migriert zuerst die fehlenden Stammdaten', () => { const S = sim.newGame(12); toDay(S, 10); S.minute = SC.DAY_END; S.pending = null; S.sap.pk = 1; sim.endDay(S); const before = sim.progress(S); sim.weekend(S, 1); assert.strictEqual(S.sap.state, 'done'); assert.strictEqual(S.sap.pk, S.sap.need); assert.ok(sim.progress(S) - before <= 1, 'Wochenende hat statt SAP Module bearbeitet'); });
+t('Tag 6: Montagsrunde und SAP-Kick-off kollidieren nicht (300 Seeds)', () => { for (let i = 0; i < 300; i++) { const S = sim.newGame(1000 + i * 7919); toDay(S, 6); const mr = S.meetings.find(m => /Montagsrunde/.test(m.title)), ko = S.meetings.find(m => /SAP-Kick-off/.test(m.title)); assert.ok(mr && ko, 'beide Termine'); assert.ok(ko.start - (mr.start + mr.dur) >= 30, 'Puffer'); for (const a of S.meetings) for (const b of S.meetings) if (a !== b) assert.ok(!(a.start < b.start + b.dur && b.start < a.start + a.dur), 'Überlappung'); } });
+t('Weiterspielen nach dem Abend: Phase, Bilanz und Cutover-Frage bleiben erhalten', () => {
+  const store = {}; const old = global.localStorage; global.localStorage = { getItem: k => store[k] || null, setItem: (k, v) => { store[k] = v; } };
+  const S = sim.newGame(12); toDay(S, 10); S.minute = SC.DAY_END; S.pending = null; S.sap.pk = 2; const R = sim.endDay(S); sim.save(S);
+  const L = sim.load(); assert.strictEqual(L.phase, 'wochenende'); assert.strictEqual(L.day, 10); assert.ok(L.sap.cutover); assert.strictEqual(L.lastReport.day, R.day); assert.ok(L.lastReport.lines.some(l => /Cutover/.test(l[1])));
+  sim.weekend(L, 0); assert.ok(L.chaosUntil >= 11); sim.startDay(L); assert.strictEqual(L.day, 11);
+  const S2 = sim.newGame(5); S2.minute = SC.DAY_END; S2.pending = null; sim.endDay(S2); sim.save(S2); const L2 = sim.load(); assert.strictEqual(L2.phase, 'abend'); assert.strictEqual(L2.day, 1); sim.startDay(L2); assert.strictEqual(L2.day, 2);
+  global.localStorage = old;
+});
 t('Bot: deterministisch, Invarianten, meetingfan schwächer als gut', () => {
   const bot = require('../tools/bot.js');
   const play = (seed, P) => { const S = sim.newGame(seed); let g = 0; while (S.phase !== 'ende' && g++ < 40) bot.playDay(S, P); return S; };

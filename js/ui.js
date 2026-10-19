@@ -38,7 +38,7 @@
     $('calendar').innerHTML = (act ? '<b class="blink">JETZT ' + hm(act.start) + ' ' + esc(act.title) + ' → MEETING (2. OG)</b>' : nm ? 'Nächster Termin: <b>' + hm(nm.start) + '</b> ' + esc(nm.title) + ' <span class="dim">(' + nm.dur + ' Min.)</span>' : '<span class="dim">Keine Termine mehr heute.</span>') +
       ' · Server: ' + (s.server.up ? '<span class="good">läuft</span>' : '<span class="bad">DOWN</span>') + (s.printer.jam ? ' · <span class="bad">Drucker: Papierstau</span>' : '') +
       (s.stations.some(x => x.fault) ? ' · <span class="bad">Störung: ' + s.stations.filter(x => x.fault).map(x => sim().stName(x.id)).join(', ') + '</span>' : '') +
-      (s.sap.state === 'migration' ? ' · <span class="warn">SAP-Migration ' + s.sap.pk + '/' + s.sap.need + '</span>' : '') + (s.chaosUntil >= s.day ? ' · <span class="bad">SAP-Chaos</span>' : '') + (s.excel ? '' : ' · <span class="bad">Excel-Liste offen</span>');
+      (s.sap.state === 'migration' || s.sap.state === 'nacharbeit' ? ' · <span class="warn">SAP-' + (s.sap.state === 'nacharbeit' ? 'Nacharbeit ' : 'Migration ') + s.sap.pk + '/' + s.sap.need + '</span>' : '') + (s.chaosUntil >= s.day ? ' · <span class="bad">SAP-Chaos</span>' : '') + (s.excel ? '' : ' · <span class="bad">Excel-Liste offen</span>');
     if (UI.room && UI._lastMin !== Math.floor(s.minute / 5)) { UI._lastMin = Math.floor(s.minute / 5); renderRoom(); }
   };
 
@@ -59,7 +59,7 @@
     const y = b => '<td class="' + (b ? 'good' : 'dim') + '">' + (b ? '✓' : '–') + '</td>';
     return '<table class="xl"><tr><th>Modul</th><th>Req.</th><th>Spez.</th><th>Impl.</th><th>Deploy</th><th>Test</th><th>Druck</th><th>Abnahme</th></tr>' +
       s.modules.map(m => '<tr><td>' + esc(m.name) + ' <span class="dim small">(' + esc(sim().stName(m.station)) + ')</span></td>' + (m.done ? '<td colspan="7" class="good">ABGENOMMEN ✓</td>' : c(m.req, m.need.req) + c(m.spec, m.need.spec) + c(m.impl, m.need.impl) + y(m.deployed) + c(m.test, m.need.test) + y(m.printed) + y(false)) + '</tr>').join('') +
-      (s.sap.state !== 'none' ? '<tr><td>SAP-Stammdaten</td><td colspan="7" class="' + (s.sap.state === 'done' ? 'good">migriert ✓' : 'warn">' + s.sap.pk + '/' + s.sap.need + ' migriert, Cutover Freitag Tag 10') + '</td></tr>' : '') + '</table>';
+      (s.sap.state !== 'none' ? '<tr><td>SAP-Stammdaten</td><td colspan="7" class="' + (s.sap.state === 'done' ? 'good">migriert ✓' : 'warn">' + s.sap.pk + '/' + s.sap.need + ' migriert, ' + (s.sap.state === 'nacharbeit' ? 'Nacharbeit nach dem Chaos-Cutover' : 'Cutover Freitag Tag 10')) + '</td></tr>' : '') + '</table>';
   }
 
   function renderRoom() {

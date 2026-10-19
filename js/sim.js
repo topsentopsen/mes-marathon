@@ -64,7 +64,9 @@
     const M = [{ start: 9 * 60, dur: 15, kind: 'chef', title: 'Daily bei der Werkleitung' }];
     if (S.sap.state === 'migration' && S.sap.kick !== true && (S.sap.kick = true)) M.push({ start: 11 * 60, dur: 60, kind: 'chef', title: 'SAP-Kick-off der Werkleitung (Pflicht)' });
     if (weekday(S) === 4) M.push({ start: 14 * 60 + 30, dur: 30, kind: 'chef', title: 'Wochenrückblick mit der Werkleitung (KPI)' });
-    if (weekday(S) === 0) M.push({ start: 10 * 60, dur: 45, kind: 'schicht', title: 'Montagsrunde Schicht (Pflicht laut Schichtleiter)' });
+    // Montagsrunde: am Tag des SAP-Kick-offs (11:00) kürzt der Schichtleiter auf 30 Min., damit Christian pünktlich oben ist
+    const kickDay = M.some(m => /SAP-Kick-off/.test(m.title));
+    if (weekday(S) === 0) M.push(kickDay ? { start: 10 * 60, dur: 30, kind: 'schicht', title: 'Montagsrunde Schicht (Kurzfassung wegen SAP, sagt er)' } : { start: 10 * 60, dur: 45, kind: 'schicht', title: 'Montagsrunde Schicht (Pflicht laut Schichtleiter)' });
     const tm = T().meet;
     let n = 1 + (rng(S) < 0.55 ? 1 : 0) + (S.schicht > 70 && rng(S) < 0.4 ? 1 : 0) + (S.schicht > 85 && rng(S) < tm.spiral2 ? 1 : 0) + (S.uselessYesterday >= 2 && rng(S) < tm.spiral ? 1 : 0);
     if (isDone(S, 'auftrag') && rng(S) < 0.3) n--;
@@ -165,8 +167,10 @@
     test: S => firstMod(S, m => m.deployed && m.test < m.need.test && !faulted(S, m)),
     testAny: S => firstMod(S, m => m.deployed && m.test < m.need.test),
     print: S => firstMod(S, m => m.test >= m.need.test && !m.printed),
-    abnahme: S => firstMod(S, m => m.printed && !(m.id === 'erp' && S.sap.state === 'migration'))
+    abnahme: S => firstMod(S, m => m.printed && !(m.id === 'erp' && sapOpen(S)))
   };
+  // SAP noch nicht sauber: Migration läuft oder Nacharbeit nach einem Chaos-Cutover
+  const sapOpen = S => S.sap.state === 'migration' || S.sap.state === 'nacharbeit';
   function slow(S) { return S.energy < 25 ? 1.5 : S.energy < 45 ? 1.2 : 1; }
   const eff = S => Math.min(S.schicht, T().meet.cap);
   // Ein Arbeitspaket in der Pipeline (Wochenende, Berater, Azubi, Pyramide)
@@ -205,7 +209,7 @@
           const m = targets.test(S);
           if (rng(S) < (S.schicht < 40 ? 0.8 - S.schicht / 100 : S.schicht < 60 ? 0.15 : 0)) { S._cost = 30; say(S, 'Der Schichtleiter: »Die ' + stName(m.station) + ' ist heute nicht frei. Hättest halt zu meinem Meeting kommen sollen.« (30 Minuten verloren)', true); return; }
           spend(S, T().cost.test);
-          const bug = 0.34 - m.spec * 0.03 - (isDone(S, 'qs') ? 0.05 : 0);
+          const bug = 0.34 - m.spec * 0.03 - (isDone(S, 'qs') ? 0.05 : 0) + (S.chaosUntil >= S.day ? 0.12 : 0);
           if (rng(S) < bug) { m.impl = Math.max(0, m.impl - 1); m.deployed = false; S.stats.bugs++; say(S, 'Testlauf ' + m.name + ' an der ' + stName(m.station) + ': Bug gefunden! Zurück an den Schreibtisch (Implementierung ' + m.impl + '/' + m.need.impl + ').', true); return; }
           m.test++; say(S, 'Testlauf ' + m.name + ' an der ' + stName(m.station) + ' bestanden: ' + m.test + '/' + m.need.test + '.');
         } },
@@ -240,9 +244,10 @@
         check: S => targets.impl(S) ? null : 'Nichts zu implementieren (erst Spezifikation fertig schreiben).',
         run: S => { const m = targets.impl(S); m.impl++; say(S, 'Implementierung ' + m.name + ': ' + m.impl + '/' + m.need.impl + '.'); } },
       { id: 'migrate', label: 'SAP-Stammdaten migrieren', cost: 60, energy: 9,
-        check: S => S.sap.state === 'migration' ? null : 'Gerade keine Migration. Genieß es.',
-        run: S => { S.sap.pk++; say(S, 'Stammdaten ' + S.sap.pk + '/' + S.sap.need + ': 14.000 Materialnummern, 11.000 davon heißen »Schraube«.');
-          if (S.sap.pk >= S.sap.need) { S.sap.state = 'done'; S.chef += 6; say(S, 'SAP-Cutover vorgezogen und geschafft! Die Werkleitung +6. Das neue SAP fragt jetzt bei jedem Klick »Sind Sie sicher?«.'); } } },
+        check: S => sapOpen(S) ? null : 'Gerade keine Migration. Genieß es.',
+        run: S => { S.sap.pk++; say(S, (S.sap.state === 'nacharbeit' ? 'Nacharbeit Stammdaten ' : 'Stammdaten ') + S.sap.pk + '/' + S.sap.need + ': 14.000 Materialnummern, 11.000 davon heißen »Schraube«.');
+          if (S.sap.pk >= S.sap.need && S.sap.state === 'nacharbeit') { S.sap.state = 'done'; say(S, 'Stammdaten endlich sauber. Die ERP-Schnittstelle kann jetzt abgenommen werden. Die Werkleitung tut so, als wäre nichts gewesen.'); }
+          else if (S.sap.pk >= S.sap.need) { S.sap.state = 'done'; S.chef += 6; say(S, 'SAP-Cutover vorgezogen und geschafft! Die Werkleitung +6. Das neue SAP fragt jetzt bei jedem Klick »Sind Sie sicher?«.'); } } },
       { id: 'excel', label: 'Excel-Liste für die Werkleitung pflegen', cost: 20, energy: 3,
         check: S => S.excel ? 'Heute schon gepflegt.' : null,
         run: S => { S.excel = true; say(S, 'Excel-Liste aktualisiert: 47 Spalten, 3 Farben, ein SVERWEIS, den nur du verstehst.'); } },
@@ -305,7 +310,7 @@
       { id: 'report', label: 'Status anhand der Excel-Liste berichten', cost: 20, energy: 2, check: S => S.reported === S.day ? 'Heute schon berichtet.' : null,
         run: S => { S.reported = S.day; if (S.excel) { S.chef += 5; say(S, 'Die Werkleitung: »Die Excel-Liste ist aktuell. So mag ich das.«'); } else { S.chef -= 3; say(S, 'Die Werkleitung: »Und wo steht das in der Excel-Liste?«', true); } } },
       { id: 'abnahme', label: 'Abnahme mit Unterschrift einholen', cost: 30, energy: 3,
-        check: S => targets.abnahme(S) ? null : (S.sap.state === 'migration' && S.modules.some(m => m.printed && !m.done) ? 'Die ERP-Schnittstelle wird erst nach dem SAP-Cutover abgenommen.' : 'Keine gedruckte, getestete Spezifikation dabei.'),
+        check: S => targets.abnahme(S) ? null : (sapOpen(S) && S.modules.some(m => m.printed && !m.done) ? (S.sap.state === 'nacharbeit' ? 'Die ERP-Schnittstelle wird erst abgenommen, wenn die Stammdaten nachgearbeitet sind (Büro).' : 'Die ERP-Schnittstelle wird erst nach dem SAP-Cutover abgenommen.') : 'Keine gedruckte, getestete Spezifikation dabei.'),
         run: S => { const m = targets.abnahme(S); m.done = true; S.chef += 8; say(S, 'Abgenommen: ' + m.name + '! Unterschrift, Stempel, Händedruck.'); } }
     ],
     controlling: [
@@ -334,7 +339,9 @@
     let cost = Math.round(a.cost * slow(S));
     if (id === 'test') { if (S.testSlot === S.day) cost = Math.round(cost * 0.67); else if (eff(S) >= 70) cost = Math.round(cost * T().meet.testFactor); if (S.budget < 0) cost = Math.round(cost * 1.3); }
     if (room === 'halle' && id === 'req') { const m = targets.req(S); if (m && faulted(S, m)) cost = Math.round(cost * 1.3); }
-    if (room === 'halle' && S.chaosUntil >= S.day) cost = Math.round(cost * 1.25);
+    if (room === 'halle' && S.chaosUntil >= S.day) cost = Math.round(cost * 1.4);
+    if (id === 'migrate' && S.sap.state === 'nacharbeit') cost = Math.round(cost * 1.25);
+    if (room === 'buero' && (id === 'spec' || id === 'impl') && S.chaosUntil >= S.day) cost = Math.round(cost * 1.25);
     if (id === 'repair' && isDone(S, 'trace')) cost -= 15;
     if (id === 'bericht' && isDone(S, 'bde')) cost = 15;
     if (S.lunch && S.minute < 15 * 60 && cost > 20) cost = Math.round(cost * 0.9);
@@ -495,6 +502,8 @@
     else if (me < best - 12) { S.chef -= 3; R.lines.push(['bad', 'Deutlich hinter ' + S.rivals.find(r => r.prog === best).name + ': Werkleitung −3']); }
     if (S.modules.some(m => m.deployed && !m.done) && rng(S) < 0.22) { S.energy -= 10; S.family -= 3; R.lines.push(['bad', '23:40 Anruf aus der Nachtschicht: »Das neue MES-Dings zeigt Rot.« Energie −10, Familie −3']); }
     if (S.chaosUntil >= S.day) { S.stats.chaosDays++; R.lines.push(['bad', 'SAP-Chaos: Niemand findet seine Materialnummer.']); }
+    // Das Chaos hört erst auf, wenn die Stammdaten nachgearbeitet sind
+    if (S.sap.state === 'nacharbeit' && S.chaosUntil <= S.day) { S.chaosUntil = S.day + 1; R.lines.push(['bad', 'SAP-Chaos geht weiter, bis die Stammdaten nachgearbeitet sind.']); }
     S.schicht -= 3;
     if (S.schicht < 20) { S.chef -= 3; R.lines.push(['bad', 'Der Schichtleiter hat sich bei der Werkleitung über dich beschwert: Werkleitung −3']); }
     const rest = 55 - Math.round(over / 6);
@@ -525,9 +534,12 @@
   // Wochenendschicht: shifts = 0, 1 oder 2 Tage
   function weekend(S, shifts) {
     const out = [];
+    // Cutover am Wochenende: die Schicht migriert zuerst die fehlenden Stammdaten
+    let sapRest = S.sap.cutover && S.sap.state === 'migration' && shifts >= 1 ? Math.max(0, S.sap.need - S.sap.pk) : 0;
     for (let d = 0; d < shifts; d++) {
       S.stats.weekend++;
-      autoWork(S, 4);
+      const use = Math.min(4, sapRest); sapRest -= use;
+      autoWork(S, 4 - use);
       spend(S, T().cost.weekend);
       S.family -= 13; S.energy -= 12; S.chef += 3;
     }
@@ -535,8 +547,8 @@
     else out.push('Wochenendschicht (' + shifts + (shifts > 1 ? ' Tage' : ' Tag') + '): viel geschafft, Familie −' + 13 * shifts + ', Werkleitung +' + 3 * shifts + ', Budget −' + T().cost.weekend * shifts + ' k€ (Zuschläge).');
     if (S.sap.cutover && S.sap.state === 'migration') {
       S.sap.cutover = false; S.sap.state = 'done';
-      if (shifts >= 1) out.push('SAP-Cutover am Wochenende durchgezogen. Montag läuft alles. Fast.');
-      else { S.chaosUntil = S.day + 3; S.chef -= 5; out.push('SAP-Cutover ohne Wochenendschicht: drei Tage Chaos, Werkleitung −5.'); }
+      if (shifts >= 1) { S.sap.pk = S.sap.need; out.push('SAP-Cutover am Wochenende durchgezogen (die Schicht hat die restlichen Stammdaten migriert). Montag läuft alles. Fast.'); }
+      else { S.chaosUntil = S.day + 3; S.chef -= 8; if (S.sap.pk < S.sap.need) S.sap.state = 'nacharbeit'; out.push('SAP-Cutover ohne Wochenendschicht: drei Tage Chaos, Werkleitung −8.' + (S.sap.state === 'nacharbeit' ? ' Die fehlenden Stammdaten (' + (S.sap.need - S.sap.pk) + ' Pakete) müssen im Büro nachgearbeitet werden, sonst keine Abnahme der ERP-Schnittstelle.' : '')); }
     }
     S.chef = clamp(S.chef, 0, 100); S.family = clamp(S.family, 0, 100); S.energy = clamp(S.energy, 15, 100);
     if (S.family <= 0) { S.result = { win: false, why: 'Zuhause hängt der Haussegen schief. Du kündigst und wirst Imker.' }; S.result.score = score(S); S.phase = 'ende'; }

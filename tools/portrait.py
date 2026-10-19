@@ -43,7 +43,6 @@ for y,r in enumerate(ROWS[:32]):
     for i,c in enumerate(r): img.putpixel((off+i,y),PAL[c])
 img.save('img/portrait-32.png')
 img.resize((256,256),Image.NEAREST).save('img/portrait.png')
-img.resize((16,16),Image.LANCZOS)
 img.save('favicon.ico',sizes=[(16,16),(32,32)])
 img.resize((180,180),Image.NEAREST).save('img/apple-touch-icon.png')
 print('ok')

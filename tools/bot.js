@@ -51,7 +51,7 @@ function playDay(S, P) {
     if (P.schichtplan && S.minute < 12 * 60 && sim.targets.testAny(S) && tryAct(S, 'schicht', 'schichtplan')) continue;
     if (P.report && S.excel && S.reported !== S.day && tryAct(S, 'chef', 'report')) continue;
     if (P.bericht && S.minute >= 13 * 60 && tryAct(S, 'leitstand', 'bericht')) continue;
-    if (S.sap.state === 'migration' && tryAct(S, 'buero', 'migrate')) continue;
+    if (((P.migrate !== false && S.sap.state === 'migration') || S.sap.state === 'nacharbeit') && tryAct(S, 'buero', 'migrate')) continue;
     if (tryAct(S, 'chef', 'abnahme') || tryAct(S, 'drucker', 'print') || tryAct(S, 'server', 'deploy') || tryAct(S, 'halle', 'test') || tryAct(S, 'buero', 'impl') || tryAct(S, 'buero', 'spec') || tryAct(S, 'halle', 'req')) continue;
     if (P.review && tryAct(S, 'it', 'review')) continue;
     if (P.care && tryAct(S, 'server', 'care')) continue;
@@ -77,7 +77,9 @@ const POL = {
   berater: P({ care: true, berater: true, kredit: true }),
   workaholic: P({ meet: 'chef', we: () => 2, leave: 19 * 60 + 30 }),
   fleissig: P({ care: true, we: S => (S.sap.cutover || S.family > 60 ? 1 : 0), leave: 18 * 60 }),
-  sparfuchs: P({ care: true, tranche: false })
+  sparfuchs: P({ care: true, tranche: false }),
+  // Chaos-Pfad: migriert keine SAP-Stammdaten und nimmt beim Cutover frei (we: 0)
+  sapChaos: P({ care: true, migrate: false, we: S => (S.sap.cutover ? 0 : S.family > 55 ? 1 : 0) })
 };
 function run(n) {
   const rows = {};
@@ -111,6 +113,8 @@ if (require.main === module) {
     if (rank < 4) errs.push('meetingfan auf Rang ' + rank + ' (höchstens Rang 4 erlaubt)');
     if (R.passiv.win > 5) errs.push('passiv gewinnt zu oft');
     if (best > 75) errs.push('Spiel zu leicht (> 75 %)');
+    if (R.sapChaos.chaos < 90) errs.push('Chaos-Pfad nicht abgedeckt (sapChaos Chaos% ' + R.sapChaos.chaos + ')');
+    if (R.sapChaos.win > R.gut.win - 8) errs.push('SAP-Chaos lohnt sich (sapChaos nicht >= 8 PP unter gut)');
     // Zielbereiche aus docs/PHASEN.md 10.2 (Abweichungen als Warnung)
     const Z = { einfach: [20, 40], gut: [55, 70], ohneSchichtplan: [45, 62], meetingfan: [25, 40], ablenkbar: [30, 50], berater: [50, 68], workaholic: [25, 45], sparfuchs: [35, 55] };
     for (const [k, [lo, hi]] of Object.entries(Z)) if (R[k].win < lo || R[k].win > hi) warn.push(k + ' ' + R[k].win + ' % (Ziel ' + lo + '–' + hi + ')');
