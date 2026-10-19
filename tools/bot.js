@@ -18,8 +18,14 @@ function resolveVisit(S, P) {
     if (P.visit === 'skip') c = 'skip';
     else { const right = p.opts.indexOf(SC.PYRAMID_Q[p.q].a); c = sim.rng(S) < P.pyr ? 'a' + right : 'a' + Math.floor(sim.rng(S) * 3); }
   } else if (opts.length === 1) c = opts[0];
+  // v0.3 Pflicht-Ereignisse: feste, nachvollziehbare Regeln (passiv nimmt immer die letzte Option)
+  else if (p.id === 'rivale') c = P.gegen !== false && P.visit !== 'skip' && S.budget >= 15 ? 'gegen' : 'hin';
+  else if (p.id === 'kaffee') c = P.visit === 'skip' ? 'durchhalten' : S.energy < 70 ? 'kantine' : 'durchhalten';
+  else if (p.id === 'kreis') c = P.visit === 'skip' ? 'spaeter' : 'meeting';
+  else if (p.id === 'raetsel') c = P.visit === 'skip' ? 'ticket' : S.budget >= 15 ? 'service' : 'aus';
+  else if (p.id === 'party') c = opts[S.seed % opts.length];
   else if (P.visit === 'listen') c = opts[0];
-  else if (P.visit === 'smart') c = (p.id === 'italien' && S.energy < 60) || p.id === 'altwerk' ? opts[0] : opts[1];
+  else if (P.visit === 'smart') c = (p.id === 'italien' && (S.energy < 60 || S.itStreak > 0)) || p.id === 'altwerk' ? opts[0] : opts[1];
   else c = opts[1];
   sim.choose(S, c);
 }
@@ -42,7 +48,9 @@ function playDay(S, P) {
     if (S.energy < 40 && S.coffee < 3 && tryAct(S, 'kantine', 'coffee')) continue;
     if (!S.lunch && S.minute >= 11.5 * 60 && tryAct(S, 'kantine', 'lunch')) continue;
     if (P.tranche && S.trancheWeek !== sim.week(S) && tryAct(S, 'controlling', 'tranche')) continue;
-    if (P.kredit && S.budget < 10 && tryAct(S, 'controlling', 'vorschuss')) continue;
+    if (P.kredit && S.budget < 10 && tryAct(S, 'controlling', 'kredit')) continue;
+    if (P.kredit && S.budget > 40 && S.kredit > 0 && tryAct(S, 'controlling', 'tilgen')) continue;
+    if (P.zusage && !S.zusage && S.day >= 3 && tryAct(S, 'chef', 'z_' + P.zusage)) continue;
     if (P.berater && S.budget > 45 && tryAct(S, 'controlling', 'berater')) continue;
     if (!S.server.up && tryAct(S, 'server', 'restart')) continue;
     if (P.repair && !sim.targets.test(S) && sim.targets.testAny(S) && tryAct(S, 'werkstatt', P.repair === 'notbehelf' ? 'notbehelf' : 'repair')) continue;
@@ -79,6 +87,9 @@ const POL = {
   fleissig: P({ care: true, we: S => (S.sap.cutover || S.family > 60 ? 1 : 0), leave: 18 * 60 }),
   sparfuchs: P({ care: true, tranche: false }),
   // Chaos-Pfad: migriert keine SAP-Stammdaten und nimmt beim Cutover frei (we: 0)
+  ohneGegen: P({ care: true, gegen: false }),
+  zusager: P({ care: true, zusage: 'mittel' }),
+  waghalsig: P({ care: true, zusage: 'kurz' }),
   sapChaos: P({ care: true, migrate: false, we: S => (S.sap.cutover ? 0 : S.family > 55 ? 1 : 0) })
 };
 function run(n) {
@@ -108,7 +119,11 @@ if (require.main === module) {
     // harte Invarianten (Auftrag: Meeting-Marathon ist nicht die stärkste Strategie)
     if (R.meetingfan.win > R.gut.win - 15) errs.push('meetingfan nicht >= 15 PP unter gut');
     if (R.meetingfan_plus.win > R.gut.win - 8) errs.push('meetingfan_plus nicht >= 8 PP unter gut');
-    if (R.gut.win !== best && R.berater.win !== best) errs.push('beste Strategie ist weder gut noch berater');
+    // v0.3: Die beste Strategie muss eine »vernünftige« sein (keine Meeting-, Passiv- oder Chaos-Strategie).
+    // fleissig (maßvolle Überstunden + Samstagsschicht) darf vorn liegen, muss aber mindestens 20 % der Partien über die Familie verlieren.
+    const SANE = ['gut', 'berater', 'fleissig', 'ohneGegen', 'zusager'];
+    if (!SANE.some(k => R[k].win === best)) errs.push('beste Strategie ist keine der vernünftigen (' + SANE.join(', ') + ')');
+    if (R.fleissig.fam < n * 0.2) errs.push('fleissig verliert zu selten über die Familie');
     const rank = Object.values(R).map(x => x.win).sort((a, b) => b - a).indexOf(R.meetingfan.win) + 1;
     if (rank < 4) errs.push('meetingfan auf Rang ' + rank + ' (höchstens Rang 4 erlaubt)');
     if (R.passiv.win > 5) errs.push('passiv gewinnt zu oft');

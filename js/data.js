@@ -59,11 +59,13 @@ window.SC = window.SC || {};
   };
   // Zahlen-Hebel für die Balance (docs/PHASEN.md 10.3)
   SC.TUNE = {
-    budgetStart: 100, tranche: 30, trancheLow: 15, vorschuss: 25, rueckzahlung: 30, berater: 25,
+    budgetStart: 110, tranche: 30, trancheLow: 15, berater: 25,
+    kredit: { rahmen: 60, rahmenHoch: 80, schritt: 20, zins: 0.08 },
+    rival: { p: 0.2, lead: 0.1, from: 4, cost: 5 },
     cost: { test: 2, repair: 3, care: 2, toner: 1, weekend: 8, sap: 10, fusion: 12, daily: 1 },
     fault: { inpack: 0.40, auspack: 0.15, other: 0.04 },
     visit: { tesla: 0.55, duo: 0.6, italienHour: 0.30, italienMax: 3, itEven: 0.85, itOdd: 0.25, ahnungslos: 0.5, altwerk: 0.5, glueck: 0.08 },
-    flur: 0.35, bingoScore: 50,
+    flur: 0.35, bingoScore: 50, tiramisu: 0.15,
     meet: { gain: 8, step: 2, cap: 80, quotaMin: 90, quotaPen: 1, spiral: 0.35, spiral2: 0.5, testFactor: 0.75, reqDouble: 0.35 }
   };
   SC.KPI = {
@@ -237,5 +239,37 @@ window.SC = window.SC || {};
     'Der Schornstein raucht. Laut Werkleitung ist das »Digitalisierung, die man sieht«.',
     'Aus dem Schornstein kommt heute eine Rauchwolke in Form einer Pyramide. Die IT-Chefin hat ein Foto gemacht.',
     'Der Schornstein ist denkmalgeschützt. Das MES leider nicht.'
+  ];
+
+  // v0.3 Pflicht-Ereignisse (Tobi): Kaffeeautomat, Kreis-Pyramide, Morse-Rätsel, Kostümparty
+  SC.KOSTUEME = [
+    { label: 'Pappe-Pyramide (50 Min.)', min: 50, energy: -4, chef: 3, msg: 'Du kommst als Automatisierungspyramide. Die IT-Chefin weint vor Rührung. Die Werkleitung findet es »strategisch« (+3).' },
+    { label: 'Kaffeemaschine »Fehler 42« (40 Min.)', min: 40, energy: 4, schicht: 2, msg: 'Du piepst den ganzen Abend und gibst niemandem Kaffee. Die Schicht feiert dich (+2). Irgendwie erholsam.' },
+    { label: 'Verpackungsautomat aus Karton (45 Min.)', min: 45, energy: -2, schicht: 3, chef: -1, msg: 'Alle zehn Minuten fällt dein Kostüm auseinander. Die Instandhaltung repariert es mit Kabelbinder. Riesenapplaus.' },
+    { label: 'Schornstein mit Wattewolke (45 Min.)', min: 45, energy: -2, chef: 2, family: 1, msg: 'Die Werkleitung fotografiert dich für die Werkszeitung (+2). Zuhause hängt das Foto am Kühlschrank.' },
+    { label: 'Ladesäule mit Kabel (35 Min.)', min: 35, energy: 2, schicht: 3, chef: -2, msg: 'Der Tesla-Kollege lädt sich den ganzen Abend an dir auf. Ihr seid das Paar des Abends.' },
+    { label: 'Gar nicht, Hemd wie immer (15 Min.)', min: 15, energy: 0, chef: -3, family: 1, msg: 'Du kommst als Christian. Verkleidungspflicht verletzt, die Werkleitung notiert es (−3). Dafür bist du früh daheim.' }
+  ];
+  SC.PARTY_GAESTE = 'Der Schichtleiter kommt als Wandkalender (alle Tage voller Meetings). Der Tesla-Kollege kommt als Reichweitenanzeige. Der Kollege, der nichts arbeitet, kommt als »Kollege, der arbeitet«, und niemand erkennt ihn. Der italienische Kollege kommt als Pizza Margherita. Die IT-Chefin kommt als Kreis. Die Werkleitung kommt als Gantt-Diagramm.';
+  SC.PARTY_BUBBLES = { schicht: ['Ich bin ein Kalender!', 'Termin um 17:00!'], tesla: ['Reichweite: 100 %!', 'Ich bin geladen!'], nix: ['Ich arbeite. Echt.', 'Kostüm: fleißig.'], italien: ['Ich bin eine Pizza!', 'Margherita, bitte!'], itchefin: ['Industrie 5.0!', 'Ich bin ein Kreis.'] };
+  // Running Gags
+  SC.IMMER = ['Das hatten wir schon immer so.', 'Haben wir schon immer so gemacht.', 'Das war schon immer so, Christian.'];
+  SC.DRUCKER_FEHLER = [
+    ['Der Drucker meldet: »Papierformat unbekannt (A4)«.', 'Der Drucker meldet: »Toner fast leer« (seit 2019).', 'Der Drucker meldet: »Bitte Klappe C schließen«. Es gibt keine Klappe C.'],
+    ['Der Drucker meldet: »Fehler 49.4C02: Drucker hat schlechte Laune«.', 'Der Drucker meldet: »Ihr Druckauftrag ist mir egal«.', 'Der Drucker druckt eine Testseite. Darauf steht nur: »Warum?«'],
+    ['Der Drucker meldet: »SAP-Cutover erkannt. Drucker geht in den Widerstand.«', 'Der Drucker meldet: »Materialnummer für Papier nicht gefunden (neues SAP)«.', 'Der Drucker meldet auf Latein: »Memento mori«. Dann piept er dreimal.']
+  ];
+
+  // v0.3 aus Sender-Chef übertragen: aktive Rivalen mit Image, Zusagen an die Werkleitung
+  SC.RIVAL_EVT = [
+    { who: 'Werk Nord (Anruf aus der Personalabteilung)', text: 'Werk Nord wirbt einen erfahrenen Bediener der Extrusion ab. Mit Dienstwagen. Ohne Testläufe wird es hier zwei Tage lang zäh.',
+      gegen: 'Bediener mit Zulage halten (5 k€, 10 Min.)', hin: 'Ziehen lassen (Testläufe 3 Tage deutlich langsamer)' },
+    { who: 'Werk Süd (Flurfunk aus dem Vorstand)', text: 'Werk Süd erzählt dem Vorstand, Werk Mitte habe »noch nicht mal eine Excel-Liste«. Die Werkleitung hat es gehört.',
+      gegen: 'Gegendarstellung mit KPI-Folien (5 k€ Grafikagentur, 10 Min.)', hin: 'Ignorieren (Werkleitung −5, Image −7, nächste Tranche −10 k€)' }
+  ];
+  SC.ZUSAGE = [
+    { id: 'kurz', label: 'Zusage »kurz«: 1 Modul in 4 Tagen', need: 1, days: 4, praemie: 8, chef: 4, image: 3, strafe: 8, chefMinus: 6, imageMinus: 5 },
+    { id: 'mittel', label: 'Zusage »mittel«: 2 Module in 8 Tagen', need: 2, days: 8, praemie: 15, chef: 6, image: 4, strafe: 15, chefMinus: 8, imageMinus: 6 },
+    { id: 'lang', label: 'Zusage »lang«: 3 Module in 12 Tagen', need: 3, days: 12, praemie: 22, chef: 8, image: 5, strafe: 20, chefMinus: 10, imageMinus: 8 }
   ];
 })(window.SC);
