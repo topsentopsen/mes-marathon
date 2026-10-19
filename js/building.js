@@ -189,7 +189,7 @@
     } else if (f === 3) {
       rect(x0, y0, w, h, '#2a2e34'); for (let gx = -sx % 8; gx < w; gx += 8) rect(x0 + gx, y0, 1, h, '#30353c');
       const lines = [y0 + 7, y0 + h - 9]; lines.forEach((ly, li) => { rect(x0, ly, w, 3, '#505860'); for (let bx = -((tick * (0.5 + li * 0.2)) % 16); bx < 160; bx += 16) { const xx = X(bx); if (xx > x0 - 6 && xx < x0 + w) { rect(xx, ly - 1, 5, 5, '#c09060'); rect(xx + 1, ly - 3, 3, 1, '#40ff80'); } } });
-      SC.STATIONS.forEach((d, i) => { const st = S && S.stations && S.stations[i], xx = X(4 + i * 21), yy = i < 3 ? lines[0] + 5 : lines[1] - 8; rect(xx, yy, 8, 4, st && st.fault ? ((blink >> 3) % 2 ? '#ff2020' : '#802020') : '#5a7a9a'); });
+      SC.STATIONS.forEach((d, i) => { const st = S && S.stations && S.stations[i], xx = i < 3 ? X(4 + i * 13) : X(103 + (i - 3) * 10), yy = i < 3 ? lines[0] + 5 : lines[1] - 8; rect(xx, yy, 8, 4, st && st.fault ? ((blink >> 3) % 2 ? '#ff2020' : '#802020') : '#5a7a9a'); });
       rect(x0 + 2, y0 + h / 2 - 4, 30, 7, 'rgba(0,0,0,0.55)'); text((sx ? 'OEE ' + (S && S.kpi ? S.kpi.oee.toFixed(0) : '62') + '%' : 'MES ' + (S && SC.sim ? SC.sim.progress(S) : 0) + '%'), x0 + 17, y0 + h / 2 - 3, '#40ff80', 5);
     } else {
       const sk = skyCols(min); rect(x0, y0, w, h, sk[1]); rect(x0, y0, w, 6, sk[0]);

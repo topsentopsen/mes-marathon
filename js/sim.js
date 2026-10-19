@@ -597,6 +597,12 @@
     if (S.kpiHist.length > 30) S.kpiHist.shift();
   }
 
+  // Wochenrückblick am Freitag (auch nach einem Burnout-Sprung vom Donnerstag auf den Freitag)
+  function wochenRueckblick(S, R) {
+    if (S.reportWeek !== week(S)) { S.chef -= 4; R.lines.push(['bad', 'Wochenrückblick ohne KPI-Bericht: Werkleitung −4']); }
+    else { const d = clamp(Math.round((kpiScore(S) - kpiPath(S)) * 20), -5, 5); S.chef += d; R.lines.push([d >= 0 ? 'good' : 'bad', 'Wochenrückblick KPI-Index ' + kpiIndex(S) + ' %: Werkleitung ' + (d >= 0 ? '+' : '') + d]); }
+    wochenAuswertung(S, R);
+  }
   // v0.4: Prognose und Wassermelone am Freitag auswerten (idempotent: k = null, melone = -2; auch nach einem Burnout-Sprung auf den Freitag)
   function wochenAuswertung(S, R) {
         // v0.4 Prognose-Auswertung
@@ -633,11 +639,8 @@
     // Besprechungsquote
     if (S.uselessMin > T().meet.quotaMin) { const k = Math.ceil((S.uselessMin - T().meet.quotaMin) / 30); S.chef -= k * T().meet.quotaPen; R.lines.push(['bad', 'Die Werkleitung zählt: ' + S.uselessMin + ' Min. Schichtleiter-Meetings, null Ergebnisse. Werkleitung −' + k * T().meet.quotaPen]); }
     // Wochenrückblick
-    if (weekday(S) === 4) {
-      if (S.reportWeek !== week(S)) { S.chef -= 4; R.lines.push(['bad', 'Wochenrückblick ohne KPI-Bericht: Werkleitung −4']); }
-      else { const d = clamp(Math.round((kpiScore(S) - kpiPath(S)) * 20), -5, 5); S.chef += d; R.lines.push([d >= 0 ? 'good' : 'bad', 'Wochenrückblick KPI-Index ' + kpiIndex(S) + ' %: Werkleitung ' + (d >= 0 ? '+' : '') + d]); }
-      wochenAuswertung(S, R);
-    }
+    if (weekday(S) === 4) wochenRueckblick(S, R);
+
     // Budget
     if (T().cost.daily) spend(S, T().cost.daily);
     if (weekday(S) === 4 && S.kredit > 0) { const z = Math.max(1, Math.round(S.kredit * T().kredit.zins)); spend(S, z); R.lines.push(['bad', 'Kreditzinsen (Saldo ' + S.kredit + ' k€): −' + z + ' k€']); }
@@ -671,7 +674,7 @@
     const rest = 55 - Math.round(over / 6);
     S.energy = clamp(S.energy + rest, 15, 100);
     let fri = weekday(S) === 4;
-    if (S.burnout) { S.burnout = false; S.chef -= 8; S.family -= 4; S.energy = 70; R.lines.push(['bad', 'Am Schreibtisch eingeschlafen, Kopf auf der Tastatur. Ein Tag krank: Werkleitung −8.']); S.day++; if (weekday(S) === 4) { fri = true; wochenAuswertung(S, R); } }
+    if (S.burnout) { S.burnout = false; S.chef -= 8; S.family -= 4; S.energy = 70; R.lines.push(['bad', 'Am Schreibtisch eingeschlafen, Kopf auf der Tastatur. Ein Tag krank: Werkleitung −8.']); S.day++; if (weekday(S) === 4) { fri = true; wochenRueckblick(S, R); S.chef = clamp(S.chef, 0, 100); S.image = clamp(S.image, 0, 100); } }
     S.chef = clamp(S.chef, 0, 100); S.family = clamp(S.family, 0, 100); S.schicht = clamp(S.schicht, 0, 100);
     R.progress = me; R.rivals = S.rivals.map(r => ({ name: r.name, prog: r.prog })); R.budget = S.budget; R.kpiIndex = kpiIndex(S);
     R.friday = fri;

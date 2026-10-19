@@ -256,12 +256,12 @@
     $('btn-menu').onclick = () => { UI.paused = true; $('btn-pause').textContent = 'Weiter'; UI.showTitle(); };
     if (SC.audio) { SC.audio.init(); }
     // v0.4: Ton-Knopf zeigt auch »Ton: tippen«, solange der Browser den Ton noch sperrt (Handy)
-    const syncSnd = () => { const A = SC.audio, st = A && A.state ? A.state() : {}; $('btn-sound').dataset.ctx = st.ctx || 'none'; $('btn-sound').textContent = A && A.isMuted() ? '🔇 Ton aus' : st.ctx === 'running' ? '🔊 Ton an' : '🔈 Ton: tippen'; };
+    const syncSnd = () => { const A = SC.audio, st = A && A.state ? A.state() : {}; $('btn-sound').textContent = A && A.isMuted() ? '🔇 Ton aus' : st.ctx === 'running' ? '🔊 Ton an' : '🔈 Ton: tippen'; };
     UI.syncSnd = syncSnd; setInterval(syncSnd, 1000); if (SC.audio) SC.audio.onState = syncSnd;
     // iOS-Hinweis einmal je Gerät (nicht bei jedem Seitenaufruf)
     if (SC.audio) SC.audio.onFirstUnlock = () => { let seen = false; try { seen = !!localStorage.getItem('mesmarathon-sndhint'); localStorage.setItem('mesmarathon-sndhint', '1'); } catch (e) { /* */ } if (!seen && SC.audio.isIOS && SC.audio.isIOS()) { UI._sndHint = true; UI.toast(SND_HINT); } };
-    // Erster Tipp auf »Ton: tippen« entsperrt nur, er schaltet den Ton nicht ab (dataset.ctx ist der Zustand vor dem Tipp)
-    $('btn-sound').onclick = () => { const A = SC.audio, was = $('btn-sound').dataset.ctx; aud('unlock'); if (A && !A.isMuted() && was !== 'running') { syncSnd(); aud('play', S() && S().phase === 'tag' ? 'tower' : 'title'); return; } aud('setMuted', !(A && A.isMuted())); syncSnd(); if (SC.audio && !SC.audio.isMuted()) aud('play', S() && S().phase === 'tag' ? 'tower' : 'title'); };
+    // Erster Tipp auf »Ton: tippen« entsperrt nur, er schaltet den Ton nicht ab: hat dieselbe Geste gerade erst entsperrt (< 1,5 s), nicht umschalten
+    $('btn-sound').onclick = () => { const A = SC.audio, fresh = !!(A && A._gestureUnlockAt && Date.now() - A._gestureUnlockAt < 1500); if (A) A._gestureUnlockAt = 0; aud('unlock'); if (A && !A.isMuted() && fresh) { syncSnd(); aud('play', S() && S().phase === 'tag' ? 'tower' : 'title'); return; } aud('setMuted', !(A && A.isMuted())); syncSnd(); if (SC.audio && !SC.audio.isMuted()) aud('play', S() && S().phase === 'tag' ? 'tower' : 'title'); };
     $('vol').oninput = e => aud('setVolume', e.target.value / 100);
     syncSnd();
     document.addEventListener('keydown', e => {

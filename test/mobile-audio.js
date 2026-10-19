@@ -13,6 +13,8 @@ const DEV = [
   { name: 'android', ua: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Mobile Safari/537.36', w: 412, h: 915 }
 ];
 async function tapSel(page, sel) { const r = await page.evaluate(s => { const e = document.querySelector(s); if (!e) return null; const b = e.getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; }, sel); if (!r) throw new Error('fehlt: ' + sel); await page.touchscreen.tap(r.x, r.y); }
+// langsamer Tipp wie ein echter Finger: 150 ms zwischen Berühren und Loslassen (Review-Befund: Race beim ersten Tipp)
+async function slowTap(page, sel) { const r = await page.evaluate(s => { const b = document.querySelector(s).getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; }, sel); await page.touchscreen.touchStart(r.x, r.y); await wait(150); await page.touchscreen.touchEnd(); }
 (async () => {
   // bewusst OHNE --autoplay-policy=no-user-gesture-required: wie ein echtes Handy
   const browser = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome', headless: 'new', args: ['--no-sandbox'] });
@@ -35,9 +37,9 @@ async function tapSel(page, sel) { const r = await page.evaluate(s => { const e 
     const again = await st();
     // Ton-Knopf als allererste Berührung (Review-Befund): darf den Ton nicht abschalten, sondern nur entsperren
     const p2 = await browser.newPage(); await p2.setUserAgent(d.ua); await p2.setViewport({ width: d.w, height: d.h, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
-    await p2.goto(url, { waitUntil: 'load' }); await wait(1300); await tapSel(p2, '#btn-sound'); await wait(400);
+    await p2.goto(url, { waitUntil: 'load' }); await wait(1300); await slowTap(p2, '#btn-sound'); await wait(400);
     const first = await p2.evaluate(() => Object.assign(window.SC.audio.state(), { btn: document.getElementById('btn-sound').textContent })); await p2.close();
-    await tapSel(page, '#btn-sound'); await wait(200); const muted = await st();
+    await wait(1600); await slowTap(page, '#btn-sound'); await wait(200); const muted = await st();
     await tapSel(page, '#btn-sound'); await wait(300); const unmuted = await st();
     const ok = before.ctx !== 'running' && after.ctx === 'running' && after.ready && susp.ctx === 'suspended' && again.ctx === 'running' && muted.muted && /aus/.test(muted.btn) && !unmuted.muted && unmuted.ctx === 'running' && /Ton an/.test(unmuted.btn) && !first.muted && first.ctx === 'running' && !errs.length &&
       (d.name !== 'iphone' || /Stummschalter/.test(after.ticker));
