@@ -3,9 +3,9 @@
 'use strict';
 window.SC = window.SC || {};
 (function (SC) {
-  SC.VERSION = '0.10.0';
+  SC.VERSION = '0.11.0';
   // v0.8: Spielstände dieser Versionen laden weiter (kein neues Feld in S)
-  SC.SAVE_OK = ['0.7.0', '0.8.0', '0.9.0'];
+  SC.SAVE_OK = ['0.7.0', '0.8.0', '0.9.0', '0.10.0'];
   SC.DAY_START = 7 * 60 + 30;   // 07:30 Frühschicht-Beginn im Büro
   SC.DAY_END = 17 * 60;         // 17:00 regulärer Feierabend
   SC.LATEST = 20 * 60;          // 20:00 der Pförtner schließt ab
@@ -15,14 +15,14 @@ window.SC = window.SC || {};
   SC.DEADLINE = 20;             // Go-Live am Abend von Arbeitstag 20 (nach der Übernahme 22)
   SC.WEEKDAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag'];
   SC.PLAYER = { name: 'Christian', col: '#8cb8e8' };
-  // v0.9 Figurenwahl: Christian (der Erfahrene) oder Sandra (die jüngere Kollegin aus der MES-Entwicklung).
+  // v0.9 Figurenwahl: Christian (der Erfahrene) oder Sandra (die Kollegin aus der MES-Entwicklung).
   // Namensregel: Nur Christian und Sandra haben Namen. Alle anderen Figuren heißen nach ihrer Rolle.
   SC.FIGUREN = {
-    christian: { id: 'christian', name: 'Christian', col: '#8cb8e8', titel: 'MES-Projektleiter', kurz: 'der Erfahrene',
+    christian: { id: 'christian', name: 'Christian', col: '#8cb8e8', titel: 'MES-Projektleiter', kurz: 'mit langer Werkserfahrung',
       plus: ['Kennt jede Station und jeden Schichtleiter persönlich', 'Gute Beziehungen: Werkleitung 60, Schichtleiter 50'],
       minus: ['Steckt in vielen Gesprächen und Meetings', 'Kein Vorsprung bei Spezifikation, Umsetzung und Berichten'] },
-    sandra: { id: 'sandra', name: 'Sandra', col: '#58b8a8', titel: 'MES-Spezialistin', kurz: 'die jüngere Kollegin aus der MES-Entwicklung',
-      plus: ['Kennt die MES-Schnittstellen aus der Entwicklung: Spezifikation, Umsetzung, Deploy, Berichte und Migration gehen flotter', 'Weniger Fehler im Testlauf, Mapping beim Altwerk in 18 statt 30 Min.'],
+    sandra: { id: 'sandra', name: 'Sandra', col: '#58b8a8', titel: 'MES-Spezialistin', kurz: 'die Kollegin aus der MES-Entwicklung',
+      plus: ['Kennt die MES-Schnittstellen aus der Entwicklung: Spezifikation, Umsetzung, Deploy, Berichte und Migration gehen bis Feierabend flotter', 'Weniger Fehler im Testlauf, Mapping beim Altwerk in 18 statt 30 Min.'],
       minus: ['Neu im Werk: Werkleitung 55, Schichtleiter 42, Beziehungen wachsen langsamer', 'Hallen-Anforderungen und Reparaturen dauern länger'] }
   };
   // Christian als Kollege bei Sandra (Besuch, 12 Min.): erprobte Tipps aus der Halle
@@ -49,42 +49,48 @@ window.SC = window.SC || {};
   // Sandra als Kollegin bei Christian: nur eine Zeile im Protokoll, keine Zeitkosten
   SC.SANDRA_NPC = [
     'Sandra, die Kollegin aus der MES-Entwicklung, schaut kurz rein: »Dein SVERWEIS ist das einzige Dokument, das die Schicht wirklich liest. Ich hab ihn dokumentiert.«',
-    'Sandra aus der MES-Entwicklung fragt nach dem BDE-Feed. Du erklärst ihn mit drei Kaffeetassen und einem Bleistift. Sie macht ein Foto.',
+    'Sandra aus der MES-Entwicklung fragt, wie die Halle den BDE-Feed wirklich befüllt. Du zeigst ihr den Zettel neben der Stempeluhr. Sie macht ein Foto und baut am Nachmittag ein Pflichtfeld weniger ein.',
     'Sandra zeigt dir ein neues Dashboard. Der Schichtleiter fragt, ob man das ausdrucken kann.',
-    'Sandra schickt dir ein Mapping. Es hat Spaltenüberschriften. Du nickst anerkennend.'
+    'Sandra schickt dir ein Mapping mit Versionsnummer und Änderungsprotokoll. Du fragst, ob du das für die Excel-Liste abschreiben darfst. Sie sagt ja.'
   ];
   // Sandras eigene Szenen: erscheinen manchmal nach passenden Aktionen
   SC.SANDRA_SZENEN = {
     req: 'Du fragst die Schicht: »Warum machen wir das so?« Antwort: »Schon immer.« Es folgt die längste Pause des Tages.',
     spec: 'Excel-Liste mit 47 Spalten. Du markierst sechs fürs MES. Die Spalte »Bemerkung« enthält alle Geschäftsregeln.',
-    impl: 'Du zeichnest die Schnittstelle auf das Whiteboard. Der Drucker meldet sich als Teilnehmer an.',
+    impl: 'Du zeichnest die Schnittstelle zum Etikettendrucker auf das Whiteboard. Der Drucker kann kein UTF-8: Aus »Größe« wird »Gr??e«. Das steht jetzt auch im Pflichtenheft.',
     deploy: 'Sieben Tools für die Auftragsübergabe: vier tun dasselbe, eines tut nichts, das siebte ist der Schichtleiter.',
-    migrate: 'Stammdaten: 11.000-mal »Schraube«. Du fragst: »Welche?« Die Werkstatt: »Die große.«',
-    bericht: 'Drei Leute, drei Formeln für die OEE. Du nimmst die vierte: die dokumentierte.',
+    migrate: 'Stammdaten: 11.000-mal »Schraube«. Du fragst: »Welche?« Die Werkstatt: »Die große.« Einheit Stück oder Karton? »Ja.«',
+    bericht: 'Drei Leute, drei Formeln für die OEE. Eine zählt das Rüsten als Ausfall, eine nicht, eine je nach Wetter. Du nimmst die vierte: die dokumentierte.',
     test: 'Der Bediener: »Die Stückzahl tippen wir abends nach.« Du schreibst »Echtzeit« aufs Whiteboard und streichst es nicht durch.',
     linie: 'Die Schicht zeigt dir die Stempeluhr von 1994. Du bist ehrlich beeindruckt, und die Schicht freut sich darüber.'
   };
   // v0.10: weitere Szenen für Sandra (Salz 34000), nur bei Aktionen ohne bisherige Szene
   SC.SANDRA_SZENEN2 = {
     print: 'Auf dem Etikett fehlt die Chargennummer. Im Datensatz steht sie. Dazwischen liegt ein Drucker mit eigenem Kopf.',
-    schichtplan: 'Rüsten dauert laut Plan 20 Minuten. Die Schicht zeigt dir den Trick mit dem zweiten Wagen: Jetzt sind es zwölf. Der Trick steht ab heute im MES.',
+    schichtplan: 'Rüsten dauert laut Plan 20 Minuten. Die Schicht zeigt dir den Trick mit dem zweiten Wagen: Jetzt sind es zwölf. Du trägst die Rüstzeit im Stammsatz nach, ab heute plant das MES mit zwölf.',
     excel: 'Die Rückmeldung kommt als Foto vom Zettel. Du liest eine 3, die Schicht liest eine 8. Ihr einigt euch auf ein Terminal in Reichweite.',
     gespraech: 'Der Schichtleiter gibt den Auftrag frei, sobald das Material da ist. Das MES, sobald es das weiß. Du baust die Brücke: ein Knopf am Terminal.',
     restart: 'Nach dem Neustart melden sich die Schnittstellen der Reihe nach zurück. Die Waage braucht am längsten. Sie war schon immer gründlich.',
-    abnahme: 'Du nennst eine Charge, und die Schicht zeigt in zwei Minuten, wo jede Palette war. Die Werkleitung nickt. Dafür ist das MES da.',
+    abnahme: 'Du nennst eine Charge, und das MES zeigt in zwei Minuten, wo jede Palette war. Die Werkleitung nickt. Dafür ist es da.',
     review: 'Die IT-Chefin fragt nach der Fußnote auf Seite vier der Schnittstellenbeschreibung. Du hast die Seite. Und die Fußnote.',
     wartung: 'Am Automaten klebt ein Zettel: »Nicht anfassen, läuft.« Du fotografierst ihn für die Dokumentation und fasst nichts an.',
     mail: 'Im Postfach: 14 Mails mit »Dringend«, zwei mit Inhalt. Du sortierst nach Inhalt, nicht nach Ausrufezeichen.'
   };
+  // v0.11: drei weitere Szenen (Salz 35000), Stillstandsgründe, Fehlerwarteschlange, Ausschuss
+  SC.SANDRA_SZENEN3 = {
+    repair: 'Der Katalog der Stillstandsgründe hat 83 Einträge. Die Schicht nutzt drei: »Sonstiges«, »Sonstiges 2« und »Pause«. Du legst einen vierten an: »Siehe Sonstiges«. Er wird sofort beliebt.',
+    care: 'Die Fehlerwarteschlange der Schnittstelle enthält 212 Meldungen. 211 sind dieselbe. Du suchst die eine andere. Sie lautet: »Siehe oben.«',
+    notbehelf: 'Beim Notbehelf fallen 40 Teile Ausschuss an. Gebucht werden sie auf die Kostenstelle »Muss weg«. Du legst im MES einen echten Ausschussgrund an. Die Kostenstelle bleibt trotzdem.'
+  };
   SC.SANDRA_TAG1 = 'Dein Werksausweis ist noch nicht gedruckt. Der Pförtner schreibt dir einen Besucherzettel: »MES, Ebene drei.« Das Formular hat kein Feld für »arbeitet hier«.';
   // Anrede im Text: alle Spielertexte sind für Christian geschrieben, für Sandra werden sie angepasst.
   // Nur einmal je Text anwenden (an den Anzeigestellen), denn aus {C} wird »Christian«, und ein zweiter Lauf machte daraus »Sandra«.
-  SC.FILL = { sandra: [[/Christian/g, 'Sandra'], [/»der vom MES«/g, '»die vom MES«'], [/»den vom MES«/g, '»die vom MES«'], [/Hemd wie immer/g, 'Blazer wie immer'], [/»den Entsorger«/g, '»die Entsorgerin«'], [/MES-Projektleiter\b/g, 'MES-Spezialistin']] };
+  SC.FILL = { sandra: [[/Christian/g, 'Sandra'], [/»der vom MES«/g, '»die vom MES«'], [/»den vom MES«/g, '»die vom MES«'], [/Hemd wie immer/g, 'Blazer wie immer'], [/»den Entsorger«/g, '»die Entsorgerin«'], [/wirst Imker\./g, 'wirst Imkerin.'], [/Pappkameraden/g, 'Pappaufsteller'], [/Pappkamerad\b/g, 'Pappaufsteller'], [/MES-Projektleiter\b/g, 'MES-Spezialistin']] };
   // {C} steht in Texten, in denen Christian als Kollege vorkommt (wird nach der Anpassung eingesetzt)
   SC.fill = (S, t) => { if (t == null) return t; t = String(t); const L = S && SC.FILL[S.figur]; if (L) for (const [a, b] of L) t = t.replace(a, b); return t.replace(/\{C\}/g, 'Christian'); };
   SC.KOLLEGE_BUBBLES = {
     christian: ['Erst Kaffee, dann Frage.', 'Dein Mapping schlägt meinen SVERWEIS.', 'Kennst du schon den Schichtleiter?', 'Wir schauen mal. Das heißt Nein.', 'Rüsten? Setz dich dazu.', 'Erst fragen, dann ersetzen.', 'Charge? Frag das Papier.'],
-    sandra: ['Mapping? Gib mir 10 Min.', 'Frag mich zum BDE-Feed.', 'Ich hab ein Dashboard gebaut!', 'Echtzeit heißt jetzt, nicht abends.', 'Ich zeichne dir die Freigabe.', 'Etikett in 100 mal 60?', 'Schnittstelle? Sag Bescheid.']
+    sandra: ['Mapping? Gib mir 10 Min.', 'Frag mich zum BDE-Feed.', 'Ich hab ein Dashboard gebaut!', 'Echtzeit heißt jetzt, nicht abends.', 'Ich zeichne dir die Freigabe.', 'Etikett in 100 mal 60 mm?', 'Schnittstelle? Sag Bescheid.']
   };
   SC.PLANT = 'Werk Mitte';
   SC.RIVALS = [
@@ -136,7 +142,8 @@ window.SC = window.SC || {};
   SC.TUNE = {
     // v0.9 Figuren: Christian ist die Basis (alles 1, keine Boni), nur Sandra hat Abweichungen
     figur: { sandra: { start: { chef: 55, schicht: 42 }, dauer: { spec: 0.95, impl: 0.9, deploy: 0.85, restart: 0.85, migrate: 0.9, bericht: 0.85, review: 0.8, req: 1.25, repair: 1.4, notbehelf: 1.4 },
-      schichtF: 0.6, abnahmeChef: -2, testRisk: 0.04, mapping: 18, erklaeren: 0.65, pyrFalsch: 25, kollege: { p: 0.45, min: 12, schicht: 4, ab: 2 } } },
+      // v0.11 nurBis17: der Zeitvorteil gilt nur bis Feierabend (gemessen: fleissig 46 auf 33 %, gut1730 77 auf 75 %, gut bleibt 56 %)
+      nurBis17: true, schichtF: 0.6, abnahmeChef: -2, testRisk: 0.04, mapping: 18, erklaeren: 0.65, pyrFalsch: 25, kollege: { p: 0.45, min: 12, schicht: 4, ab: 2 } } },
     budgetStart: 110, tranche: 30, trancheLow: 15, berater: 25,
     kredit: { rahmen: 60, rahmenHoch: 80, schritt: 20, zins: 0.08 },
     rival: { p: 0.2, lead: 0.1, from: 4, cost: 5, cut: 15 },
@@ -218,16 +225,16 @@ window.SC = window.SC || {};
       'Reichweite im Winter, Christian. Darüber muss man reden. Jetzt. Ausführlich.'
     ],
     duo: [
-      'Der Kollege, der nichts arbeitet, steht daneben, nickt und sagt: »Genau.« Er sagt das seit 2019.',
-      'Der Kollege, der nichts arbeitet, ergänzt: »Und die Hupe kann Geräusche machen.« Beide lachen eine Minute lang.',
-      'Der Kollege, der nichts arbeitet, hält einen Kaffee. Es ist sein dritter. Gearbeitet hat er heute noch nicht.'
+      'Der Kollege aus dem Nachbarbüro steht daneben, nickt und sagt: »Genau.« Dann: »Ich muss gleich wieder rüber, ich arbeite ja eh zu viel.« Er bleibt bis zum Schluss.',
+      'Der Kollege aus dem Nachbarbüro ergänzt: »Und die Hupe kann Geräusche machen.« Beide lachen eine Minute lang. Er sagt, das sei seine erste Pause seit Wochen.',
+      'Der Kollege aus dem Nachbarbüro hält einen Kaffee. Es ist sein dritter. »Ich komme vor lauter Arbeit zu nichts«, sagt er und trinkt in aller Ruhe aus.'
     ],
     italien: [
       'Meine Nonna hat am Sonntag die Soße vier Stunden gekocht. Vier! Ich hab ein Foto. Und noch eins. Und ein Video.',
       'In meinem Dorf gibt es eine Bäckerei, die backt seit 1890 dasselbe Brot. Nie ein Update. Nie ein Absturz.',
       'Weißt du, warum Espresso so klein ist? Damit man öfter Pause machen kann. Ich hab dir einen mitgebracht.',
       'Mein Onkel hat einmal einen Käse so groß wie ein Autoreifen gemacht. Das Dorf hat drei Tage gefeiert.',
-      'Christian, du siehst müde aus. Bei uns sagt man: Erst essen, dann Pyramide.'
+      'Christian, hast du schon gegessen? Bei uns sagt man: Erst essen, dann Pyramide.'
     ],
     itchefin: [
       'Und jetzt kurz zur Pyramide.',
@@ -265,7 +272,7 @@ window.SC = window.SC || {};
   SC.BUBBLES = {
     schicht: ['Hast du kurz?', 'Kleines Meeting gleich?', 'Ich lad dich mal ein.', 'Wichtig. Glaub ich.', 'Nur fünf Minuten!', 'Termin folgt!'],
     tesla: ['0 auf 100 in 3,1!', 'Reichweite, Christian!', 'Update über Nacht!', 'Der parkt allein ein.', 'Hast du das Video gesehen?', 'Elon würde das anders machen!', 'Mars, Christian, Mars!'],
-    nix: ['Genau.', 'Bin gleich bei dir.', 'Erst mal Kaffee.', 'Viel los heute, ne?', 'Ich warte auf Rückmeldung.'],
+    nachbar: ['Genau.', 'Bin gleich bei dir.', 'Erst mal Kaffee.', 'Ich arbeite eh zu viel.', 'Ich warte auf Rückmeldung.', 'Bei mir brennt die Hütte!'],
     italien: ['Mamma mia, die Pasta!', 'Heute Bruschetta!', 'Espresso? Espresso.', 'In Italien ist jetzt Pause.', 'Meine Nonna sagt ...'],
     itchefin: ['Ebene 3!', 'Denk an die Pyramide!', 'Feld, Steuerung, ...', 'Wo ist das MES? Na?', 'Ich hab Folien dabei.']
   };
@@ -299,7 +306,7 @@ window.SC = window.SC || {};
       opts: [{ label: 'Sofort ändern (8 Min.)', min: 8, energy: -1, msg: 'Geschafft. Du hast es auf einen Zettel geschrieben, den du unter die Tastatur legst. Sicherheit!' },
         { label: '»Morgen erinnern« (1 Min.)', min: 1, energy: 0, msg: 'Morgen erinnert es dich. Und übermorgen. Und in jedem Meeting am Beamer.' }] },
     { id: 'app', who: 'Der Azubi', text: 'Der Azubi fragt, ob er die Excel-Liste »mal schnell« in eine App umziehen darf. Mit Dark Mode.',
-      opts: [{ label: 'Geduldig erklären, warum nicht (10 Min.)', min: 10, energy: 1, msg: 'Du erklärst den SVERWEIS. Er schaut dich an wie ein Museumsstück. Aber er hört zu.' },
+      opts: [{ label: 'Geduldig erklären, warum nicht (10 Min.)', min: 10, energy: 1, msg: 'Du erklärst den SVERWEIS. Er schaut dich an, als hättest du Excel erfunden. Aber er hört zu.' },
         { label: '»Frag die Werkleitung.« (1 Min.)', min: 1, energy: -1, msg: 'Die Werkleitung findet die Idee gut und beauftragt dich. Für 2031.' }] }
   ];
   // Buzzword-Bingo der Werkleitung (Running Gag, nur Punkte)
@@ -340,11 +347,11 @@ window.SC = window.SC || {};
     { label: 'Kaffeemaschine »Fehler 42« (40 Min.)', min: 40, energy: 4, schicht: 2, msg: 'Du piepst den ganzen Abend und gibst niemandem Kaffee. Die Schicht feiert dich (+2). Irgendwie erholsam.' },
     { label: 'Verpackungsautomat aus Karton (45 Min.)', min: 45, energy: -2, schicht: 3, chef: -1, msg: 'Alle zehn Minuten fällt dein Kostüm auseinander. Die Instandhaltung repariert es mit Kabelbinder. Riesenapplaus.' },
     { label: 'Schornstein mit Wattewolke (45 Min.)', min: 45, energy: -2, chef: 2, family: 1, msg: 'Die Werkleitung fotografiert dich für die Werkszeitung (+2). Zuhause hängt das Foto am Kühlschrank.' },
-    { label: 'Ladesäule mit Kabel (35 Min.)', min: 35, energy: 2, schicht: 3, chef: -2, msg: 'Der Tesla-Kollege lädt sich den ganzen Abend an dir auf. Ihr seid das Paar des Abends.' },
+    { label: 'Ladesäule mit Kabel (35 Min.)', min: 35, energy: 2, schicht: 3, chef: -2, msg: 'Der Tesla-Kollege lädt sich den ganzen Abend an dir auf. Ihr seid das Duo des Abends.' },
     { label: 'Gar nicht, Hemd wie immer (15 Min.)', min: 15, energy: 0, chef: -3, family: 1, msg: 'Du kommst als Christian. Verkleidungspflicht verletzt, die Werkleitung notiert es (−3). Dafür bist du früh daheim.' }
   ];
-  SC.PARTY_GAESTE = 'Der Schichtleiter kommt als Wandkalender (alle Tage voller Meetings). Der Tesla-Kollege kommt als Reichweitenanzeige. Der Kollege, der nichts arbeitet, kommt als »Kollege, der arbeitet«, und niemand erkennt ihn. Der italienische Kollege kommt als Pizza Margherita. Die IT-Chefin kommt als Kreis. Die Werkleitung kommt als Gantt-Diagramm.';
-  SC.PARTY_BUBBLES = { schicht: ['Ich bin ein Kalender!', 'Termin um 17:00!'], tesla: ['Reichweite: 100 %!', 'Ich bin geladen!'], nix: ['Ich arbeite. Echt.', 'Kostüm: fleißig.'], italien: ['Ich bin eine Pizza!', 'Margherita, bitte!'], itchefin: ['Industrie 5.0!', 'Ich bin ein Kreis.'] };
+  SC.PARTY_GAESTE = 'Der Schichtleiter kommt als Wandkalender (alle Tage voller Meetings). Der Tesla-Kollege kommt als Reichweitenanzeige. Der Kollege aus dem Nachbarbüro kommt als Überstundenzettel. Er sagt, das Kostüm sei autobiografisch. Gebastelt hat er es in der Arbeitszeit. Der italienische Kollege kommt als Pizza Margherita. Die IT-Chefin kommt als Kreis. Die Werkleitung kommt als Gantt-Diagramm.';
+  SC.PARTY_BUBBLES = { schicht: ['Ich bin ein Kalender!', 'Termin um 17:00!'], tesla: ['Reichweite: 100 %!', 'Ich bin geladen!'], nachbar: ['Ich arbeite zu viel!', 'Kostüm: Überstunden.'], italien: ['Ich bin eine Pizza!', 'Margherita, bitte!'], itchefin: ['Industrie 5.0!', 'Ich bin ein Kreis.'] };
   // Running Gags
   SC.IMMER = ['Das hatten wir schon immer so.', 'Haben wir schon immer so gemacht.', 'Das war schon immer so, Christian.'];
   SC.DRUCKER_FEHLER = [

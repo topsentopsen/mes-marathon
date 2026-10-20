@@ -17,7 +17,8 @@
   const T = () => SC.TUNE;
   // v0.9 Figuren: FG(S) liefert Sandras Abweichungen, für Christian null (Christian bleibt exakt wie v0.8)
   const FG = S => (S && S.figur === 'sandra' ? SC.TUNE.figur.sandra : null);
-  const figF = (S, id) => { const F = FG(S); return F && F.dauer[id] || 1; };
+  // v0.11: mit nurBis17 gilt Sandras Zeitvorteil (Faktor < 1) nur bis Feierabend; Schwächen (Faktor > 1) gelten immer
+  const figF = (S, id) => { const F = FG(S); const f = F && F.dauer[id] || 1; if (f < 1 && F.nurBis17 && S.minute >= SC.DAY_END + (S.partyMin || 0)) return 1; return f; };
   const SIREN = 14 * 60, HANDOVER = 14 * 60 + 20;
 
   function newModule(def, need) {
@@ -451,8 +452,8 @@
     ],
     kantine: [
       { id: 'coffee', label: 'Kaffee holen', cost: 10, energy: 0, check: S => S.kaffeeDef === S.day ? 'Der Kaffeeautomat ist defekt. Display: »Bitte Wartung rufen«. Die Wartung ist im Cutover.' : null,
-        run: S => { if (S.coffeeBlock === S.day) { S.minute += 15; say(S, 'Der Tesla-Kollege und der Kollege, der nichts arbeitet, blockieren die Kaffeemaschine. Diskussion: Kann ein Auto Kaffee kochen? (+15 Min.)', true); }
-          S.coffee++; S.stats.coffee++; const g = S.coffee <= 3 ? 14 : 4; S.energy += g; say(S, S.coffee <= 3 ? 'Kaffee. Energie +' + g + '.' : 'Schon der ' + S.coffee + '. Kaffee. Das Herz rast, die Wirkung nicht.');
+        run: S => { if (S.coffeeBlock === S.day) { S.minute += 15; say(S, 'Der Tesla-Kollege und der Kollege aus dem Nachbarbüro blockieren die Kaffeemaschine. Diskussion: Kann ein Auto Kaffee kochen? (+15 Min.)', true); }
+          S.coffee++; S.stats.coffee++; const g = S.coffee <= 3 ? 14 : 4; S.energy += g; say(S, S.coffee <= 3 ? 'Kaffee. Energie +' + g + '.' : 'Schon der ' + S.coffee + '. Kaffee. Die Tasse ist leer, die Wirkung auch.');
           if (S.coffee >= 7) egg(S, 'kaffee', 'Die Kaffeemaschine zeigt »Fehler 42: Benutzer zu wach«. Die Kantinenkraft hängt ein Foto von dir an die Pinnwand.'); } },
       { id: 'lunch', label: 'Mittagessen in der Werkskantine (11:30 bis 13:30)', cost: 30, energy: 0,
         check: S => S.lunch ? 'Schon gegessen.' : (S.minute < 11 * 60 + 30 || S.minute > 13 * 60 + 30) ? 'Die Ausgabe hat nur 11:30 bis 13:30 auf.' : null,
@@ -570,15 +571,18 @@
     return { ok: true };
   }
   // v0.9 Sandra: Beziehungen wachsen langsamer, Abnahme bringt etwas weniger, eigene Szenen (Salz 33300)
+  const SZ3_IDS = ['repair', 'care', 'notbehelf'];
   const SZ2_IDS = ['print', 'schichtplan', 'excel', 'gespraech', 'restart', 'abnahme', 'review', 'wartung', 'mail'];
   const SZ_IDS = ['req', 'spec', 'impl', 'deploy', 'migrate', 'bericht', 'test', 'linie'];
   function figurNach(S, F, room, id, sch0) {
-    if (S.schicht > sch0) S.schicht = sch0 + Math.round((S.schicht - sch0) * F.schichtF);
-    if (id === 'abnahme') S.chef += F.abnahmeChef;
+    if (S.schicht > sch0) { const roh = S.schicht - sch0, neu = Math.round(roh * F.schichtF); S.schicht = sch0 + neu; if (neu < roh && S.day <= 5) say(S, 'Neu im Werk: Das Vertrauen des Schichtleiters wächst bei dir langsamer, Schichtleiter +' + neu + ' statt +' + roh + '.'); }
+    if (id === 'abnahme') { S.chef += F.abnahmeChef; if (S.day <= 10) say(S, 'Die Werkleitung kennt dich noch nicht so lange: Werkleitung +' + (8 + F.abnahmeChef) + ' statt +8.'); }
     const k = SZ_IDS.indexOf(id);
     if (k >= 0 && SC.SANDRA_SZENEN[id] && rngA(S, 33300 + ((S.day * 13 + k * 7) % 100)) < 0.35) say(S, SC.SANDRA_SZENEN[id]);
     const k2 = SZ2_IDS.indexOf(id);
     if (k2 >= 0 && SC.SANDRA_SZENEN2[id] && rngA(S, 34000 + ((S.day * 11 + k2 * 7) % 100)) < 0.3) say(S, SC.SANDRA_SZENEN2[id]);
+    const k3 = SZ3_IDS.indexOf(id);
+    if (k3 >= 0 && SC.SANDRA_SZENEN3[id] && rngA(S, 35000 + ((S.day * 17 + k3 * 7) % 100)) < 0.35) say(S, SC.SANDRA_SZENEN3[id]);
   }
   // echte Dauer einer Aktion (Gesamtprüfung v0.5: auch für die Anzeige auf den Knöpfen)
   function costOf(S, room, id, a) {
@@ -627,7 +631,7 @@
     const p = S.pending; if (!p) return null; const VT = SC.VISIT_TEXT; const t = p.t || 0;
     const of = arr => arr[t % arr.length];
     switch (p.id) {
-      case 'tesla': return { who: 'Der Tesla-Kollege' + (p.duo ? ' (mit dem Kollegen, der nichts arbeitet)' : ''), text: '»' + of(VT.tesla) + ' ' + elonSatz(S) + '« Reichweite heute laut Display: ' + SC.TESLA_KM(S.day) + ' km. Gestern waren es mehr. Geladen hat er trotzdem nicht.' + (S.day >= T().elon.akkuDay ? ' »' + SC.ELON_AKKU + '«' : '') + (p.duo ? ' ' + of(VT.duo) : '') + ' Elon-Zähler heute: ' + (elonHeute(S) + 1) + '.' };
+      case 'tesla': return { who: 'Der Tesla-Kollege' + (p.duo ? ' (mit dem Kollegen aus dem Nachbarbüro)' : ''), text: '»' + of(VT.tesla) + ' ' + elonSatz(S) + '« Reichweite heute laut Display: ' + SC.TESLA_KM(S.day) + ' km. Gestern waren es mehr. Geladen hat er trotzdem nicht.' + (S.day >= T().elon.akkuDay ? ' »' + SC.ELON_AKKU + '«' : '') + (p.duo ? ' ' + of(VT.duo) : '') + ' Elon-Zähler heute: ' + (elonHeute(S) + 1) + '.' };
       case 'italien': return { who: 'Der italienische Kollege', text: '»' + of(VT.italien) + '«' };
       case 'itchefin': return { who: 'Die IT-Chefin (mit der Automatisierungspyramide)', text: '»' + VT.itchefin[p.open % VT.itchefin.length] + ' ' + SC.PYRAMID_Q[p.q].q + '«', pyr: true };
       case 'ahnungslos': return { who: 'Ein Kollege ohne Ahnung', text: of(VT.ahnungslos) };
@@ -760,13 +764,13 @@
     if (S.kpiHist.length > 30) S.kpiHist.shift();
   }
 
-  // Wochenrückblick am Freitag (auch nach einem Burnout-Sprung vom Donnerstag auf den Freitag)
+  // Wochenrückblick am Freitag (auch nach einem Sprung bei Energie null vom Donnerstag auf den Freitag)
   function wochenRueckblick(S, R) {
     if (S.reportWeek !== week(S)) { S.chef -= 4; R.lines.push(['bad', 'Wochenrückblick ohne KPI-Bericht: Werkleitung −4']); }
     else { const d = clamp(Math.round((kpiScore(S) - kpiPath(S)) * 20), -5, 5); S.chef += d; R.lines.push([d >= 0 ? 'good' : 'bad', 'Wochenrückblick KPI-Index ' + kpiIndex(S) + ' %: Werkleitung ' + (d >= 0 ? '+' : '') + d]); }
     wochenAuswertung(S, R);
   }
-  // v0.4: Prognose und Wassermelone am Freitag auswerten (idempotent: k = null, melone = -2; auch nach einem Burnout-Sprung auf den Freitag)
+  // v0.4: Prognose und Wassermelone am Freitag auswerten (idempotent: k = null, melone = -2; auch nach einem Sprung bei Energie null auf den Freitag)
   function wochenAuswertung(S, R) {
         // v0.4 Prognose-Auswertung
     const PG = T().prognose, names = ['unter Plan', 'im Plan', 'über Plan'];
@@ -841,7 +845,7 @@
     const rest = 55 - Math.round(over / T().ueber.rest);
     S.energy = clamp(S.energy + rest, 15, 100);
     let fri = weekday(S) === 4;
-    if (S.burnout) { S.burnout = false; S.chef -= 8; S.family -= 4; S.energy = 70; R.lines.push(['bad', 'Am Schreibtisch eingeschlafen, Kopf auf der Tastatur. Ein Tag krank: Werkleitung −8, Familie −4.' + (weekday(S) === 3 ? ' Der Freitag fällt aus, das Wochenende kommt danach trotzdem.' : weekday(S) === 4 ? ' Das Wochenende kommt trotzdem, aber der Montag fällt aus.' : '')]); if (S.ev.kaffee === S.day && weekday(S) === 4) S.ev.kaffeeKrank = S.day + 1; S.day++; if (T().cost.daily) spend(S, T().cost.daily); if (weekday(S) === 4 && S.kredit > 0) { const z = Math.max(1, Math.round(S.kredit * T().kredit.zins)); spend(S, z); R.lines.push(['bad', 'Kreditzinsen (Saldo ' + S.kredit + ' k€): −' + z + ' k€']); } if (S.auktion && !S.auktion.res && S.day >= S.auktion.closeDay) closeAuktion(S, R); if (weekday(S) === 4) { fri = true; wochenRueckblick(S, R); S.chef = clamp(S.chef, 0, 100); S.image = clamp(S.image, 0, 100); auditFreitag(S, R); } }
+    if (S.burnout) { S.burnout = false; S.chef -= 8; S.family -= 4; S.energy = 70; R.lines.push(['bad', 'Am Schreibtisch eingeschlafen, Kopf auf der Tastatur. Energie auf null, ein Tag fällt aus: Werkleitung −8, Familie −4.' + (weekday(S) === 3 ? ' Der Freitag fällt aus, das Wochenende kommt danach trotzdem.' : weekday(S) === 4 ? ' Das Wochenende kommt trotzdem, aber der Montag fällt aus.' : '')]); if (S.ev.kaffee === S.day && weekday(S) === 4) S.ev.kaffeeKrank = S.day + 1; S.day++; if (T().cost.daily) spend(S, T().cost.daily); if (weekday(S) === 4 && S.kredit > 0) { const z = Math.max(1, Math.round(S.kredit * T().kredit.zins)); spend(S, z); R.lines.push(['bad', 'Kreditzinsen (Saldo ' + S.kredit + ' k€): −' + z + ' k€']); } if (S.auktion && !S.auktion.res && S.day >= S.auktion.closeDay) closeAuktion(S, R); if (weekday(S) === 4) { fri = true; wochenRueckblick(S, R); S.chef = clamp(S.chef, 0, 100); S.image = clamp(S.image, 0, 100); auditFreitag(S, R); } }
     S.chef = clamp(S.chef, 0, 100); S.family = clamp(S.family, 0, 100); S.schicht = clamp(S.schicht, 0, 100);
     R.progress = me; R.rivals = S.rivals.map(r => ({ name: r.name, prog: r.prog })); R.budget = S.budget; R.kpiIndex = kpiIndex(S);
     R.friday = fri;
@@ -867,7 +871,7 @@
     return Math.max(0, Math.round(progress(S) * 10 + (S.result && S.result.win ? (S.result.pfad ? T().audit.score : (S.deadline - S.day) * 150 + 1000) : 0) + S.family * 5 + S.chef * 5 + kpiIndex(S) * 5 + Math.max(0, S.budget) / 2 + (S.stats.bingo ? T().bingoScore : 0) + S.stats.eggs * 25 + S.image * 3 - S.kredit / 2 + (S.titel ? T().titel.score : 0)));
   }
   // Wochenendschicht: shifts = 0, 1 oder 2 Tage
-  // v0.7: der Kaffeeautomat bleibt auch dann am Wochenende kaputt, wenn der Freitag nach einem Burnout ausfiel
+  // v0.7: der Kaffeeautomat bleibt auch dann am Wochenende kaputt, wenn der Freitag wegen Energie null ausfiel
   const kaffeeKaputt = S => S.ev.kaffee === S.day || S.ev.kaffeeKrank === S.day;
   function weekend(S, shifts) {
     const out = [];

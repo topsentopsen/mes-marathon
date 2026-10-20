@@ -22,5 +22,11 @@ for (const f of files.filter(f => /[\\/](js|css)[\\/]/.test(f) || /index\.html$/
 // Neue Figurentexte: kein anderer Personenname als Christian oder Sandra in »Name:«-artigen Anreden
 const figTxt = JSON.stringify([SCx.FIGUREN, SCx.CHRISTIAN_TIPPS, SCx.SANDRA_NPC, SCx.SANDRA_SZENEN, SCx.SANDRA_TAG1, SCx.KOLLEGE_BUBBLES]);
 for (const m of figTxt.matchAll(/\b([A-ZÄÖÜ][a-zäöüß]+), (?:die|der) (?:neue|erfahrene|Kollegin|Kollege)/g)) if (!['Christian', 'Sandra'].includes(m[1])) { console.log('Unbekannter Name:', m[1]); bad++; }
+// v0.11: Kein Kollege wird abwertend als untätig bezeichnet. Das Wort und seine Varianten sind überall verboten
+// (Wort zusammengesetzt, damit es auch hier nicht im Klartext steht; »fault« im Code heißt Störung und ist nicht gemeint).
+const W1 = 'f' + 'aul', W2 = 'la' + 'zy';
+const SCHMAEH = new RegExp(W1 + '(?!t)|' + W2, 'i'); // auch in Zusammensetzungen; fault, faulty, faulted bleiben erlaubt
+for (const f of files) { const txt = fs.readFileSync(f, 'utf8'); const m = txt.match(SCHMAEH); if (m) { console.log('Abwertendes Wort gefunden in', path.relative(root, f), m[0]); bad++; } if (SCHMAEH.test(path.basename(f))) { console.log('Dateiname:', f); bad++; } }
+for (const t of [].concat(...Object.values(SCx.BUBBLES), ...Object.values(SCx.VISIT_TEXT || {}).flat(), SCx.PARTY_GAESTE || '', Object.values(SCx.SANDRA_SZENEN3 || {}), Object.values(SCx.SANDRA_SZENEN2 || {}))) if (SCHMAEH.test(String(t))) { console.log('Spieltext:', t); bad++; }
 if (bad) { console.log(bad + ' Verstöße gegen die Namensregel'); process.exit(1); }
 console.log('ok Namensregel (' + files.length + ' Dateien)');

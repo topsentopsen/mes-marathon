@@ -214,10 +214,9 @@ if (require.main === module) {
       const C = run(n, 'christian');
       console.log('Vergleich Christian gut ' + C.gut.win + ' %, ' + figur + ' gut ' + R.gut.win + ' %');
       if (Math.abs(R.gut.win - C.gut.win) > 5) errs.push(figur + ' gut weicht mehr als 5 PP von Christian ab');
-      // fleissig ist die Ausnahme (docs/BALANCE-v0.9.md): Wer am Rechner schneller ist, macht weniger Überstunden und verliert seltener über die Familie.
-      // Für fleissig gilt deshalb: höchstens 15 PP über Christian und klar unter gut derselben Figur.
-      for (const k of SANE) if (k !== 'fleissig' && R[k].win > C[k].win + 8) errs.push(figur + ' ' + k + ' mehr als 8 PP über Christian');
-      if (R.fleissig.win > C.fleissig.win + 15) errs.push(figur + ' fleissig mehr als 15 PP über Christian');
+      // v0.11: Seit Sandras Zeitvorteil nur bis Feierabend gilt, braucht fleissig keine Ausnahme mehr (vorher bis 15 PP erlaubt)
+      for (const k of SANE) if (R[k].win > C[k].win + 8) errs.push(figur + ' ' + k + ' mehr als 8 PP über Christian');
+      if (R.gut1730.win > C.gut1730.win + 3) errs.push(figur + ' gut1730 mehr als 3 PP über Christian');
       if (R.fleissig.win > R.gut.win - 5) errs.push(figur + ' fleissig nicht >= 5 PP unter gut');
     }
     if (warn.length) console.log('WARNUNG Zielbereiche: ' + warn.join('; '));

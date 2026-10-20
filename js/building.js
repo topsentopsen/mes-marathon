@@ -6,11 +6,11 @@
   let cv, ctx, vctx, off, hover = null, blink = 0;
   const P = { x: 190, f: 0, dir: 1, moving: false, anim: 0, visible: true, inLift: false, queue: [] };
   const lift = { pos: 0 };
-  // Figuren nur über Rollen: Schichtleiter, Tesla-Kollege, der Kollege, der nichts arbeitet, italienischer Kollege, IT-Chefin
+  // Figuren nur über Rollen: Schichtleiter, Tesla-Kollege, der Kollege aus dem Nachbarbüro, italienischer Kollege, IT-Chefin
   const NPC0 = [
     { role: 'schicht', f: 0, x: 170, dir: 1, col: '#e0e020' },
     { role: 'tesla', f: 1, x: 300, dir: -1, col: '#d03030' },
-    { role: 'nix', f: 1, x: 288, dir: 1, col: '#7a7a70', idle: true },
+    { role: 'nachbar', f: 1, x: 288, dir: 1, col: '#7a7a70', idle: true },
     { role: 'italien', f: 2, x: 290, dir: -1, col: '#f0f0f0' },
     { role: 'itchefin', f: 3, x: 300, dir: 1, col: '#9050d0' },
     // v0.9: die jeweils andere Figur ist als Kollege oder Kollegin im MES-Stock unterwegs
@@ -70,14 +70,15 @@
     for (const q of Q) {
       const m = q.m, rot = Math.abs(m.b) > 1e-6 || Math.abs(m.c) > 1e-6;
       const lx = m.a * q.x + m.c * q.y + m.e, ly = m.b * q.x + m.d * q.y + m.f;
-      const base = q.size * s * (rot ? 1 : m.a), px = Math.round(Math.max(base, minPx)), grow = px > base;
+      // v0.11: Mindestgröße gilt auch für gedrehte Schrift (Maßstab der Drehmatrix), gewachsene Schrift bleibt in ihrer Ursprungsbreite (keine Überlappung)
+      const k = rot ? Math.hypot(m.a, m.b) || 1 : m.a, base = q.size * s * k, px = Math.round(Math.max(base, minPx)), grow = px > base;
       v.save();
       if (q.clip) { v.beginPath(); v.rect(Math.round(q.clip[0] * s), Math.round(q.clip[1] * s), Math.round(q.clip[2] * s), Math.round(q.clip[3] * s)); v.clip(); }
-      if (rot) { v.setTransform(s * m.a, s * m.b, s * m.c, s * m.d, Math.round(s * lx), Math.round(s * ly)); v.font = 'bold ' + q.size + 'px monospace'; }
+      if (rot) { v.setTransform(s * m.a, s * m.b, s * m.c, s * m.d, Math.round(s * lx), Math.round(s * ly)); v.font = 'bold ' + (q.size * px / base).toFixed(2) + 'px monospace'; }
       else { v.setTransform(1, 0, 0, 1, Math.round(s * lx), Math.round(s * ly - (grow && !q.top ? (px - base) / 2 : 0))); v.font = 'bold ' + px + 'px monospace'; }
       v.textAlign = q.align;
-      const maxW = rot ? undefined : (q.fit ? q.mw * s : grow ? q.mw * s * 1.25 : undefined);
-      v.lineWidth = rot ? 1.5 : Math.max(2, px * 0.24); v.strokeStyle = q.o;
+      const maxW = rot ? (grow ? q.mw : undefined) : (q.fit || grow ? q.mw * s * k : undefined);
+      v.lineWidth = rot ? Math.max(1.5, 1.5 * px / base) : Math.max(2, px * 0.24); v.strokeStyle = q.o;
       if (maxW) { v.strokeText(q.t, 0, 0, maxW); v.fillStyle = q.c; v.fillText(q.t, 0, 0, maxW); } else { v.strokeText(q.t, 0, 0); v.fillStyle = q.c; v.fillText(q.t, 0, 0); }
       v.restore();
     }
@@ -113,7 +114,7 @@
   function costume(x, y, role) {
     if (role === 'schicht') { rect(x - 5, y - 17, 10, 9, '#ffffff'); rect(x - 5, y - 17, 10, 2, '#d02020'); for (let i = 0; i < 3; i++) rect(x - 4 + i * 3, y - 14, 2, 2, '#202020'); }
     else if (role === 'tesla') { rect(x - 3, y - 30, 7, 5, '#20c040'); rect(x + 4, y - 29, 1, 3, '#20c040'); rect(x - 2, y - 29, 3, 3, '#a0ffa0'); }
-    else if (role === 'nix') { rect(x - 4, y - 26, 9, 3, '#ffd000'); rect(x - 2, y - 28, 5, 2, '#ffd000'); }
+    else if (role === 'nachbar') { rect(x - 4, y - 26, 9, 3, '#ffd000'); rect(x - 2, y - 28, 5, 2, '#ffd000'); }
     else if (role === 'italien') { rect(x - 5, y - 16, 10, 8, '#f0c060'); rect(x - 4, y - 15, 8, 6, '#e03020'); rect(x - 2, y - 14, 2, 2, '#ffffff'); rect(x + 1, y - 12, 2, 2, '#ffffff'); rect(x - 1, y - 11, 1, 1, '#20a040'); }
     else if (role === 'itchefin') { rect(x - 6, y - 32, 13, 1, '#40e0ff'); rect(x - 6, y - 32, 1, 6, '#40e0ff'); rect(x + 6, y - 32, 1, 6, '#40e0ff'); rect(x - 6, y - 27, 13, 1, '#40e0ff'); }
   }
@@ -361,7 +362,7 @@
     // Besuch: die Figur kommt zu Christian auf die Etage (Dialog läuft in ui.js)
     summon(id) {
       const p = SC.S && SC.S.pending;
-      const roles = id === 'tesla' ? (p && p.duo ? ['tesla', 'nix'] : ['tesla']) : id === 'italien' ? ['italien'] : id === 'itchefin' ? ['itchefin'] : id === 'christian' ? ['kollege'] : [];
+      const roles = id === 'tesla' ? (p && p.duo ? ['tesla', 'nachbar'] : ['tesla']) : id === 'italien' ? ['italien'] : id === 'itchefin' ? ['itchefin'] : id === 'christian' ? ['kollege'] : [];
       if (id === 'flur' && p && SC.FLUR[p.k] && SC.FLUR[p.k].role) roles.push(SC.FLUR[p.k].role);
       roles.forEach((r, i) => { const n = npcs.find(q => q.role === r); if (!n) return; n.f = P.f; n.idle = false; const side = P.x > 300 ? -1 : 1; n.x = P.x + side * 60; n.target = P.x + side * (14 + i * 10); });
     },
