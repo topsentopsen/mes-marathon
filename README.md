@@ -1,8 +1,13 @@
 # MES-Marathon
 
-Retro-Managerspiel im Browser, inspiriert von **Mad TV** (1991) und abgeleitet aus [Sender-Chef](https://github.com/topsentopsen/sender-chef). Statt eines Fernsehsenders führst du als **Christian** (ca. 40, sehr viel graue Haare, kein Bart, Hemd) seit Jahren ein MES (Manufacturing Execution System) in *Werk Mitte* ein. Diesmal wirklich. Comedy, kein Drama.
+Retro-Managerspiel im Browser, inspiriert von **Mad TV** (1991) und abgeleitet aus [Sender-Chef](https://github.com/topsentopsen/sender-chef). Statt eines Fernsehsenders führst du als **Christian** (ca. 40, sehr viel graue Haare, kein Bart, Hemd) oder seit v0.9 als **Sandra** (jüngere Kollegin aus der MES-Entwicklung, braune Haare, Blazer) seit Jahren ein MES (Manufacturing Execution System) in *Werk Mitte* ein. Diesmal wirklich. Comedy, kein Drama.
 
 **Spielen:** https://topsentopsen.github.io/mes-marathon/
+
+## Neu in v0.9.0 »Sandra«
+- Mehr Ruhe zum Lesen: In Räumen, Dialogen, Hinweisen und Textfeldern steht die Uhr, eine Aktion springt um ihre Dauer vor. Tempo Langsam, Normal, Schnell (Standard Langsam: 60 Echtsekunden pro Spielstunde, vorher 30). Der 17:00-Hinweis wartet auf »Weiter«. Größere und scharfe Schrift, Schalter »Schrift: Groß«.
+- Zweite Figur: Bei »Neues Spiel« wählst du Christian oder Sandra. Die andere Figur ist als Kollege oder Kollegin im Werk. Spielstände speichern die Figur, alte Stände laden mit Christian.
+- Details: `docs/RELEASE-v0.9.md`. Balance: `docs/BALANCE-v0.9.md`. Review: `docs/REVIEW-v0.9.md`. Pläne: `docs/PLAN-v0.9.md`, `docs/PLAN-v0.9-Sandra.md`. Recherche Tempo und Lesehilfen: `docs/RECHERCHE-v0.9-Tempo.md`.
 
 ## Neu in v0.8.0 »Aushang«
 - Ein Tipp auf den Ticker zeigt das Tagesprotokoll (📋). Außerdem gibt es einen Aushang am Werkstor, das Diagramm des Tages im Leitstand und eine Zeile im Wochenend-Dialog. Spielstände aus 0.7.0 laden weiter.
@@ -56,5 +61,5 @@ Vanilla JavaScript ohne Build, Canvas-Pixelgrafik, Musik und Fabriklärm per Web
 
 Eigenes Fanprojekt, keine Original-Inhalte von Mad TV. Alle Figuren, Werke und Firmen sind frei erfunden.
 
-## Balance (v0.8.0, `node tools/bot.js 1000 --check`)
-Siehe `docs/BALANCE-v0.8.md` und `docs/BALANCE-v0.7.md` (ältere: `-v0.6` bis `-v0.2`). Seit v0.6 unverändert, in v0.8 ist die Bot-Tabelle identisch. Meeting-Marathon bleibt deutlich schwächer als planvolles Arbeiten (15 gegen 60 %). Überstunden lohnen sich weniger: fleissig 35 %, bis 17:30 bleiben 74,5 % (3000 Partien). Offen: Das ist weiter etwa 15 PP besser als pünktlich gehen.
+## Balance (v0.9.0, `node tools/bot.js 1000 --check`, für Sandra mit `--figur=sandra`)
+Siehe `docs/BALANCE-v0.9.md` (Christian unverändert, Sandra gut 56 gegen 58 %), `docs/BALANCE-v0.8.md` und `docs/BALANCE-v0.7.md` (ältere: `-v0.6` bis `-v0.2`). Seit v0.6 unverändert, in v0.8 ist die Bot-Tabelle identisch. Meeting-Marathon bleibt deutlich schwächer als planvolles Arbeiten (15 gegen 60 %). Überstunden lohnen sich weniger: fleissig 35 %, bis 17:30 bleiben 74,5 % (3000 Partien). Offen: Das ist weiter etwa 15 PP besser als pünktlich gehen.
