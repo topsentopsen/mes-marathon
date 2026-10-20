@@ -4,6 +4,10 @@ Retro-Managerspiel im Browser, inspiriert von **Mad TV** (1991) und abgeleitet a
 
 **Spielen:** https://topsentopsen.github.io/mes-marathon/
 
+## Neu in v0.13.0 »Breitbild«
+
+Am PC passt jetzt alles ohne Scrollen auf einen Bildschirm (geprüft bei 1366 × 768, 1440 × 900 und 1920 × 1080): Das Spiel nutzt die ganze Fensterbreite, die Raumknöpfe stehen neben dem Werk, und ein Raum zeigt links die Infos und rechts die Aktionen in Spalten. Feierabend und Spielende sind zweispaltig, die Anleitung steht in Spalten und blättert bei Bedarf mit ◀ und ▶. Auf dem Handy bleibt alles untereinander, breite Tabellen lassen sich dort seitlich schieben. Texte und Wertung unverändert. Details: `docs/RELEASE-v0.13.md`.
+
 ## Neu in v0.12.0 »Dialogrunde«
 
 Alle Dialoge geprüft und 27 Texte verbessert (docs/DIALOGE-v0.12.md). Auf dem Handy passen Dialoge und Räume besser auf den Bildschirm. Das Spiel macht keine Netzwerkaufrufe; ein Vorschlag für eine Zugriffsstatistik der Seite steht in docs/STATISTIK-VORSCHLAG.md. Wertung unverändert.
@@ -69,7 +73,7 @@ Sandra nachgeschärft: Figurenkarte über den Namensknopf, Knopfvermerke zu ihre
 Vanilla JavaScript ohne Build, Canvas-Pixelgrafik, Musik und Fabriklärm per Web Audio. `index.html` öffnen genügt.
 
 - `js/data.js` Daten und Balance-Hebel (`SC.TUNE`), `js/sim.js` Spiellogik (läuft auch in Node), `js/ui.js` Oberfläche, `js/building.js` Fabrik, Aufzug und Figuren, `js/audio.js` Musik und Fabriklärm.
-- Tests: `node test/sim.test.js`, `node test/names.test.js`, Browser: `node test/browser-check.js [url]`, `node test/playthrough.js [tage] [seed]` und Handy-Ton `node test/mobile-audio.js` (puppeteer-core).
+- Tests: `node test/sim.test.js`, `node test/names.test.js`, Browser: `node test/browser-check.js [url]`, `node test/playthrough.js [tage] [seed]`, Handy-Ton `node test/mobile-audio.js` und seit v0.13 das Layout `node test/layout-check.js [url]` (puppeteer-core).
 - Balance-Bot: `node tools/bot.js 300 --check`.
 - Konzept und Plan: `docs/KONZEPT.md`, `docs/PHASEN.md`.
 

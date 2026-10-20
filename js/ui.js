@@ -15,14 +15,14 @@
   // v0.9: Auch ein offenes Textfeld (Fokus in input oder textarea, z. B. mit Handy-Tastatur) hält die Uhr an
   UI.typing = () => { const a = document.activeElement; if (!a) return false; if (a.isContentEditable || a.tagName === 'TEXTAREA') return true; return a.tagName === 'INPUT' && !/^(range|checkbox|radio|button|submit|reset|color|file|image|hidden)$/i.test(a.type || 'text'); };
   UI.clockRuns = () => { const s = SC.S; return !!(s && s.phase === 'tag' && !UI.paused && !UI._ov && !UI.room && !UI.typing()); };
-  UI.setGross = function (on) { document.body.classList.toggle('gross', !!on); store('mesmarathon-schrift', on ? 'gross' : 'normal'); const b = document.getElementById('btn-schrift'); if (b) b.textContent = on ? 'Schrift: Groß' : 'Schrift: Normal'; };
+  UI.setGross = function (on) { document.body.classList.toggle('gross', !!on); store('mesmarathon-schrift', on ? 'gross' : 'normal'); const b = document.getElementById('btn-schrift'); if (b) b.textContent = on ? 'Schrift: Groß' : 'Schrift: Normal'; if (UI.room && UI.fitRoom) UI.fitRoom(); };
   let shown = 0;
   const SND_HINT = 'Ton an. Kein Ton? Stummschalter am iPhone prüfen und Lautstärke hoch.';
 
   UI.overlayOpen = () => UI._ov;
   // v0.9: Texte sind für Christian geschrieben, SC.fill passt sie für Sandra an (raw: Figurenwahl, dort stehen beide Namen)
   const F = h => SC.fill ? SC.fill(SC.S, h) : h;
-  function overlay(html, raw) { if (!raw) html = F(html); UI._ovAt = performance.now(); if (!/data-o="logzu"/.test(html)) UI._log = false; $('overlay').innerHTML = '<div class="box">' + html + '</div>'; $('overlay').classList.remove('hidden'); UI._ov = true; padOverlay(); }
+  function overlay(html, raw) { if (!raw) html = F(html); UI._hseiten = null; UI._ovAt = performance.now(); if (!/data-o="logzu"/.test(html)) UI._log = false; $('overlay').innerHTML = '<div class="box">' + html + '</div>'; $('overlay').classList.remove('hidden'); UI._ov = true; padOverlay(); }
   // v0.10: Auf dem Handy liegt der Ton-Knopf über Dialogen; der Dialog beginnt deshalb darunter
   window.addEventListener('resize', () => { if (UI._ov) padOverlay(); });
   function padOverlay() { const o = $('overlay'), b = document.getElementById('btn-sound'); if (window.innerWidth > 640 || !b) { o.style.paddingTop = ''; return; } const r = b.getBoundingClientRect(); o.style.paddingTop = (r.bottom > 0 && r.bottom < window.innerHeight * 0.5 ? Math.round(r.bottom + 6) : 10) + 'px'; }
@@ -72,9 +72,13 @@
   };
   UI.openRoom = function (room) {
     if (!S() || S().phase !== 'tag') { SC.building.showPlayer(); return; }
-    UI.room = room; document.body.classList.add('raum'); aud('jingle', 'door'); aud('zone', room); renderRoom(); $('room').classList.remove('hidden');
+    // v0.13: Kam man per Tastatur über einen Raumknopf (die am PC im Raum verdeckt sind), springt der Fokus auf »Raus« und danach zurück
+    const ae = document.activeElement; let tast = false; try { tast = !!(ae && ae.closest && ae.closest('#rooms') && ae.matches(':focus-visible')); } catch (e) { /* */ }
+    UI._opener = tast ? ae : null;
+    UI.room = room; document.body.classList.add('raum'); aud('jingle', 'door'); aud('zone', room); renderRoom(); $('room').classList.remove('hidden'); fitRoom();
+    if (tast) { const b = $('room').querySelector('button[data-a="leave"]'); if (b) b.focus(); }
   };
-  UI.closeRoom = function () { UI.room = null; document.body.classList.remove('raum'); $('room').classList.add('hidden'); aud('zone', null); SC.building.showPlayer(); if (S()) sim().save(S()); };
+  UI.closeRoom = function () { UI.room = null; document.body.classList.remove('raum'); $('room').classList.add('hidden'); aud('zone', null); SC.building.showPlayer(); if (S()) sim().save(S()); const o = UI._opener; UI._opener = null; if (o && document.contains(o)) o.focus(); };
 
   function modTable(s) {
     const c = (v, n) => '<td class="' + (v >= n ? 'good' : v > 0 ? '' : 'dim') + '">' + v + '/' + n + '</td>';
@@ -87,7 +91,9 @@
   function renderRoom() {
     const s = S(), room = UI.room; if (!s || !room) return;
     const R = SC.ROOMS[room], acts = sim().actions[room];
-    let h = '<div class="room-head"><h2>' + esc(R.title) + '</h2><span class="dim">' + esc(R.who) + '</span><span class="dim small">⏸ Uhr steht, solange du hier bist</span><button data-a="leave">Raus (Esc)</button></div>';
+    // v0.13: Kopf oben, darunter zwei Spalten (Infos links, Aktionen rechts), damit der Raum ohne Scrollen auf den Bildschirm passt
+    const head = '<div class="room-head"><h2>' + esc(R.title) + '</h2><span class="dim">' + esc(R.who) + '</span><span class="dim small">⏸ Uhr steht, solange du hier bist</span><button data-a="leave">Raus (Esc)</button></div>';
+    let h = '';
     if (room === 'meeting') {
       h += '<h3>Kalender heute</h3><table>' + s.meetings.map(m => '<tr><td>' + hm(m.start) + '</td><td>' + esc(m.title) + '</td><td>' + m.dur + ' Min.</td><td>' + ({ chef: 'Werkleitung', schicht: 'Schichtleiter', useful: '<span class="good">nützlich</span>' })[m.kind] + '</td><td class="' + (m.state === 'missed' ? 'bad' : m.state === 'done' ? 'good' : '') + '">' + ({ open: 'offen', missed: 'verpasst', done: 'dabei' })[m.state] + '</td></tr>').join('') + '</table>';
     }
@@ -106,18 +112,47 @@
     if (room === 'controlling') h += '<p>Budget: <b class="' + (s.budget < 0 ? 'bad' : '') + '">' + Math.round(s.budget) + ' k€</b> · ausgegeben: ' + Math.round(s.stats.budgetSpent) + ' k€ · Tranche diese Woche: ' + (s.trancheWeek === sim().week(s) ? '<span class="good">beantragt</span>' : '<span class="warn">offen</span>') + ' · Kredit: ' + (s.kredit ? '<span class="warn">' + s.kredit + ' k€</span>' : '0 k€') + ' von ' + sim().rahmen(s) + ' k€ Rahmen (8 % Zins freitags) · Image: <b>' + Math.round(s.image) + '</b>' + '</p><p class="small dim">Unter 0 k€: Budgetsperre. Unter −40 k€ stoppt das Controlling das Projekt.</p>' + marktHtml(s) + auktionHtml(s);
     if (room === 'it') h += pyramidHtml(null) + '<div class="say">Die IT-Chefin: »' + esc(SC.VISIT_TEXT.itchefin[s.day % SC.VISIT_TEXT.itchefin.length]) + ' Hast du gesehen? Jede Etage hier ist eine Ebene. Das hab ich durchgesetzt.«</div>';
     if (room === 'server') h += '<p>Status: ' + (s.server.up ? '<span class="good">MES-Server läuft</span>' : '<span class="bad">MES-Server DOWN</span>') + (s.server.careUntil >= s.day ? ' · <span class="good">frisch gewartet</span>' : '') + '</p>';
-    h += '<h3>Was tun?</h3><div class="acts">';
+    let info = h; h = '<h3>Was tun?</h3><div class="acts">';
     for (const a of acts) {
       const why = a.check(s); let cost = sim().actCost(s, room, a.id); const label = typeof a.label === 'function' ? a.label(s) : a.label;
       const wait = sim().handoverWait(s, room), fertig = s.minute + wait + cost, spaet = fertig > SC.DAY_END + (s.partyMin || 0);
       // v0.11: Sandras Stärken und Schwächen sichtbar auf dem Knopf (nur Anzeige)
       const ff = s.figur === 'sandra' && cost ? sim().figF(s, a.id) : 1, roh = s.figur === 'sandra' && cost ? (SC.TUNE.figur.sandra.dauer[a.id] || 1) : 1, fv = ff < 1 ? ' <span class="small good fig">Sandra: schneller</span>' : ff > 1 ? ' <span class="small warn fig">Sandra: langsamer</span>' : roh < 1 ? ' <span class="small dim fig">Sandra: Vorsprung nur bis 17:00</span>' : '';
-      h += '<button data-a="' + a.id + '"' + (why ? ' disabled title="' + esc(why) + '"' : '') + '>' + esc(label) + (cost ? ' <span class="small">(' + cost + ' Min.' + (wait ? ' + ' + wait + ' Wartezeit' : '') + ', fertig ' + (spaet ? '⚠ ' : '') + hm(fertig) + (spaet ? ' nach Feierabend' : '') + ')</span>' : '') + fv + '</button>' + (why ? '<div class="small dim why">' + esc(why) + '</div>' : '');
+      h += '<div class="act"><button data-a="' + a.id + '"' + (why ? ' disabled title="' + esc(why) + '"' : '') + '>' + esc(label) + (cost ? ' <span class="small">(' + cost + ' Min.' + (wait ? ' + ' + wait + ' Wartezeit' : '') + ', fertig ' + (spaet ? '⚠ ' : '') + hm(fertig) + (spaet ? ' nach Feierabend' : '') + ')</span>' : '') + fv + '</button>' + (why ? '<div class="small dim why">' + esc(why) + '</div>' : '') + '</div>';
     }
     h += '</div>';
-    if (room === 'halle' || room === 'buero') h += '<p class="small dim">Ablauf je Modul: Requirements (Hallen, Station) → Spezifikation → Implementierung (Büro) → Deployment (Serverraum) → Testlauf (Hallen, Teststation) → Ausdruck (Drucker) → Abnahme (Werkleitung).</p>';
-    $('room').innerHTML = F(h);
+    if (room === 'halle' || room === 'buero') info += '<p class="small dim">Ablauf je Modul: Requirements (Hallen, Station) → Spezifikation → Implementierung (Büro) → Deployment (Serverraum) → Testlauf (Hallen, Teststation) → Ausdruck (Drucker) → Abnahme (Werkleitung).</p>';
+    const fa = document.activeElement && $('room').contains(document.activeElement) && document.activeElement.dataset ? document.activeElement.dataset.a : null; // Fokus über das Neuzeichnen retten
+    $('room').innerHTML = F(head + '<div class="room-cols' + (info ? '' : ' nur-acts') + '">' + (info ? '<div class="room-info">' + info + '</div>' : '') + '<div class="room-act">' + h + '</div></div>');
+    // Breite Tabellen schieben auf dem Handy nur sich selbst zur Seite, nicht den ganzen Raum
+    $('room').querySelectorAll('table').forEach(t => { const d = document.createElement('div'); d.className = 'tw'; t.parentNode.insertBefore(d, t); d.appendChild(t); });
+    fitRoom();
+    if (fa) { const nb = $('room').querySelector('button[data-a="' + fa + '"]'); if (nb && !nb.disabled) nb.focus(); }
   }
+  // v0.13: Am PC soll ein Raum ohne Scrollen passen. Reicht die normale Aufteilung nicht, werden die Infos zweispaltig, danach etwas dichter gesetzt.
+  const DESKTOP = '(min-width: 900px) and (min-height: 560px)';
+  const VARIANTEN = ['', ' v-info2', ' v-acts', ' v-fluss', ' v-fluss v-fluss2', ' v-eng', ' v-info2 v-eng', ' v-acts v-eng', ' v-fluss v-eng', ' v-fluss v-fluss2 v-eng'], LETZTE = {};
+  function fitRoom() {
+    const el = $('room'), cols = el.querySelector('.room-cols'); if (!cols) return;
+    const base = 'room-cols' + (cols.querySelector('.room-info') ? '' : ' nur-acts'), desk = !!(window.matchMedia && window.matchMedia(DESKTOP).matches);
+    const hidden = el.classList.contains('hidden'); if (hidden) el.classList.remove('hidden');
+    // zuerst die zuletzt passende Aufteilung dieses Raums, damit die Spalten zwischen zwei Aktionen nicht springen
+    const last = LETZTE[UI.room], order = desk ? (last !== undefined ? [last].concat(VARIANTEN.filter(v => v !== last)) : VARIANTEN) : [''];
+    let best = null;
+    for (const v of order) {
+      cols.className = base + v; let over = el.scrollHeight - el.clientHeight;
+      if (el.scrollWidth > el.clientWidth + 1) over += 1000;
+      el.querySelectorAll('.tw').forEach(t => { if (t.scrollWidth > t.clientWidth + 1) over += 1000; }); // seitlich verschobene Tabelle zählt als nicht passend
+      if (!best || over < best.over) best = { v, over }; if (over <= 0) break;
+    }
+    cols.className = base + best.v; if (desk && best.over <= 0) LETZTE[UI.room] = best.v;
+    if (hidden) el.classList.add('hidden');
+  }
+  UI.fitRoom = fitRoom;
+  // Fenstergröße geändert: Raum neu aufteilen, Anleitung neu in Seiten teilen (gebündelt pro Bild)
+  let rz = 0;
+  window.addEventListener('resize', () => { if (rz) return; rz = requestAnimationFrame(() => { rz = 0; if (UI.room) fitRoom(); if (UI._ov && document.querySelector('#overlay .hilfe')) { const i = UI._hseiten ? UI._hseiten.i : 0; help(); zeigeSeite(i); } }); });
+
   // v0.4 Markt und Prognose
   function marktHtml(s) {
     if (!s.markt) return '';
@@ -219,15 +254,17 @@
   function showEvening(s, R) {
     if (!R) { s.phase = 'tag'; morning(); return; }
     aud('play', 'balance');
-    let h = '<h2>Feierabend · ' + R.weekday + ', Tag ' + R.day + '</h2>' +
-      '<div class="chefin">' + pimg(s.figur, 'pt') + '<div><p>Projektfortschritt: <b>' + R.progress + ' %</b></p>' + rivals(s) + '</div></div>' +
-      '<h3>Bilanz</h3><ul>' + R.lines.map(l => '<li class="' + l[0] + '">' + esc(l[1]) + '</li>').join('') + '</ul>' +
-      '<h3>KPIs heute</h3><p class="kpis">' + R.kpi.map(x => { const ok = x.k === 'ausschuss' ? x.ist <= x.ziel : x.ist >= x.ziel; const better = x.k === 'ausschuss' ? x.d < 0 : x.d > 0; return '<span class="' + (ok ? 'good' : '') + '">' + SC.KPI.names[x.k] + ' ' + x.ist.toFixed(1) + ' <span class="' + (better ? 'good' : x.d === 0 ? 'dim' : 'bad') + '">' + (x.d > 0 ? '▲' : x.d < 0 ? '▼' : '•') + '</span> <span class="dim">(Ziel ' + x.ziel + ')</span></span>'; }).join(' · ') + '</p>' +
-      '<p>Werkleitung ' + bar(s.chef) + ' · Familie ' + bar(s.family, 'heartbar') + ' · Schichtleiter ' + bar(s.schicht) + ' · Energie morgen ' + bar(s.energy) + ' · Budget <b>' + Math.round(s.budget) + ' k€</b></p>' +
-      '<details><summary>Tagesprotokoll</summary><ul class="log">' + R.log.map(l => '<li>' + esc(l) + '</li>').join('') + '</ul></details>';
-    if (s.phase === 'ende') { h += endHtml(s); aud('jingle', s.result.win ? 'win' : 'lose'); h += '<p><button data-o="title">Zum Titel</button></p>'; }
-    else if (s.phase === 'wochenende') h += '<h3>Wochenende! Der Schichtleiter sucht Leute für die Wochenendschicht.</h3>' + (s.sap.cutover ? '<p class="warn">SAP-Cutover steht an! Ohne Wochenendschicht gibt es drei Tage Chaos.</p>' : '') + '<p class="small">Jeder Tag Wochenendschicht bringt bis zu 4 Arbeitspakete (beim SAP-Cutover gehen sie zuerst in die Stammdaten), kostet aber Familie (−' + SC.TUNE.weekendFam + '), Energie (−12, bei kaputtem Kaffeeautomaten −16) und ' + SC.TUNE.cost.weekend + ' k€ Zuschläge.</p><p class="small dim">' + esc(sim().wochenendGag(s)) + '</p><p><button data-o="we0">Frei nehmen</button> <button data-o="we1">Samstag arbeiten</button> <button data-o="we2">Samstag und Sonntag</button></p>';
-    else h += '<p><button data-o="next">Nächster Tag</button></p>';
+    // v0.13: am PC zweispaltig (links Fortschritt und Bilanz, rechts KPIs und Werte, am Spielende rechts das Ergebnis), damit nichts scrollt
+    const kopf = '<h2>Feierabend · ' + R.weekday + ', Tag ' + R.day + '</h2>',
+      fort = '<div class="chefin">' + pimg(s.figur, 'pt') + '<div><p>Projektfortschritt: <b>' + R.progress + ' %</b></p>' + rivals(s) + '</div></div>',
+      bilanz = '<h3>Bilanz</h3><ul>' + R.lines.map(l => '<li class="' + l[0] + '">' + esc(l[1]) + '</li>').join('') + '</ul>',
+      kpis = '<h3>KPIs heute</h3><p class="kpis">' + R.kpi.map(x => { const ok = x.k === 'ausschuss' ? x.ist <= x.ziel : x.ist >= x.ziel; const better = x.k === 'ausschuss' ? x.d < 0 : x.d > 0; return '<span class="' + (ok ? 'good' : '') + '">' + SC.KPI.names[x.k] + ' ' + x.ist.toFixed(1) + ' <span class="' + (better ? 'good' : x.d === 0 ? 'dim' : 'bad') + '">' + (x.d > 0 ? '▲' : x.d < 0 ? '▼' : '•') + '</span> <span class="dim">(Ziel ' + x.ziel + ')</span></span>'; }).join(' · ') + '</p>',
+      werte = '<p>Werkleitung ' + bar(s.chef) + ' · Familie ' + bar(s.family, 'heartbar') + ' · Schichtleiter ' + bar(s.schicht) + ' · Energie morgen ' + bar(s.energy) + ' · Budget <b>' + Math.round(s.budget) + ' k€</b></p>',
+      proto = '<details><summary>Tagesprotokoll</summary><ul class="log">' + R.log.map(l => '<li>' + esc(l) + '</li>').join('') + '</ul></details>';
+    let h = kopf;
+    if (s.phase === 'ende') { h += '<div class="abend mit-ende"><div class="abend-a">' + fort + bilanz + kpis + werte + proto + '</div><div class="abend-b">' + endHtml(s) + '</div></div>'; aud('jingle', s.result.win ? 'win' : 'lose'); h += '<p><button data-o="title">Zum Titel</button></p>'; }
+    else if (s.phase === 'wochenende') h += '<div class="abend"><div class="abend-a">' + fort + bilanz + '</div><div class="abend-b">' + kpis + werte + proto + '<h3>Wochenende! Der Schichtleiter sucht Leute für die Wochenendschicht.</h3>' + (s.sap.cutover ? '<p class="warn">SAP-Cutover steht an! Ohne Wochenendschicht gibt es drei Tage Chaos.</p>' : '') + '<p class="small">Jeder Tag Wochenendschicht bringt bis zu 4 Arbeitspakete (beim SAP-Cutover gehen sie zuerst in die Stammdaten), kostet aber Familie (−' + SC.TUNE.weekendFam + '), Energie (−12, bei kaputtem Kaffeeautomaten −16) und ' + SC.TUNE.cost.weekend + ' k€ Zuschläge.</p><p class="small dim">' + esc(sim().wochenendGag(s)) + '</p></div></div><p><button data-o="we0">Frei nehmen</button> <button data-o="we1">Samstag arbeiten</button> <button data-o="we2">Samstag und Sonntag</button></p>';
+    else h += '<div class="abend"><div class="abend-a">' + fort + bilanz + '</div><div class="abend-b">' + kpis + werte + proto + '</div></div><p><button data-o="next">Nächster Tag</button></p>';
     sim().save(s);
     overlay(h);
   }
@@ -302,7 +339,7 @@
       '<p class="small dim">Inspiriert von Mad TV (1991). Eigenes Fanprojekt, alle Figuren frei erfunden. Version ' + SC.VERSION + '</p>' + (sim().highscores().length ? '<p class="small">Bestenliste: ' + sim().highscores().map((x, i) => (i + 1) + '. ' + x.score + figTag(x, false)).join(' · ') + '</p>' : '') + '</div>', true);
   };
   function help() {
-    overlay('<h2>Anleitung</h2><p>Du bist {C} (erfahrener Projektleiter fürs MES) oder Sandra (Spezialistin aus der MES-Entwicklung) in ' + SC.PLANT + '. Die Wahl kommt bei »Neues Spiel«. Bis Tag ' + SC.DEADLINE + ' müssen alle Module des neuen Manufacturing Execution Systems abgenommen sein. Werk Nord und Werk Süd machen dasselbe, und die Werkleitung vergleicht.</p>' +
+    overlay('<h2>Anleitung</h2><div class="hilfe"><p>Du bist {C} (erfahrener Projektleiter fürs MES) oder Sandra (Spezialistin aus der MES-Entwicklung) in ' + SC.PLANT + '. Die Wahl kommt bei »Neues Spiel«. Bis Tag ' + SC.DEADLINE + ' müssen alle Module des neuen Manufacturing Execution Systems abgenommen sein. Werk Nord und Werk Süd machen dasselbe, und die Werkleitung vergleicht.</p>' +
       '<ul><li><b>Das Werk ist die Automatisierungspyramide:</b> EG Feld (Pforte, Schichtleiter, Hallen), 1 Steuerung (Werkstatt, Drucker, Kantine), 2 Leitebene (Büro, Leitstand, Meeting), 3 MES (Server, IT), 4 ERP (Werkleitung, Controlling). Die IT-Chefin fragt gern danach.</li>' +
       '<li><b>Klick auf eine Tür</b> (oder die Knöpfe unten): Deine Figur läuft hin, Aufzug inklusive. Beim Laufen läuft die Uhr. In einem Raum, bei Besuchen, Hinweisen und in der Pause steht sie: Lies in Ruhe. Zeit kosten nur das Laufen und die Aktionen: Eine Aktion springt die Uhr um ihre Dauer vor. Auch während du in ein Textfeld tippst, steht die Uhr.</li><li><b>Tempo:</b> Knopf oben oder Tasten + und −. Langsam (Standard): eine Spielstunde dauert 60 Sekunden, Normal 40, Schnell 30. <b>Schrift:</b> im Menü auf Groß stellen.</li>' +
       '<li><b>Ablauf je Modul:</b> Requirements (Hallen, an der Station des Moduls) → Spezifikation → Implementierung (Büro) → Deployment (Serverraum) → Testlauf (Hallen, Teststation) → Ausdruck (Drucker) → Abnahme (Werkleitung).</li>' +
@@ -317,6 +354,7 @@
       '<li><b>Neu in 0.5:</b> Dienstags hängt im Controlling eine Ausschreibung aus (Ersatzteile, Beraterkontingent oder Wartungspaket). Gebote bis Mittwoch 15:00, im Controlling oder per Mail aus dem Büro. Werk Nord bietet verdeckt, gezahlt wird nur beim Zuschlag. Zweiter Weg zum Sieg: das Konzernaudit »Vorzeigewerk« (Freitag ab Tag 15, sehr hohes Image und KPI-Index, mindestens 3 Module). Der Knopf 🎧 setzt Kopfhörer auf: Tesla-Kollege, Ahnungslose und Altwerk halten sich dann kurz. Im Serverraum wohnt jetzt ein digitaler Zwilling, und das Archiv hat Fundstücke. Christian bringt immer Süßigkeiten mit: Die Box im Büro füllst du einmal pro Woche am Kiosk der Kantine auf (Schoko-Mix, Gummibärchen oder Lakritz). Jeden Tag schaut ein Stammgast vorbei. Passt die Sorte, hilft er dir (zum Beispiel eine Reparatur oder ein Testlauf 10 Min. kürzer), sonst wird gemeckert. Das letzte Stück nimmt niemand. Und der Tesla-Kollege erzählt dir jetzt dauernd, was »Elon« angeblich alles anders machen würde (Elon-Zähler oben). Thema wechseln geht meistens.</li>' +
       '<li><b>Neu in 0.6:</b> Die Aktionsknöpfe zeigen, wann du fertig bist (⚠: nach Feierabend), in den Hallen auch die Wartezeit der Schichtübergabe. Wer nach 17:00 noch etwas anfängt, hat weniger Energie und braucht länger. Tasten: Leertaste Pause, + Tempo, M Ton, K Kopfhörer. Im Büro wartet ein Pappkamerad, im Druckerraum ein Fax-Gerät, und der Aufzug (Klick auf die Kabine) hat ein Geheimnis. Fällt der Dienstag aus, hängt die Ausschreibung am Mittwoch aus.</li>' +
       '<li><b>Neu in 0.7:</b> Im Schichtleiter-Büro hängt ein Abreißkalender, am Ende zeigt »Dein Werk in Zahlen«, was du so getrieben hast. Im Herbst gibt es am Kiosk Lebkuchen. Beim ersten Start gibt das Titelbild eine Kurzanleitung. Fällt der Freitag aus, weil die Energie auf null war, kommt das Wochenende danach trotzdem.</li>' +
+      '<li><b>Neu in 0.13:</b> Breiteres Layout: Am PC passen Räume, Dialoge und die Anleitung ohne Scrollen auf den Bildschirm. In Räumen stehen links die Infos und rechts die Aktionen, die Raumknöpfe stehen neben dem Werk. Die Anleitung blättert mit ◀ und ▶. Spielstände aus 0.7 bis 0.12 laden weiter.</li>' +
       '<li><b>Neu in 0.12:</b> Alle Dialoge überarbeitet: weniger Widersprüche, Anrede passt für beide Figuren, ein paar Pointen sitzen besser. Auf dem Handy passen Dialoge und Räume besser auf den Bildschirm. Spielstände aus 0.7 bis 0.11 laden weiter.</li>' +
       '<li><b>Neu in 0.11:</b> Der Knopf mit dem Namen oben zeigt die Figurenkarte mit Stärken und Schwächen. Bei Sandra steht auf den Aktionsknöpfen, was ihr schneller oder langsamer gelingt; ihr Vorsprung am Rechner gilt bis Feierabend. Drei neue MES-Szenen. Kommt 17:00 mitten in einem Besuch, steht der Hinweis im Ticker. Spielstände aus 0.7 bis 0.10 laden weiter.</li>' +
       '<li><b>Neu in 0.9:</b> Mehr Ruhe zum Lesen: In Räumen steht die Uhr, der 17:00-Hinweis wartet auf »Weiter«, Tempo Langsam/Normal/Schnell (Standard Langsam), größere Schrift und Schalter »Schrift: Groß«. Leertaste bestätigt Hinweise mit nur einem Knopf, statt die Pause umzuschalten. Zwei Figuren zur Wahl: {C} (erfahren, gute Beziehungen) oder Sandra (Kollegin aus der MES-Entwicklung, schneller am Rechner, neu im Werk). Die andere Figur ist als Kollege oder Kollegin im MES-Stock unterwegs. Alle Texte im Werk sind schärfer gezeichnet.</li>' +
@@ -324,7 +362,35 @@
       '<li><b>Flurfunk (neu in 0.3):</b> Brandschutzübungen, Beamer-Kabel, Überraschungsgerichte und mehr. Die Werkleitung streut Buzzwords: fünf verschiedene sind ein Bingo (Punkte). Werksdurchsagen, die Werkszeitung am Abend und ein paar Easter Eggs.</li>' +
       '<li><b>Excel-Liste</b> jeden Tag pflegen. Server und Drucker zicken. Kaffee und Mittagessen in der Kantine geben Energie. Bei Energie 0 schläfst du am Schreibtisch ein: Der nächste Tag fällt aus (Energie auf null, Werkleitung −8, Familie −4; am Freitag trifft es den Montag). Fällt so der Tag vor dem Go-Live-Termin aus, ist am Abend danach Schluss.</li>' +
       '<li><b>Feierabend</b> über die Pforte ab 15:00. Überstunden bis 20:00 kosten Familie. Sirene um 14:00: Schichtwechsel.</li>' +
-      '<li><b>Ton auf dem Handy:</b> Der Ton startet mit der ersten Berührung. Oben rechts schaltet der Ton-Knopf an und aus. Auf dem iPhone den Stummschalter prüfen.</li><li>Verloren: Werkleitung oder Familie auf null, Budget unter −40 k€ oder Go-Live-Termin verpasst.</li></ul><p class="small">Tasten: Leertaste Pause, + Tempo, Esc Raum verlassen, M Ton, K Kopfhörer.</p><p><button data-o="back">Zurück</button></p>');
+      '<li><b>Ton auf dem Handy:</b> Der Ton startet mit der ersten Berührung. Oben rechts schaltet der Ton-Knopf an und aus. Auf dem iPhone den Stummschalter prüfen.</li><li>Verloren: Werkleitung oder Familie auf null, Budget unter −40 k€ oder Go-Live-Termin verpasst.</li></ul><p class="small">Tasten: Leertaste Pause, + Tempo, Esc Raum verlassen, M Ton, K Kopfhörer.</p></div><p class="hilfe-nav"><button data-o="back">Zurück</button></p>');
+    blaettern();
+  }
+  // v0.13: Passt die Anleitung am PC nicht auf den Bildschirm, wird sie in Seiten geteilt (gleicher Text, nur aufgeteilt; ◀ und ▶ blättern)
+  function blaettern() {
+    const box = document.querySelector('#overlay .box'), hl = box && box.querySelector('.hilfe'); if (!hl) return;
+    if (!(window.matchMedia && window.matchMedia(DESKTOP).matches) || box.scrollHeight <= box.clientHeight) return;
+    const teile = []; for (const n of [...hl.children]) { if (n.tagName === 'UL') for (const li of [...n.children]) teile.push(li); else teile.push(n); }
+    hl.innerHTML = ''; const nav = box.querySelector('.hilfe-nav'); nav.insertAdjacentHTML('afterbegin', '<button data-o="hs-1" aria-label="Vorherige Seite">◀</button> <span class="hs-n"></span> <button data-o="hs+1" aria-label="Nächste Seite">▶</button> ');
+    const seiten = []; let seite = null, ul = null;
+    const neu = () => { seite = document.createElement('div'); seite.className = 'hilfe-seite'; hl.appendChild(seite); seiten.push(seite); ul = null; };
+    const dazu = t => { if (t.tagName === 'LI') { if (!ul) { ul = document.createElement('ul'); seite.appendChild(ul); } ul.appendChild(t); } else { ul = null; seite.appendChild(t); } };
+    neu();
+    for (const t of teile) {
+      dazu(t);
+      if (box.scrollHeight > box.clientHeight && seite.querySelectorAll('li, :scope > p').length > 1) {
+        const leer = t.parentNode.tagName === 'UL' && t.parentNode.children.length === 1 ? t.parentNode : null; t.remove(); if (leer) leer.remove();
+        seite.classList.add('hidden'); neu(); dazu(t);
+      }
+    }
+    UI._hseiten = { seiten, i: 0 }; zeigeSeite(0);
+  }
+  function zeigeSeite(i) {
+    const H = UI._hseiten; if (!H) return; H.i = Math.max(0, Math.min(H.seiten.length - 1, i));
+    H.seiten.forEach((x, k) => x.classList.toggle('hidden', k !== H.i));
+    const n = document.querySelector('#overlay .hs-n'); if (n) n.textContent = 'Seite ' + (H.i + 1) + '/' + H.seiten.length;
+    const a = document.querySelector('#overlay button[data-o="hs-1"]'), b = document.querySelector('#overlay button[data-o="hs+1"]'); const fa = document.activeElement === a || document.activeElement === b;
+    if (a) a.disabled = H.i === 0; if (b) b.disabled = H.i === H.seiten.length - 1;
+    if (fa && document.activeElement && document.activeElement.disabled) (a && !a.disabled ? a : b).focus(); // Fokus bleibt beim Blättern erhalten
   }
 
   UI.init = function () {
@@ -341,9 +407,10 @@
       else if (o === 'weiter') closeOverlay();
       else if (o === 'schrift') { UI.setGross(!document.body.classList.contains('gross')); }
       else if (o === 'help') help();
+      else if (o === 'hs-1' || o === 'hs+1') zeigeSeite(UI._hseiten ? UI._hseiten.i + (o === 'hs+1' ? 1 : -1) : 0);
       else if (o === 'back' || o === 'title') UI.showTitle();
       else if (o === 'next') next();
-      else if (o.startsWith('we')) { const out = sim().weekend(S(), +o[2]); sim().save(S()); if (S().phase === 'ende') { aud('jingle', S().result.win ? 'win' : 'lose'); overlay('<h2>Wochenende</h2><p>' + esc(out.join(' ')) + '</p>' + endHtml(S()) + '<p><button data-o="title">Zum Titel</button></p>'); } else { next(); UI.toast(out.join(' ')); } }
+      else if (o.startsWith('we')) { const out = sim().weekend(S(), +o[2]); sim().save(S()); if (S().phase === 'ende') { aud('jingle', S().result.win ? 'win' : 'lose'); overlay('<h2>Wochenende</h2><div class="abend mit-ende"><div class="abend-a"><p>' + esc(out.join(' ')) + '</p></div><div class="abend-b">' + endHtml(S()) + '</div></div><p><button data-o="title">Zum Titel</button></p>'); } else { next(); UI.toast(out.join(' ')); } }
     });
     const nav = $('rooms');
     nav.innerHTML = SC.FLOORS.map((f, i) => '<span class="floor-grp"><span class="fl">' + (i === 0 ? 'EG' : i) + ' ' + f.name + '</span>' + f.doors.filter(d => d.room).map(d => '<button data-r="' + d.room + '">' + esc(SC.ROOMS[d.room].title.split(' (')[0]) + '</button>').join('') + '</span>').reverse().join('');
