@@ -32,6 +32,11 @@ for (const t of [].concat(...Object.values(SCx.BUBBLES), ...Object.values(SCx.VI
 { const iv = JSON.stringify([SCx.IVO_INTRO, SCx.IVO_MERK, SCx.IVO_SZENEN, SCx.IVO_SZENEN2, SCx.IVO_TAG1, SCx.IVO_KOLLEGE, SCx.IVO_LERN10, SCx.FIGUREN.ivo, SCx.KOLLEGE_BUBBLES.christianIvo]);
   const AB = /dumm|doof|blöd|Idiot|ahnungslos|unfähig|Trottel|Depp|peinlich|Versager/i; if (AB.test(iv)) { console.log('Abwertung in Ivo-Texten:', iv.match(AB)[0]); bad++; }
   if (/Christian|Sandra/.test(iv)) { console.log('Ivo-Texte nennen eine Figur beim Namen statt {C}'); bad++; } }
+// early-access: Der Name des Raketen-Milliardärs steht in keinem sichtbaren Text mehr, nur noch vage Umschreibungen.
+// Geprüft werden Spielcode, Seite, CSS und README (Wort zusammengesetzt, damit es hier nicht im Klartext steht). Interne Kennungen in
+// Kleinbuchstaben oder Großbuchstaben (stats.elon, SC.ELON) bleiben für die Spielstände erhalten und werden nie angezeigt.
+{ const EN = new RegExp('El' + 'on', 'g'); for (const f of fs.readdirSync(path.join(root, 'js')).map(x => path.join(root, 'js', x)).concat([path.join(root, 'index.html'), path.join(root, 'README.md')], fs.readdirSync(path.join(root, 'css')).map(x => path.join(root, 'css', x)))) { const m = fs.readFileSync(f, 'utf8').match(EN); if (m) { console.log('Name des Milliardärs in', path.relative(root, f), m.length + 'x'); bad++; } }
+  global.window = global.window || {}; const all = JSON.stringify(SCx); if (EN.test(all)) { console.log('Name des Milliardärs in den Spieldaten'); bad++; } }
 // v0.12: Das Spiel macht keine Netzwerkaufrufe (keine Telemetrie). Gilt für js/ und index.html.
 const NETZ = new RegExp('\\b(' + ['fe' + 'tch\\s*\\(', 'XMLHttp' + 'Request', 'send' + 'Beacon', 'Web' + 'Socket', 'Event' + 'Source'].join('|') + ')');
 for (const f of [path.join(root, 'index.html')].concat(fs.readdirSync(path.join(root, 'js')).map(x => path.join(root, 'js', x)))) { const m = fs.readFileSync(f, 'utf8').match(NETZ); if (m) { console.log('Netzwerkaufruf in', path.relative(root, f), m[0]); bad++; } }

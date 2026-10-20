@@ -9,7 +9,7 @@
   // v0.4: dritter Zufallsstrom für Markt, Hotline und Prognose-Audit (S.rs und S.rf bleiben je Seed gleich)
   function rngM(S) { S.rm = (S.rm * 1103515245 + 12345) & 0x7fffffff; return S.rm / 0x7fffffff; }
   // v0.5: vierter, zustandsloser Strom für Ausschreibung und neue Gags (hängt nur von Seed und Salz ab, kein Feld in S)
-  // Salzbereiche von rngA: Ausschreibung < 1000, Süßigkeitenbox 9000 bis 9999, Elon 20000 bis 20999, v0.7-Gags ab 31000 (Kalender 31000+, Abschluss 31100+), v0.8-Gags ab 32000 (Aushang 32000+, Diagramm 32100+, Wochenende 32200+)
+  // Salzbereiche von rngA: Ausschreibung < 1000, Süßigkeitenbox 9000 bis 9999, Milliardärs-Gag 20000 bis 20999, v0.7-Gags ab 31000 (Kalender 31000+, Abschluss 31100+), v0.8-Gags ab 32000 (Aushang 32000+, Diagramm 32100+, Wochenende 32200+)
   function rngA(S, salt) { const x = (((S.seed ^ Math.imul(salt, 0x85ebca6b)) & 0x7fffffff) || 13) >>> 0; return ((x * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff; }
   const ri = (S, a, b) => a + Math.floor(rng(S) * (b - a + 1));
   const pick = (S, arr) => arr[Math.floor(rng(S) * arr.length)];
@@ -470,7 +470,7 @@
           spend(S, T().suess.cost[k]); B.n = T().suess.stk; B.sorte = k; B.week = week(S); S.stats.suess++; say(S, 'Süßigkeitenbox im Büro aufgefüllt: ' + SC.SORTEN[k] + ', ' + B.n + ' Stück.' + t + ' Wer was mag, steht auf dem Zettel am Kiosk.'); } }))
     ],
     drucker: [
-      { id: 'fax', label: S => S && S.eggs && S.eggs.elon ? 'Elon-Abo per Fax kündigen' : 'Das Fax-Gerät benutzen', cost: 5, energy: 0, check: () => null,
+      { id: 'fax', label: S => S && S.eggs && S.eggs.elon ? 'Milliardärs-Abo per Fax kündigen' : 'Das Fax-Gerät benutzen', cost: 5, energy: 0, check: () => null,
         run: S => { S.stats.fax++; say(S, S.eggs.elon ? SC.FAX_ELON : SC.FAX[(S.stats.fax - 1) % SC.FAX.length]); if (S.stats.fax >= 5) egg(S, 'fax', SC.FAX_EGG); } },
       { id: 'print', label: 'Spezifikation zur Unterschrift ausdrucken', cost: 10, energy: 1,
         check: S => S.printer.jam ? 'Papierstau! Erst beheben.' : targets.print(S) ? null : 'Nichts zu drucken (Testläufe müssen bestanden sein).',
@@ -545,7 +545,7 @@
   function aufzug(S) { S.stats.aufzug++; const n = S.stats.aufzug; if (n >= 7 && !S.eggs.aufzug) { egg(S, 'aufzug', SC.AUFZUG_EGG); return null; } return SC.AUFZUG[(n - 1) % SC.AUFZUG.length]; }
   // v0.6 Wartezeit bis zur Schichtübergabe (für die Anzeige auf den Knöpfen)
   const handoverWait = (S, room) => (room === 'halle' && S.minute >= SIREN && S.minute < HANDOVER ? Math.ceil(HANDOVER - S.minute) : 0);
-  // v0.5 Elon-Zähler des Tages (Running Gag des Tesla-Kollegen); neue Zufälle nur über rngA mit Salzen ab 20000
+  // v0.5 Milliardärs-Zähler des Tages (Running Gag des Tesla-Kollegen); neue Zufälle nur über rngA mit Salzen ab 20000
   function elonPlus(S) { const E = S.elon; if (E.day !== S.day) { E.day = S.day; E.n = 0; } E.n++; S.stats.elon++; if (S.stats.elon >= T().elon.egg) egg(S, 'elon', SC.ELON_EGG.replace('{n}', S.stats.elon)); }
   const elonHeute = S => (S.elon && S.elon.day === S.day ? S.elon.n : 0);
   const elonSatz = S => SC.ELON[Math.floor(rngA(S, 20000 + S.day * 16 + (S.stats.visits % 16)) * SC.ELON.length)];
@@ -644,7 +644,7 @@
     const p = S.pending; if (!p) return null; const VT = SC.VISIT_TEXT; const t = p.t || 0;
     const of = arr => arr[t % arr.length];
     switch (p.id) {
-      case 'tesla': return { who: 'Der Tesla-Kollege' + (p.duo ? ' (mit dem Kollegen aus dem Nachbarbüro)' : ''), text: '»' + of(VT.tesla) + ' ' + elonSatz(S) + '« Reichweite heute laut Display: ' + SC.TESLA_KM(S.day) + ' km. Gestern waren es mehr. Geladen hat er trotzdem nicht.' + (S.day >= T().elon.akkuDay ? ' »' + SC.ELON_AKKU + '«' : '') + (p.duo ? ' ' + of(VT.duo) : '') + ' Elon-Zähler heute: ' + (elonHeute(S) + 1) + '.' };
+      case 'tesla': return { who: 'Der Tesla-Kollege' + (p.duo ? ' (mit dem Kollegen aus dem Nachbarbüro)' : ''), text: '»' + of(VT.tesla) + ' ' + elonSatz(S) + '« Reichweite heute laut Display: ' + SC.TESLA_KM(S.day) + ' km. Gestern waren es mehr. Geladen hat er trotzdem nicht.' + (S.day >= T().elon.akkuDay ? ' »' + SC.ELON_AKKU + '«' : '') + (p.duo ? ' ' + of(VT.duo) : '') + ' Milliardärs-Zähler heute: ' + (elonHeute(S) + 1) + '.' };
       case 'italien': return { who: 'Der italienische Kollege', text: '»' + of(VT.italien) + '«' };
       case 'itchefin': return { who: 'Die IT-Chefin (mit der Automatisierungspyramide)', text: '»' + VT.itchefin[p.open % VT.itchefin.length] + ' ' + SC.PYRAMID_Q[p.q].q + '«', pyr: true };
       case 'ahnungslos': return { who: 'Besuch aus einer anderen Abteilung', text: of(VT.ahnungslos) };
@@ -851,7 +851,7 @@
     if (S.immerToday) R.lines.push(['info', '»Das hatten wir schon immer so«: heute ' + S.immerToday + 'x, insgesamt ' + S.stats.immer + 'x']);
     if (S.ev.party === S.day) R.lines.push(['info', 'Kostümparty: du warst ' + S.ev.kostuem + '. Die Überstunden zählen heute nicht.']);
     if (S.bingoDay === S.day) R.lines.push(['info', 'Buzzword-Bingo gewonnen: ' + S.bingo.slice(0, SC.BINGO_NEED).join(', ') + ' (+' + T().bingoScore + ' Punkte)']);
-    if (elonHeute(S)) R.lines.push(['info', 'Elon-Zähler heute: ' + elonHeute(S) + ' (insgesamt ' + S.stats.elon + '). Der Tesla-Kollege ist zufrieden mit dir.']);
+    if (elonHeute(S)) R.lines.push(['info', 'Milliardärs-Zähler heute: ' + elonHeute(S) + ' (insgesamt ' + S.stats.elon + '). Der Tesla-Kollege ist zufrieden mit dir.']);
     R.lines.push(['info', 'Werkszeitung: ' + pickF(S, SC.SCHLAGZEILEN)]);
     S.schicht -= 3;
     if (S.schicht < 20) { S.chef -= 3; R.lines.push(['bad', 'Der Schichtleiter hat sich bei der Werkleitung über dich beschwert: Werkleitung −3']); }

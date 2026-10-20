@@ -337,7 +337,7 @@ window.SC = window.SC || {};
   // v0.3 »Flurfunk«: Sprechblasen der Figuren im Gebäude (rein kosmetisch, höchstens 40 Zeichen)
   SC.BUBBLES = {
     schicht: ['Hast du kurz?', 'Kleines Meeting gleich?', 'Ich lad dich mal ein.', 'Wichtig. Glaub ich.', 'Nur fünf Minuten!', 'Termin folgt!'],
-    tesla: ['0 auf 100 in 3,1!', 'Reichweite, Christian!', 'Update über Nacht!', 'Der parkt allein ein.', 'Hast du das Video gesehen?', 'Elon würde das anders machen!', 'Mars, Christian, Mars!'],
+    tesla: ['0 auf 100 in 3,1!', 'Reichweite, Christian!', 'Update über Nacht!', 'Der parkt allein ein.', 'Hast du das Video gesehen?', 'Der Milliardär würde das anders machen!', 'Mars, Christian, Mars!'],
     nachbar: ['Genau.', 'Bin gleich bei dir.', 'Erst mal Kaffee.', 'Ich arbeite eh zu viel.', 'Ich warte auf Rückmeldung.', 'Bei mir brennt die Hütte!'],
     italien: ['Mamma mia, die Pasta!', 'Heute Bruschetta!', 'Espresso? Espresso.', 'In Italien ist jetzt Pause.', 'Meine Nonna sagt ...'],
     itchefin: ['Ebene 3!', 'Denk an die Pyramide!', 'Feld, Steuerung, ...', 'Wo ist das MES? Na?', 'Ich hab Folien dabei.']
@@ -451,19 +451,19 @@ window.SC = window.SC || {};
   ];
   // v0.4 Running Gag: Reichweitenanzeige des Tesla-Kollegen (sinkt jeden Tag, er lädt trotzdem nie)
   SC.TESLA_KM = d => Math.max(12, 430 - 11 * d);
-  // v0.5 Running Gag: Der Tesla-Kollege ist großer Fan von »Elon«. Nur vage Umschreibungen in seinen eigenen Worten,
+  // v0.5 Running Gag: Der Tesla-Kollege ist großer Fan eines Raketen-Milliardärs (früher beim Namen genannt, seit early-access nur noch umschrieben). Nur vage Umschreibungen in seinen eigenen Worten,
   // klar als seine Übertreibung, keine Zitate und keine Behauptungen über die reale Person, nichts Politisches.
   SC.ELON = [
-    'Elon würde bestimmt sagen, Meetings sind ineffizient. Glaube ich. Oder hab ich das geträumt?',
-    'Elon würde dieses Werk in zwei Wochen hochziehen. Höchstens. Behaupte ich jetzt mal.',
-    'Wenn es nach mir ginge, fliegt das Werk bald zum Mars. Elon fände das bestimmt super.',
-    'Ich stelle mir vor, Elon würde gerade wieder irgendwas Großes posten. Was genau, weiß ich nicht, aber ich bin jetzt schon begeistert.',
-    'Ich wette, Elon hätte das MES längst eingeführt. Mit einem einzigen Knopf.',
-    'Wäre Elon hier Werkleiter, gäbe es keine Schichtleiter-Meetings. Glaube ich. Hoffe ich.',
-    'Ich stelle mir vor, Elon würde die Kantine in eine Rakete verlegen. Currywurst in der Schwerelosigkeit!',
-    'Ich wette, Elon würde den Gabelstapler allein fahren lassen. Also noch alleiner.',
-    'Ich hab dir einen Link zu irgendwas mit Elon geschickt. Nicht geöffnet? Ich erzähl es dir, so ungefähr.',
-    'Ich bin sicher, Elon fände, Reichweite ist Einstellungssache. So ungefähr jedenfalls.'
+    'Der Chef vom Elektroauto-Konzern würde bestimmt sagen, Meetings sind ineffizient. Glaube ich. Oder hab ich das geträumt?',
+    'Der Raketen-Milliardär würde dieses Werk in zwei Wochen hochziehen. Höchstens. Behaupte ich jetzt mal.',
+    'Wenn es nach mir ginge, fliegt das Werk bald zum Mars. Der Raketen-Milliardär fände das bestimmt super.',
+    'Ich stelle mir vor, der Chef vom Elektroauto-Konzern würde gerade wieder irgendwas Großes posten. Was genau, weiß ich nicht, aber ich bin jetzt schon begeistert.',
+    'Ich wette, der Raketen-Milliardär hätte das MES längst eingeführt. Mit einem einzigen Knopf.',
+    'Wäre der Chef vom Elektroauto-Konzern hier Werkleiter, gäbe es keine Schichtleiter-Meetings. Glaube ich. Hoffe ich.',
+    'Ich stelle mir vor, der Raketen-Milliardär würde die Kantine in eine Rakete verlegen. Currywurst in der Schwerelosigkeit!',
+    'Ich wette, der Chef vom Elektroauto-Konzern würde den Gabelstapler allein fahren lassen. Also noch alleiner.',
+    'Ich hab dir einen Link zu irgendwas mit dem Raketen-Milliardär geschickt. Nicht geöffnet? Ich erzähl es dir, so ungefähr.',
+    'Ich bin sicher, der Chef vom Elektroauto-Konzern fände, Reichweite ist Einstellungssache. So ungefähr jedenfalls.'
   ];
   // v0.6 kleine Gags ohne Spielwirkung
   SC.PAPPE = [
@@ -489,7 +489,7 @@ window.SC = window.SC || {};
     'Du faxt Werk Nord einen Glückwunsch. Zurück kommt eine Folie. Folie 38 von 40.',
     'Das Fax-Gerät meldet »Papierstau«. Der Drucker daneben fühlt sich verstanden.'
   ];
-  SC.FAX_ELON = 'Du versuchst, das Elon-Abo des Tesla-Kollegen per Fax zu kündigen. Rückmeldung: »Empfänger unbekannt.« Das Abo läuft weiter, behauptet er jedenfalls.';
+  SC.FAX_ELON = 'Du versuchst, das Milliardärs-Abo des Tesla-Kollegen per Fax zu kündigen. Rückmeldung: »Empfänger unbekannt.« Das Abo läuft weiter, behauptet er jedenfalls.';
   SC.FAX_EGG = 'Werk Nord faxt eine Entschuldigung für alle Ausschreibungen, vergangene und künftige. Auf Folie 39. Folie 40 fehlt. Das Fax-Gerät wird ab heute im Archiv geführt.';
   // v0.7 Abreißkalender im Schichtleiter-Büro (je Tag ein Blatt), Abschluss-Gag im Endbildschirm, Saison-Süßigkeit
   SC.KALENDER = [
@@ -504,7 +504,7 @@ window.SC = window.SC || {};
   ];
   SC.ABSCHLUSS = {
     win: ['Der Pappkamerad lässt ausrichten: Er hat das alles schon gewusst.', 'Der Pförtner stempelt dich aus und sagt: »Viertes MES. Das erste, das bleibt.«', 'Der Schichtleiter lädt zum Abschluss-Meeting. Diesmal gehst du gern hin. Es gibt Kuchen.'],
-    lose: ['Der Pappkamerad übernimmt dein Büro. Keiner merkt den Unterschied, sagt die Werkleitung.', 'Der Pförtner: »Das MES hab ich schon dreimal gehen sehen. Jetzt viermal.«', 'Der Tesla-Kollege meint, Elon hätte das bestimmt anders gemacht. Er weiß nur nicht, wie.']
+    lose: ['Der Pappkamerad übernimmt dein Büro. Keiner merkt den Unterschied, sagt die Werkleitung.', 'Der Pförtner: »Das MES hab ich schon dreimal gehen sehen. Jetzt viermal.«', 'Der Tesla-Kollege meint, der Chef vom Elektroauto-Konzern hätte das bestimmt anders gemacht. Er weiß nur nicht, wie.']
   };
   // v0.8 Gags ohne Spielwirkung (Salze 32000+, 32100+, 32200+)
   SC.AUSHANG = [
@@ -524,15 +524,15 @@ window.SC = window.SC || {};
     'Im Büro brennt noch Licht. Es ist der Beamer.'
   ];
   SC.SAISON = 'Am Kiosk gibt es schon Lebkuchen. Seit September. Niemand weiß, ob das zu früh oder zu spät ist.';
-  SC.ELON_AKKU = 'Ich lade inzwischen dauernd Elon-Posts. Den Akku leider nicht.';
+  SC.ELON_AKKU = 'Ich lade inzwischen dauernd Posts vom Raketen-Milliardär. Den Akku leider nicht.';
   SC.ELON_THEMA = [
-    '»Und wie ist der Reifendruck?« Er redet zwei Minuten über Reifen. Elon kommt darin nur einmal vor.',
-    '»Gibt es heute Kuchen in der Kantine?« Er vergisst Elon. Für drei Sekunden.',
+    '»Und wie ist der Reifendruck?« Er redet zwei Minuten über Reifen. Der Raketen-Milliardär kommt darin nur einmal vor.',
+    '»Gibt es heute Kuchen in der Kantine?« Er vergisst den Chef vom Elektroauto-Konzern. Für drei Sekunden.',
     '»Wie weit kommst du heute noch?« Er schaut aufs Display, wird still und wechselt das Thema selbst.'
   ];
-  SC.ELON_THEMA_NEIN = 'Du versuchst es mit dem Wetter. Er: »Apropos Wetter, Elon ...« Das dauert jetzt länger.';
-  SC.ELON_MEETING = 'Der Tesla-Kollege sitzt mit im Meeting und erklärt bei jedem Punkt, was Elon an dieser Stelle angeblich anders machen würde.';
-  SC.ELON_EGG = 'Elon-Zähler {n}: Der Tesla-Kollege hat dir ein Abo für seine tägliche Elon-Zusammenfassung eingerichtet. Mit Reichweitenangabe. Kündigen geht nur per Fax.';
+  SC.ELON_THEMA_NEIN = 'Du versuchst es mit dem Wetter. Er: »Apropos Wetter, der Raketen-Milliardär ...« Das dauert jetzt länger.';
+  SC.ELON_MEETING = 'Der Tesla-Kollege sitzt mit im Meeting und erklärt bei jedem Punkt, was der Chef vom Elektroauto-Konzern an dieser Stelle angeblich anders machen würde.';
+  SC.ELON_EGG = 'Milliardärs-Zähler {n}: Der Tesla-Kollege hat dir ein Abo für seine tägliche Milliardärs-Zusammenfassung eingerichtet. Mit Reichweitenangabe. Kündigen geht nur per Fax.';
   // v0.4 SAP-Hotline (Büro, nur während der Migration): Warteschleife mit Ansage
   SC.HOTLINE = [
     'Ihr Anruf ist uns wichtig. Sie sind Nummer 47 in der Warteschleife. Bitte halten Sie Ihre Materialnummer bereit.',

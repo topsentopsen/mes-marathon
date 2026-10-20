@@ -48,7 +48,7 @@ Sandra nachgeschärft: Figurenkarte über den Namensknopf, Knopfvermerke zu ihre
 
 ## Neu in v0.5.0 »Ausschreibung«
 - Ausschreibung gegen Werk Nord (verdeckte Gebote bis Mittwoch 15:00), zweiter Weg zum Sieg: Konzernaudit »Vorzeigewerk«.
-- Christians Süßigkeitenbox im Büro (Stammgäste mit Vorlieben, Gemecker, das letzte Stück), der Tesla-Kollege schwärmt von »Elon« (Elon-Zähler, Thema wechseln), Kopfhörer im HUD, digitaler Zwilling, Fundstücke im Archiv.
+- Christians Süßigkeitenbox im Büro (Stammgäste mit Vorlieben, Gemecker, das letzte Stück), der Tesla-Kollege schwärmt vom »Raketen-Milliardär« (Milliardärs-Zähler, Thema wechseln), Kopfhörer im HUD, digitaler Zwilling, Fundstücke im Archiv.
 - Ton-Knopf: Randfall beim schnellen Tippen behoben, auf dem Handy auch über Titel- und Abendbild bedienbar.
 - Details: `docs/RELEASE-v0.5.md`, Balance: `docs/BALANCE-v0.5.md`, Review und Gesamtprüfung: `docs/REVIEW-v0.5.md`, Plan v0.6: `docs/PLAN-v0.6.md`.
 
