@@ -118,8 +118,9 @@
     else if (role === 'italien') { rect(x - 5, y - 16, 10, 8, '#f0c060'); rect(x - 4, y - 15, 8, 6, '#e03020'); rect(x - 2, y - 14, 2, 2, '#ffffff'); rect(x + 1, y - 12, 2, 2, '#ffffff'); rect(x - 1, y - 11, 1, 1, '#20a040'); }
     else if (role === 'itchefin') { rect(x - 6, y - 32, 13, 1, '#40e0ff'); rect(x - 6, y - 32, 1, 6, '#40e0ff'); rect(x + 6, y - 32, 1, 6, '#40e0ff'); rect(x - 6, y - 27, 13, 1, '#40e0ff'); }
   }
-  const figNow = () => (SC.S && SC.S.figur === 'sandra' ? 'sandra' : 'christian');
-  const figOther = () => (figNow() === 'sandra' ? 'christian' : 'sandra');
+  const figNow = () => (SC.S && SC.FIGUREN[SC.S.figur] ? SC.S.figur : 'christian');
+  // Kollege zu Besuch: bei Sandra und Senior Principal kommt Christian, bei Christian ist Sandra die Kollegin
+  const figOther = () => (figNow() === 'christian' ? 'sandra' : 'christian');
   function drawMan(x, y, col, anim, moving, dir, me, role) {
     x = Math.round(x); y = Math.round(y);
     const lk = me ? figNow() : role === 'kollege' ? figOther() : null;
@@ -129,7 +130,8 @@
     rect(x + 1, y - 8, 2, 8 - Math.max(0, -s), '#202048');
     rect(x - 4, y - 17, 8, 9, col);
     rect(x - 5, y - 16, 1, 6, col); rect(x + 4, y - 16, 1, 6, col);
-    if (me && lk === 'sandra') { rect(x - 1, y - 17, 2, 3, '#f4f8ff'); rect(x - 4, y - 17, 1, 9, '#2c6a60'); rect(x + 3, y - 17, 1, 9, '#2c6a60'); } // Blazer mit heller Bluse
+    if (me && lk === 'senior') { rect(x - 4, y - 17, 8, 9, '#26304e'); rect(x - 5, y - 16, 1, 6, '#26304e'); rect(x + 4, y - 16, 1, 6, '#26304e'); rect(x - 1, y - 17, 2, 4, '#e8e2f0'); rect(x + (dir < 0 ? -3 : 2), y - 15, 1, 1, '#b89ad8'); } // dunkelblaues Sakko, heller Rollkragen, Einstecktuch
+    else if (me && lk === 'sandra') { rect(x - 1, y - 17, 2, 3, '#f4f8ff'); rect(x - 4, y - 17, 1, 9, '#2c6a60'); rect(x + 3, y - 17, 1, 9, '#2c6a60'); } // Blazer mit heller Bluse
     else if (me) { rect(x - 2, y - 17, 4, 2, '#f4f8ff'); rect(x, y - 15, 1, 6, '#6a94c4'); } // Hemd mit hellem Kragen und Knopfleiste
     else if (role === 'schicht') { rect(x - 4, y - 13, 8, 1, '#c0c0c0'); rect(x - 4, y - 11, 8, 1, '#c0c0c0'); }
     else if (role === 'tesla') { rect(x - 2, y - 15, 5, 1, '#fff'); rect(x, y - 14, 1, 4, '#fff'); }
@@ -137,7 +139,8 @@
     else if (role === 'itchefin') { rect(x - 1, y - 16, 3, 3, '#ffcc00'); rect(x, y - 17, 1, 1, '#ffcc00'); }
     else { rect(x - 1, y - 17, 2, 5, '#ffffff'); rect(x, y - 16, 1, 4, '#c02020'); }
     rect(x - 2, y - 22, 5, 5, '#f0c090');
-    if (me && lk === 'sandra') { rect(x - 3, y - 24, 7, 2, '#6a3a1c'); rect(x - 3, y - 22, 1, 4, '#6a3a1c'); rect(x + (dir < 0 ? 3 : -4), y - 22, 2, 1, '#6a3a1c'); rect(x + (dir < 0 ? 4 : -5), y - 21, 1, 4, '#5a3014'); } // braune Haare mit Pferdeschwanz
+    if (me && lk === 'senior') { rect(x - 3, y - 24, 7, 2, '#2e2622'); rect(x - 3, y - 22, 1, 2, '#9a9aa2'); rect(x + 3, y - 22, 1, 2, '#9a9aa2'); rect(x + (dir < 0 ? -3 : 0), y - 21, 4, 1, '#18181c'); } // kurze dunkle Haare, graue Schläfen, Brille
+    else if (me && lk === 'sandra') { rect(x - 3, y - 24, 7, 2, '#6a3a1c'); rect(x - 3, y - 22, 1, 4, '#6a3a1c'); rect(x + (dir < 0 ? 3 : -4), y - 22, 2, 1, '#6a3a1c'); rect(x + (dir < 0 ? 4 : -5), y - 21, 1, 4, '#5a3014'); } // braune Haare mit Pferdeschwanz
     else if (me) { rect(x - 3, y - 24, 7, 3, '#c4c4c8'); rect(x - 3, y - 22, 1, 3, '#a4a4aa'); rect(x + 3, y - 22, 1, 2, '#a4a4aa'); rect(x - 1, y - 24, 1, 1, '#e8e8ec'); rect(x + 1, y - 24, 1, 1, '#909096'); }
     else if (role === 'schicht') { rect(x - 3, y - 24, 7, 2, '#ffffff'); rect(x - 4, y - 22, 9, 1, '#ffffff'); }
     else if (role === 'itchefin') { rect(x - 3, y - 23, 7, 2, '#603020'); rect(x - 3, y - 21, 1, 5, '#603020'); rect(x + 3, y - 21, 1, 5, '#603020'); }

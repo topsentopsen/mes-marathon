@@ -1,5 +1,6 @@
 // Balance-Bot: spielt viele Partien mit einfachen Strategien.
-// Aufruf: node tools/bot.js [anzahl] [--check] [--figur=sandra]
+// Aufruf: node tools/bot.js [anzahl] [--check] [--figur=sandra|senior] [--alle]
+// --alle spielt Christian, Sandra und Senior Principal mit denselben Startwerten (für den Figurenvergleich mindestens 1000 Partien)
 'use strict';
 const SC = require('../test/helper.js'); const sim = SC.sim;
 const WALK = 8; // Minuten je Raumwechsel (Laufen + Aufzug)
@@ -161,67 +162,105 @@ function run(n, figur) {
   }
   return rows;
 }
+// Prüfregeln je Figur (R = Ergebnis der Figur, C = Ergebnis von Christian zum Vergleich oder null)
+function pruefe(R, n, figur, C) {
+  const errs = [], warn = [];
+  // gut1730 ist eine Referenz für die offene Abweichung »maßvolle Überstunden« (docs/BALANCE-v0.7.md), sie zählt nur als Warnung
+  const best = Math.max(...Object.entries(R).filter(([k]) => k !== 'gut1730').map(([, x]) => x.win));
+  // harte Invarianten (Auftrag: Meeting-Marathon ist nicht die stärkste Strategie)
+  if (R.meetingfan.win > R.gut.win - 15) errs.push('meetingfan nicht >= 15 PP unter gut');
+  if (R.meetingfan_plus.win > R.gut.win - 8) errs.push('meetingfan_plus nicht >= 8 PP unter gut');
+  // v0.3: Die beste Strategie muss eine »vernünftige« sein (keine Meeting-, Passiv- oder Chaos-Strategie).
+  // fleissig (maßvolle Überstunden + Samstagsschicht) darf vorn liegen, muss aber mindestens 20 % der Partien über die Familie verlieren.
+  const SANE = ['gut', 'berater', 'fleissig', 'ohneGegen', 'zusager', 'bieter', 'naschbox', 'lakritz', 'elonThema', 'melone', 'ohnePlan'];
+  if (!SANE.some(k => R[k].win === best)) errs.push('beste Strategie ist keine der vernünftigen (' + SANE.join(', ') + ')');
+  if (R.fleissig.fam < n * 0.2) errs.push('fleissig verliert zu selten über die Familie');
+  const rank = Object.values(R).map(x => x.win).sort((a, b) => b - a).indexOf(R.meetingfan.win) + 1;
+  if (rank < 4) errs.push('meetingfan auf Rang ' + rank + ' (höchstens Rang 4 erlaubt)');
+  if (R.passiv.win > 5) errs.push('passiv gewinnt zu oft');
+  if (best > 75) errs.push('Spiel zu leicht (> 75 %)');
+  if (R.sapChaos.chaos < 90) errs.push('Chaos-Pfad nicht abgedeckt (sapChaos Chaos% ' + R.sapChaos.chaos + ')');
+  if (R.sapChaos.win > R.gut.win - 8) errs.push('SAP-Chaos lohnt sich (sapChaos nicht >= 8 PP unter gut)');
+  // v0.4: Wassermelone und Marktfan dürfen sich nicht lohnen, der Titel ist selten, aber erreichbar
+  if (R.melone.win > R.gut.win + 3) errs.push('Wassermelonen-Bericht lohnt sich (melone > gut + 3)');
+  if (R.marktfan.win > R.gut.win) errs.push('Markt-Dauerkauf lohnt sich (marktfan > gut)');
+  if (R.gut.titel > 40) errs.push('Werk des Jahres zu leicht (gut Titel% > 40)');
+  // v0.5: zweiter Siegpfad »Vorzeigewerk« ist erreichbar, aber nicht dominant; die Ausschreibung ist kein Gratis-Gewinn
+  if (R.vorzeig.win > R.gut.win) errs.push('Vorzeigewerk-Jagd schlägt gut');
+  if (R.vorzeig.pfad < 10) errs.push('Vorzeigewerk kaum erreichbar (vorzeig Vorzeig% < 10)');
+  if (R.gut.pfad > 12) errs.push('Vorzeigewerk zu häufig nebenbei (gut Vorzeig% > 12)');
+  for (const k of ['meetingfan', 'passiv', 'workaholic', 'sapChaos']) if (R[k].pfad > 3) errs.push(k + ' erreicht das Vorzeigewerk zu oft');
+  if (R.elonThema && R.elonThema.win > R.gut.win + 4) errs.push('Thema wechseln beim Tesla-Kollegen lohnt sich zu sehr (elonThema > gut + 4)');
+  if (R.gagfan && R.gagfan.win > R.gut.win + 3) errs.push('Gags lohnen sich (gagfan > gut + 3)');
+  if (R.gagfan && R.gagfan.meet !== undefined && Math.abs(R.gagfan.meet - R.gut.meet) > 1) errs.push('Gags ändern die Meetings');
+  if (R.bieter.win > R.gut.win + 8) errs.push('Ausschreibung lohnt sich zu sehr (bieter > gut + 8)');
+  // v0.5 Süßigkeitenbox: ignorieren (gut) darf nicht klar besser sein, Pflege nicht dominant
+  if (R.gut.win > R.naschbox.win + 4) errs.push('Süßigkeitenbox ignorieren lohnt sich (gut > naschbox + 4)');
+  if (R.naschbox.win > R.gut.win + 6) errs.push('Süßigkeitenbox zu stark (naschbox > gut + 6)');
+  if (R.naschWeg.win > R.naschbox.win + 3) errs.push('Extra-Weg zur Box lohnt sich');
+  // Zielbereiche aus docs/PHASEN.md 10.2 (Abweichungen als Warnung)
+  const Z = { einfach: [20, 40], gut: [55, 70], ohneSchichtplan: [45, 62], meetingfan: [8, 30], ablenkbar: [30, 50], berater: [50, 68], workaholic: [0, 5], sparfuchs: [35, 55] };
+  for (const [k, [lo, hi]] of Object.entries(Z)) if (R[k].win < lo || R[k].win > hi) warn.push(k + ' ' + R[k].win + ' % (Ziel ' + lo + '–' + hi + ')');
+  if (R.ohneSchichtplan.win > R.gut.win - 3) warn.push('ohneSchichtplan nicht >= 3 PP unter gut');
+  if (R.gut1730.win > 75) warn.push('gut1730 ' + R.gut1730.win + ' % (über 75, offene Abweichung)');
+  if (R.fleissig.win > R.gut.win + 3) warn.push('fleissig ' + R.fleissig.win + ' % (mehr als gut + 3)');
+  // v0.9 Figuren: neben Christian keine vernünftige Strategie mehr als 8 PP darüber.
+  // v0.16: Toleranz für gut1730 hängt von der Partienzahl ab (bei 300 Partien schwankt der Wert um mehrere PP;
+  // die alte Meldung »sandra gut1730 79 gegen 74 %« war Rauschen, mit 2000 Partien liegen beide bei 75 %).
+  if (C) {
+    const tol = n >= 1000 ? 3 : 5;
+    if (Math.abs(R.gut.win - C.gut.win) > 5) errs.push(figur + ' gut weicht mehr als 5 PP von Christian ab');
+    for (const k of SANE) if (R[k].win > C[k].win + 8) errs.push(figur + ' ' + k + ' mehr als 8 PP über Christian');
+    if (R.gut1730.win > C.gut1730.win + tol) errs.push(figur + ' gut1730 mehr als ' + tol + ' PP über Christian');
+    if (R.fleissig.win > R.gut.win - 5) errs.push(figur + ' fleissig nicht >= 5 PP unter gut');
+  }
+  return { errs, warn };
+}
+// v0.16 Lernkurve messen: Median des Fortschritts nach Tag 5 und Tag 20 mit Strategie gut
+function kurve(n, figur) {
+  const P5 = [], P20 = [], med = a => a.slice().sort((x, y) => x - y)[Math.floor(a.length / 2)];
+  for (let i = 0; i < n; i++) { const S = sim.newGame(1000 + i * 7919, figur); let g = 0; while (S.phase !== 'ende' && g++ < 40) { playDay(S, POL.gut); if (S.day === 6 && P5.length === i) P5.push(sim.progress(S)); if (S.day === 21 && P20.length === i) P20.push(sim.progress(S)); } if (P5.length === i) P5.push(sim.progress(S)); if (P20.length === i) P20.push(sim.progress(S)); }
+  return { t5: med(P5), t20: med(P20) };
+}
+const FIGS = ['christian', 'sandra', 'senior'];
+function tabelle(rows) {
+  console.log('Strategie        Sieg%  Siegtag | Werkl. Familie Termin Budget | Fortschr. Budget KPI Meet(nutzlos) Chaos% Titel% Vorzeig%');
+  for (const [k, x] of Object.entries(rows)) console.log(k.padEnd(16), String(x.win).padStart(5), String(x.winDay).padStart(8), '|', String(x.chef).padStart(6), String(x.fam).padStart(7), String(x.termin).padStart(6), String(x.budget).padStart(6), '|', String(x.prog).padStart(9), String(x.bud).padStart(6), String(x.kpi).padStart(3), (x.meet + '(' + x.useless + ')').padStart(13), String(x.chaos).padStart(6), String(x.titel).padStart(6), String(x.pfad).padStart(8));
+}
 if (require.main === module) {
   const n = +process.argv[2] || 200;
   const fa = process.argv.find(a => a.startsWith('--figur=')), figur = fa ? fa.slice(8) : 'christian';
-  const rows = run(n, figur);
-  if (figur !== 'christian') console.log('Figur: ' + figur);
-  console.log('Strategie        Sieg%  Siegtag | Werkl. Familie Termin Budget | Fortschr. Budget KPI Meet(nutzlos) Chaos% Titel% Vorzeig%');
-  for (const [k, x] of Object.entries(rows)) console.log(k.padEnd(16), String(x.win).padStart(5), String(x.winDay).padStart(8), '|', String(x.chef).padStart(6), String(x.fam).padStart(7), String(x.termin).padStart(6), String(x.budget).padStart(6), '|', String(x.prog).padStart(9), String(x.bud).padStart(6), String(x.kpi).padStart(3), (x.meet + '(' + x.useless + ')').padStart(13), String(x.chaos).padStart(6), String(x.titel).padStart(6), String(x.pfad).padStart(8));
-  if (process.argv.includes('--check')) {
-    const R = rows, errs = [], warn = [];
-    // gut1730 ist eine Referenz für die offene Abweichung »maßvolle Überstunden« (docs/BALANCE-v0.7.md), sie zählt nur als Warnung
-    const best = Math.max(...Object.entries(R).filter(([k]) => k !== 'gut1730').map(([, x]) => x.win));
-    // harte Invarianten (Auftrag: Meeting-Marathon ist nicht die stärkste Strategie)
-    if (R.meetingfan.win > R.gut.win - 15) errs.push('meetingfan nicht >= 15 PP unter gut');
-    if (R.meetingfan_plus.win > R.gut.win - 8) errs.push('meetingfan_plus nicht >= 8 PP unter gut');
-    // v0.3: Die beste Strategie muss eine »vernünftige« sein (keine Meeting-, Passiv- oder Chaos-Strategie).
-    // fleissig (maßvolle Überstunden + Samstagsschicht) darf vorn liegen, muss aber mindestens 20 % der Partien über die Familie verlieren.
-    const SANE = ['gut', 'berater', 'fleissig', 'ohneGegen', 'zusager', 'bieter', 'naschbox', 'lakritz', 'elonThema', 'melone', 'ohnePlan'];
-    if (!SANE.some(k => R[k].win === best)) errs.push('beste Strategie ist keine der vernünftigen (' + SANE.join(', ') + ')');
-    if (R.fleissig.fam < n * 0.2) errs.push('fleissig verliert zu selten über die Familie');
-    const rank = Object.values(R).map(x => x.win).sort((a, b) => b - a).indexOf(R.meetingfan.win) + 1;
-    if (rank < 4) errs.push('meetingfan auf Rang ' + rank + ' (höchstens Rang 4 erlaubt)');
-    if (R.passiv.win > 5) errs.push('passiv gewinnt zu oft');
-    if (best > 75) errs.push('Spiel zu leicht (> 75 %)');
-    if (R.sapChaos.chaos < 90) errs.push('Chaos-Pfad nicht abgedeckt (sapChaos Chaos% ' + R.sapChaos.chaos + ')');
-    if (R.sapChaos.win > R.gut.win - 8) errs.push('SAP-Chaos lohnt sich (sapChaos nicht >= 8 PP unter gut)');
-    // v0.4: Wassermelone und Marktfan dürfen sich nicht lohnen, der Titel ist selten, aber erreichbar
-    if (R.melone.win > R.gut.win + 3) errs.push('Wassermelonen-Bericht lohnt sich (melone > gut + 3)');
-    if (R.marktfan.win > R.gut.win) errs.push('Markt-Dauerkauf lohnt sich (marktfan > gut)');
-    if (R.gut.titel > 40) errs.push('Werk des Jahres zu leicht (gut Titel% > 40)');
-    // v0.5: zweiter Siegpfad »Vorzeigewerk« ist erreichbar, aber nicht dominant; die Ausschreibung ist kein Gratis-Gewinn
-    if (R.vorzeig.win > R.gut.win) errs.push('Vorzeigewerk-Jagd schlägt gut');
-    if (R.vorzeig.pfad < 10) errs.push('Vorzeigewerk kaum erreichbar (vorzeig Vorzeig% < 10)');
-    if (R.gut.pfad > 12) errs.push('Vorzeigewerk zu häufig nebenbei (gut Vorzeig% > 12)');
-    for (const k of ['meetingfan', 'passiv', 'workaholic', 'sapChaos']) if (R[k].pfad > 3) errs.push(k + ' erreicht das Vorzeigewerk zu oft');
-    if (R.elonThema && R.elonThema.win > R.gut.win + 4) errs.push('Thema wechseln beim Tesla-Kollegen lohnt sich zu sehr (elonThema > gut + 4)');
-    if (R.gagfan && R.gagfan.win > R.gut.win + 3) errs.push('Gags lohnen sich (gagfan > gut + 3)');
-    if (R.gagfan && R.gagfan.meet !== undefined && Math.abs(R.gagfan.meet - R.gut.meet) > 1) errs.push('Gags ändern die Meetings');
-    if (R.bieter.win > R.gut.win + 8) errs.push('Ausschreibung lohnt sich zu sehr (bieter > gut + 8)');
-    // v0.5 Süßigkeitenbox: ignorieren (gut) darf nicht klar besser sein, Pflege nicht dominant
-    if (R.gut.win > R.naschbox.win + 4) errs.push('Süßigkeitenbox ignorieren lohnt sich (gut > naschbox + 4)');
-    if (R.naschbox.win > R.gut.win + 6) errs.push('Süßigkeitenbox zu stark (naschbox > gut + 6)');
-    if (R.naschWeg.win > R.naschbox.win + 3) errs.push('Extra-Weg zur Box lohnt sich');
-    // Zielbereiche aus docs/PHASEN.md 10.2 (Abweichungen als Warnung)
-    const Z = { einfach: [20, 40], gut: [55, 70], ohneSchichtplan: [45, 62], meetingfan: [8, 30], ablenkbar: [30, 50], berater: [50, 68], workaholic: [0, 5], sparfuchs: [35, 55] };
-    for (const [k, [lo, hi]] of Object.entries(Z)) if (R[k].win < lo || R[k].win > hi) warn.push(k + ' ' + R[k].win + ' % (Ziel ' + lo + '–' + hi + ')');
-    if (R.ohneSchichtplan.win > R.gut.win - 3) warn.push('ohneSchichtplan nicht >= 3 PP unter gut');
-    if (R.gut1730.win > 75) warn.push('gut1730 ' + R.gut1730.win + ' % (über 75, offene Abweichung)');
-    if (R.fleissig.win > R.gut.win + 3) warn.push('fleissig ' + R.fleissig.win + ' % (mehr als gut + 3)');
-    // v0.9 Figuren: Sandra liegt bei gut höchstens 5 PP neben Christian, keine vernünftige Strategie mehr als 8 PP darüber
-    if (figur !== 'christian') {
-      const C = run(n, 'christian');
-      console.log('Vergleich Christian gut ' + C.gut.win + ' %, ' + figur + ' gut ' + R.gut.win + ' %');
-      if (Math.abs(R.gut.win - C.gut.win) > 5) errs.push(figur + ' gut weicht mehr als 5 PP von Christian ab');
-      // v0.11: Seit Sandras Zeitvorteil nur bis Feierabend gilt, braucht fleissig keine Ausnahme mehr (vorher bis 15 PP erlaubt)
-      for (const k of SANE) if (R[k].win > C[k].win + 8) errs.push(figur + ' ' + k + ' mehr als 8 PP über Christian');
-      if (R.gut1730.win > C.gut1730.win + 3) errs.push(figur + ' gut1730 mehr als 3 PP über Christian');
-      if (R.fleissig.win > R.gut.win - 5) errs.push(figur + ' fleissig nicht >= 5 PP unter gut');
+  const check = process.argv.includes('--check');
+  if (process.argv.includes('--alle')) {
+    // v0.16: alle drei Figuren mit denselben Startwerten; bei gut liegen alle drei höchstens 3 PP auseinander (ab 1000 Partien, sonst 5)
+    const all = {}, errs = [], warn = [];
+    for (const f of FIGS) { all[f] = run(n, f); console.log('Figur: ' + f); tabelle(all[f]); }
+    console.log('Vergleich (Sieg %)   ' + FIGS.map(f => f.padStart(9)).join(''));
+    for (const k of ['gut', 'naschbox', 'naschWeg', 'lakritz', 'fleissig', 'gut1730', 'berater', 'einfach']) console.log(k.padEnd(20), FIGS.map(f => String(all[f][k].win).padStart(9)).join(''));
+    if (check) {
+      for (const f of FIGS) { const r = pruefe(all[f], n, f, f === 'christian' ? null : all.christian); errs.push(...r.errs.map(e => f + ': ' + e)); warn.push(...r.warn.map(e => f + ': ' + e)); }
+      const band = n >= 1000 ? 3 : 5, g = FIGS.map(f => all[f].gut.win);
+      if (Math.max(...g) - Math.min(...g) > band) errs.push('gut liegt bei den drei Figuren mehr als ' + band + ' PP auseinander (' + g.join(', ') + ')');
+      const kc = kurve(Math.min(n, 400), 'christian'), ks = kurve(Math.min(n, 400), 'senior');
+      console.log('Lernkurve gut, Fortschritt Tag 5 / Tag 20: christian ' + kc.t5 + ' / ' + kc.t20 + ', senior ' + ks.t5 + ' / ' + ks.t20);
+      if (ks.t5 >= kc.t5) errs.push('senior ist am Anfang nicht langsamer (Tag 5: ' + ks.t5 + ' gegen ' + kc.t5 + ')');
+      if (ks.t20 < kc.t20 - 3) errs.push('senior holt bis Tag 20 nicht auf (' + ks.t20 + ' gegen ' + kc.t20 + ')');
+      if (warn.length) console.log('WARNUNG Zielbereiche: ' + warn.join('; '));
+      console.log(errs.length ? 'CHECK FEHLER: ' + errs.join('; ') : 'CHECK OK (harte Invarianten, drei Figuren)');
+      process.exitCode = errs.length ? 1 : 0;
     }
-    if (warn.length) console.log('WARNUNG Zielbereiche: ' + warn.join('; '));
-    console.log(errs.length ? 'CHECK FEHLER: ' + errs.join('; ') : 'CHECK OK (harte Invarianten)');
-    process.exitCode = errs.length ? 1 : 0;
+  } else {
+    const rows = run(n, figur);
+    if (figur !== 'christian') console.log('Figur: ' + figur);
+    tabelle(rows);
+    if (check) {
+      const C = figur !== 'christian' ? run(n, 'christian') : null;
+      if (C) console.log('Vergleich Christian gut ' + C.gut.win + ' %, ' + figur + ' gut ' + rows.gut.win + ' %');
+      const { errs, warn } = pruefe(rows, n, figur, C);
+      if (warn.length) console.log('WARNUNG Zielbereiche: ' + warn.join('; '));
+      console.log(errs.length ? 'CHECK FEHLER: ' + errs.join('; ') : 'CHECK OK (harte Invarianten)');
+      process.exitCode = errs.length ? 1 : 0;
+    }
   }
 }
-module.exports = { run, POL, playDay };
+module.exports = { run, POL, playDay, pruefe, kurve };

@@ -3,9 +3,9 @@
 'use strict';
 window.SC = window.SC || {};
 (function (SC) {
-  SC.VERSION = '0.15.0';
+  SC.VERSION = '0.16.0';
   // v0.8: Spielstände dieser Versionen laden weiter (kein neues Feld in S)
-  SC.SAVE_OK = ['0.7.0', '0.8.0', '0.9.0', '0.10.0', '0.11.0', '0.12.0', '0.13.0', '0.14.0', '0.14.1'];
+  SC.SAVE_OK = ['0.7.0', '0.8.0', '0.9.0', '0.10.0', '0.11.0', '0.12.0', '0.13.0', '0.14.0', '0.14.1', '0.15.0'];
   SC.DAY_START = 7 * 60 + 30;   // 07:30 Frühschicht-Beginn im Büro
   SC.DAY_END = 17 * 60;         // 17:00 regulärer Feierabend
   SC.LATEST = 20 * 60;          // 20:00 der Pförtner schließt ab
@@ -23,7 +23,11 @@ window.SC = window.SC || {};
       minus: ['Steckt in vielen Gesprächen und Meetings', 'Kein Vorsprung bei Spezifikation, Umsetzung und Berichten'] },
     sandra: { id: 'sandra', name: 'Sandra', col: '#58b8a8', titel: 'MES-Spezialistin', kurz: 'die Kollegin aus der MES-Entwicklung',
       plus: ['Kennt die MES-Schnittstellen aus der Entwicklung: Spezifikation, Umsetzung, Deploy, Berichte und Migration gehen bis Feierabend flotter', 'Weniger Fehler im Testlauf, Mapping beim Altwerk in 18 statt 30 Min.'],
-      minus: ['Neu im Werk: Werkleitung 55, Schichtleiter 42, Beziehungen wachsen langsamer', 'Hallen-Anforderungen und Reparaturen dauern länger'] }
+      minus: ['Neu im Werk: Werkleitung 55, Schichtleiter 42, Beziehungen wachsen langsamer', 'Hallen-Anforderungen und Reparaturen dauern länger'] },
+    // v0.16: dritte Figur ohne Eigennamen, nur mit Titel. Texte ohne Artikel und Pronomen (»Senior Principal fragt …«).
+    senior: { id: 'senior', name: 'Senior Principal', ohneName: true, col: '#b89ad8', titel: 'neu im Thema MES', kurz: 'mit langer Erfahrung in Konzernstrategie, Projekten und Budgets',
+      plus: ['Gewicht bei der Werkleitung: Start 66, Zuwächse um ein Viertel größer', 'Projekt- und Budgetroutine: Excel-Liste, Mails, Controlling, Berichte und Abnahmen gehen schneller, jede Tranche +5 k€', 'Ruhe unter Druck: an Chaostagen nur etwa halber Zeitaufschlag'],
+      minus: ['MES-Lernkurve: Fachaktionen dauern anfangs bis zu 40 % länger, ab Tag 12 normal', 'In der Einarbeitung mehr Fehler im Testlauf, Schichtleiter 48, Altwerk-Mapping 40 Min.'] }
   };
   // Christian als Kollege bei Sandra (Besuch, 12 Min.): erprobte Tipps aus der Halle
   SC.CHRISTIAN_TIPPS = [
@@ -83,9 +87,53 @@ window.SC = window.SC || {};
     notbehelf: 'Beim Notbehelf fallen 40 Teile Ausschuss an. Gebucht werden sie auf die Kostenstelle »Muss weg«. Du legst im MES einen echten Ausschussgrund an. Die Kostenstelle bleibt trotzdem.'
   };
   SC.SANDRA_TAG1 = 'Dein Werksausweis ist noch nicht gedruckt. Der Pförtner schreibt dir einen Besucherzettel: »MES, Ebene drei.« Das Formular hat kein Feld für »arbeitet hier«.';
+  // v0.16 Senior Principal: erster Tag, Fachbegriff des Tages (Tag 1 bis 11), Erklärung beim ersten Mal, eigene Szenen
+  SC.SENIOR_TAG1 = 'Erster Tag im Werk. Auf der Visitenkarte steht »Senior Principal«, auf dem Besucherzettel des Pförtners »MES?«. Senior Principal schreibt dahinter: »Lerne ich gerade.« Der Pförtner nickt. So ehrlich war hier schon lange niemand.';
+  SC.SENIOR_BEGRIFFE = [
+    'MES heißt Manufacturing Execution System, die Ebene zwischen den Maschinen und dem ERP. Senior Principal notiert: »Mittelbau. Kenne ich aus jeder Organisation.«',
+    'Rüsten heißt, die Linie auf ein anderes Produkt umzustellen. In der Konzernstrategie hieß das »Neuausrichtung« und dauerte ein Jahr. Hier dauert es 40 Minuten.',
+    'OEE ist Verfügbarkeit mal Leistung mal Qualität. Eine Kennzahl, die drei Folien auf einmal ersetzt.',
+    'Eine Charge ist eine Menge, die zusammen produziert und zusammen zurückverfolgt wird. Wie ein Projektjahrgang, nur mit Etikett.',
+    'BDE heißt Betriebsdatenerfassung: Die Maschine meldet selbst, was passiert. Ganz ohne Statusrunde.',
+    'Rückverfolgung: Von jedem Teil weiß man, woher es kommt. Senior Principal wünscht sich das für manche Entscheidungsvorlage.',
+    'Eine Schnittstelle ist die Stelle, an der zwei Systeme aneinander vorbeireden. Senior Principal kennt das aus jedem Lenkungskreis.',
+    'Ausschuss sind Teile, die nicht gut genug sind. Hier werden sie gezählt, gewogen und erklärt. Jedes einzelne.',
+    'Feinplanung heißt: welcher Auftrag wann auf welcher Linie läuft. Eine Roadmap im Minutentakt.',
+    'Deploy heißt, ein neuer Stand kommt auf den Server. Senior Principal lernt: Freitagnachmittag ist dafür kein guter Zeitpunkt.',
+    'Die Automatisierungspyramide hat fünf Ebenen vom Sensor bis zum ERP, das MES sitzt auf Ebene drei. Senior Principal kann das jetzt ohne Spickzettel.'
+  ];
+  SC.SENIOR_ERKL = {
+    req: 'Erste Anforderung in der Halle. Ein Bediener erklärt geduldig, was beim Rüsten passiert. Senior Principal schreibt mit und stellt genau die richtige Rückfrage.',
+    test: 'Erster Testlauf. Der Schichtleiter erklärt, warum »läuft auf dem Laptop« noch kein Testergebnis ist. Senior Principal nimmt den Satz in die Sammlung auf.',
+    linie: 'Erste Linienrunde. Takt, Störung, Stillstand: Senior Principal lernt drei Wörter und dass man hier nicht über die gelbe Linie läuft.',
+    spec: 'Erste Spezifikation. Lastenheft und Pflichtenheft lassen sich jetzt auseinanderhalten. In der Konzernstrategie hieß beides »Konzeptpapier«.',
+    impl: 'Erste Umsetzung. Die MES-Entwicklung zeigt, wo die Konfiguration aufhört und das Programmieren anfängt. Die Grenze ist fließend.',
+    migrate: 'Erste Datenmigration. Stammdaten sind die Daten, die alle brauchen und niemand pflegt. Das Prinzip kennt Senior Principal von Organigrammen.',
+    deploy: 'Erster Deploy. Das Rechenzentrum erklärt Testumgebung und Produktivsystem. Senior Principal merkt sich vor allem: niemals verwechseln.',
+    restart: 'Erster Neustart des MES-Servers. Aus- und wieder Einschalten heißt hier »kontrollierter Neustart« und hat ein eigenes Formular.',
+    review: 'Erstes IT-Review. Die IT-Chefin fragt nach der Pyramide, Senior Principal fragt höflich zurück und bekommt eine Zeichnung zum Mitnehmen.',
+    repair: 'Erste Reparatur. Die Instandhaltung erklärt den Unterschied zwischen Störung und Fehler. Die Erklärung dauert länger als die Reparatur.',
+    wartung: 'Erste Wartung. Senior Principal lernt: Vorbeugend heißt, bevor es jemand merkt.'
+  };
+  SC.SENIOR_SZENEN = {
+    req: 'Ein Bediener liest die Visitenkarte zweimal. »Senior Principal. Und trotzdem in der Halle?« Ja. Mit Sicherheitsschuhen.',
+    test: 'Senior Principal fragt, ob es das Testergebnis »zeitnah als Folie« gibt. Der Schichtleiter zeigt auf den Bildschirm: »Das ist die Folie.«',
+    linie: 'An der Linie hört Senior Principal zehn Minuten nur zu. Der Schichtleiter sagt später: »Das macht sonst keiner.«',
+    spec: 'Senior Principal streicht in der Spezifikation drei Absätze und ergänzt eine Tabelle. Die MES-Entwicklung staunt: Es wird tatsächlich kürzer.',
+    impl: 'Bei der Umsetzung fragt Senior Principal: »Was ist das Kleinste, das wirklich läuft?« Die Antwort ist kürzer als erwartet.',
+    migrate: 'Bei der Migration findet Senior Principal eine Spalte »Bemerkung_alt«. Nach kurzer Recherche: Sie stammt aus dem letzten MES-Versuch.',
+    deploy: 'Vor dem Deploy fragt Senior Principal nach dem Rückfallplan. Das Rechenzentrum hat einen. Er liegt seit 2019 in einer Schublade.',
+    restart: 'Neustart. Senior Principal wartet gelassen, während der Fortschrittsbalken über das Weitermachen nachdenkt.',
+    review: 'Im IT-Review sagt Senior Principal: »Die Ebenen verstehe ich noch nicht alle, das Budget dafür sehr gut.« Die IT-Chefin notiert das.',
+    repair: 'Die Instandhaltung zeigt Senior Principal das Ersatzteillager. Erstes Fazit: »Hier ist mehr Kapital gebunden als in meinem letzten Projekt.«',
+    wartung: 'Bei der Wartung hält Senior Principal die Taschenlampe. Professionell, ruhig und ohne Rückfrage.',
+    bericht: 'Am Leitstand fasst Senior Principal den KPI-Bericht in drei Sätzen für die Werkleitung zusammen. Die Werkleitung liest ausnahmsweise bis zum Ende.'
+  };
   // Anrede im Text: alle Spielertexte sind für Christian geschrieben, für Sandra werden sie angepasst.
   // Nur einmal je Text anwenden (an den Anzeigestellen), denn aus {C} wird »Christian«, und ein zweiter Lauf machte daraus »Sandra«.
-  SC.FILL = { sandra: [[/Christian/g, 'Sandra'], [/»der vom MES«/g, '»die vom MES«'], [/»den vom MES«/g, '»die vom MES«'], [/Hemd wie immer/g, 'Blazer wie immer'], [/»den Entsorger«/g, '»die Entsorgerin«'], [/wirst Imker\./g, 'wirst Imkerin.'], [/zum Schornsteinbeauftragten/g, 'zur Schornsteinbeauftragten'], [/Pappkameraden/g, 'Pappaufsteller'], [/Pappkamerad\b/g, 'Pappaufsteller'], [/MES-Projektleiter\b/g, 'MES-Spezialistin']] };
+  SC.FILL = { sandra: [[/Christian/g, 'Sandra'], [/»der vom MES«/g, '»die vom MES«'], [/»den vom MES«/g, '»die vom MES«'], [/Hemd wie immer/g, 'Blazer wie immer'], [/»den Entsorger«/g, '»die Entsorgerin«'], [/wirst Imker\./g, 'wirst Imkerin.'], [/zum Schornsteinbeauftragten/g, 'zur Schornsteinbeauftragten'], [/Pappkameraden/g, 'Pappaufsteller'], [/Pappkamerad\b/g, 'Pappaufsteller'], [/MES-Projektleiter\b/g, 'MES-Spezialistin']],
+    // v0.16 Senior Principal: neutrale Formen ohne Artikel für die Spielfigur
+    senior: [[/_Christian_/g, '_SeniorPrincipal_'], [/Christian/g, 'Senior Principal'], [/»der vom MES«/g, '»jemand vom MES«'], [/»den vom MES«/g, '»das MES-Team«'], [/Hemd wie immer/g, 'Sakko wie immer'], [/»den Entsorger«/g, '»letzte Instanz«'], [/wirst Imker\./g, 'gehst in die Imkerei.'], [/zum Schornsteinbeauftragten/g, 'zum Ehrenmitglied der Schornsteinpflege'], [/Pappkameraden/g, 'Pappaufsteller'], [/Pappkamerad\b/g, 'Pappaufsteller'], [/MES-Projektleiter\b/g, 'Senior Principal']] };
   // {C} steht in Texten, in denen Christian als Kollege vorkommt (wird nach der Anpassung eingesetzt)
   SC.fill = (S, t) => { if (t == null) return t; t = String(t); const L = S && SC.FILL[S.figur]; if (L) for (const [a, b] of L) t = t.replace(a, b); return t.replace(/\{C\}/g, 'Christian'); };
   SC.KOLLEGE_BUBBLES = {
@@ -143,7 +191,13 @@ window.SC = window.SC || {};
     // v0.9 Figuren: Christian ist die Basis (alles 1, keine Boni), nur Sandra hat Abweichungen
     figur: { sandra: { start: { chef: 55, schicht: 42 }, dauer: { spec: 0.95, impl: 0.9, deploy: 0.85, restart: 0.85, migrate: 0.9, bericht: 0.85, review: 0.8, req: 1.25, repair: 1.4, notbehelf: 1.4 },
       // v0.11 nurBis17: der Zeitvorteil gilt nur bis Feierabend (gemessen: fleissig 46 auf 33 %, gut1730 77 auf 75 %, gut bleibt 56 %)
-      nurBis17: true, schichtF: 0.6, abnahmeChef: -2, testRisk: 0.04, mapping: 18, erklaeren: 0.65, pyrFalsch: 25, kollege: { p: 0.45, min: 12, schicht: 4, ab: 2 } } },
+      nurBis17: true, schichtF: 0.6, abnahmeChef: -2, testRisk: 0.04, mapping: 18, erklaeren: 0.65, pyrFalsch: 25, kollege: { p: 0.45, min: 12, schicht: 4, ab: 2 } },
+      // v0.16 Senior Principal: Lernkurve auf Fachaktionen (Faktor f0 an Tag 1, ab Tag »bis« 1), Stärken bei Werkleitung, Budget und Spätzuschlag
+      senior: { start: { chef: 66, schicht: 48, gelernt: [] }, szenen: 'senior', tag1: 'SENIOR_TAG1',
+        // gemessen v0.16 (Bot, 1000 Partien): ohne Lernkurve gut 67 %, lineare Kurve mit 1,4 nur 37 %, quadratische Kurve mit 1,4 und Projekt-Stärken 59 %
+        lern: { ids: ['req', 'test', 'linie', 'spec', 'impl', 'migrate', 'deploy', 'restart', 'review', 'repair', 'wartung'], f0: 1.4, bis: 12, k: 2 }, lernBug: 0.04,
+        dauer: { tranche: 0.6, kredit: 0.6, berater: 0.7, report: 0.75, abnahme: 0.8, bericht: 0.85, excel: 0.7, mail: 0.7 },
+        chefF: 1.25, trancheBonus: 5, chaosF: { halle: 1.2, buero: 1.1 }, testRisk: 0, mapping: 40, erklaeren: 0.7, pyrFalsch: 45, kollege: { p: 0.4, min: 12, schicht: 3, ab: 2 } } },
     budgetStart: 110, tranche: 30, trancheLow: 15, berater: 25,
     kredit: { rahmen: 60, rahmenHoch: 80, schritt: 20, zins: 0.08 },
     rival: { p: 0.2, lead: 0.1, from: 4, cost: 5, cut: 15 },

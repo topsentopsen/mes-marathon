@@ -10,9 +10,9 @@ const url = process.argv.find(a => /^(file|https?):/.test(a)) || 'file://' + pat
 const SHOTDIR = process.env.SHOTS || '/workspace/mes-layout-shots';
 const SHOTS = process.argv.includes('--shots'), GROSS = process.argv.includes('--gross');
 const VPS = (process.env.VPS || '1366x768,1440x900,1920x1080,390x844').split(',').map(v => v.split('x').map(Number));
-// Spielstände: drei Partien (Christian »gut«, Sandra »vorzeig«, Christian »sapChaos«), jeweils zu Tagesbeginn
+// Spielstände: vier Partien (Christian »gut«, Sandra »vorzeig«, Christian »sapChaos«, seit v0.16 Senior Principal »gut«), jeweils zu Tagesbeginn
 const states = (() => { const SC = require('./helper.js'), sim = SC.sim, { POL, playDay } = require('../tools/bot.js'), out = [];
-  for (const [figur, seed, pol] of [['christian', 4242, 'gut'], ['sandra', 777, 'vorzeig'], ['christian', 99, 'sapChaos']]) {
+  for (const [figur, seed, pol] of [['christian', 4242, 'gut'], ['sandra', 777, 'vorzeig'], ['christian', 99, 'sapChaos'], ['senior', 2024, 'gut']]) {
     const S = sim.newGame(seed, figur); let g = 0;
     while (S.phase !== 'ende' && g++ < 40) { if (S.phase === 'tag' && !S.pending) out.push({ label: figur + '-' + pol + '-tag' + S.day, s: JSON.parse(JSON.stringify(S)) }); playDay(S, POL[pol]); }
   }
@@ -110,6 +110,14 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     await page.evaluate(() => { const UI = window.SC.ui; document.getElementById('overlay').classList.add('hidden'); UI._ov = false; UI.hinweis('17:00 Feierabend! Überstunden gehen bis 20:00, kosten aber Familie, und was du jetzt noch anfängst, dauert länger (Spätzuschlag: ×1,2). Raus über die Pforte (EG).'); }); note('dialogs', 'hinweis', await meas());
     await page.evaluate(() => { const UI = window.SC.ui; document.getElementById('overlay').classList.add('hidden'); UI._ov = false; document.getElementById('btn-figur').click(); }); await wait(30); note('dialogs', 'figurenkarte', await meas());
     await page.evaluate(() => { const UI = window.SC.ui; document.getElementById('overlay').classList.add('hidden'); UI._ov = false; document.getElementById('btn-menu').click(); }); await wait(30); note('dialogs', 'menue', await meas());
+    // v0.16 Senior Principal: Einarbeitungsmappe, Figurenkarte (längster Figurenname im HUD) und Figurenwahl mit drei Karten
+    { const sp = states.find(x => /^senior-gut-tag1$/.test(x.label)) || states.find(x => /^senior/.test(x.label));
+      await page.evaluate(s => { const UI = window.SC.ui; document.getElementById('overlay').classList.add('hidden'); UI._ov = false; localStorage.setItem('mesmarathon-save', JSON.stringify(s)); window.SC.S = window.SC.sim.load(); window.SC.S.pending = null; UI.hud(); UI.mappe(); }, sp.s); await wait(30); note('dialogs', 'senior-mappe', await meas());
+      if (SHOTS) await page.screenshot({ path: SHOTDIR + '/' + w + 'x' + h + '-senior-mappe.png' });
+      await page.evaluate(() => { const UI = window.SC.ui; document.getElementById('overlay').classList.add('hidden'); UI._ov = false; document.getElementById('btn-figur').click(); }); await wait(30); note('dialogs', 'senior-figurenkarte', await meas());
+      if (SHOTS) await page.screenshot({ path: SHOTDIR + '/' + w + 'x' + h + '-senior-figurenkarte.png' });
+      await page.evaluate(() => { const UI = window.SC.ui; document.getElementById('overlay').classList.add('hidden'); UI._ov = false; UI.showTitle(); document.querySelector('button[data-o="new"]').click(); }); await wait(60); note('dialogs', 'figurenwahl-im-spiel', await meas());
+      if (SHOTS) await page.screenshot({ path: SHOTDIR + '/' + w + 'x' + h + '-figurenwahl.png' }); }
     for (const s2 of states.filter((x, i) => i % 3 === 0)) {
       await page.evaluate(s => { const UI = window.SC.ui; document.getElementById('overlay').classList.add('hidden'); UI._ov = false; localStorage.setItem('mesmarathon-save', JSON.stringify(s)); window.SC.S = window.SC.sim.load(); window.SC.S.pending = null; UI.endDay(); }, s2.s); await wait(30);
       note('dialogs', 'abend', (await meas()).map(t => s2.label + ' ' + t));

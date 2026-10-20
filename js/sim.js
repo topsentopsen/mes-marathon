@@ -15,10 +15,16 @@
   const pick = (S, arr) => arr[Math.floor(rng(S) * arr.length)];
   const hm = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(Math.floor(m % 60)).padStart(2, '0');
   const T = () => SC.TUNE;
-  // v0.9 Figuren: FG(S) liefert Sandras Abweichungen, für Christian null (Christian bleibt exakt wie v0.8)
-  const FG = S => (S && S.figur === 'sandra' ? SC.TUNE.figur.sandra : null);
+  // v0.9 Figuren: FG(S) liefert die Abweichungen der gewählten Figur, für Christian null (Christian bleibt exakt wie v0.8)
+  // v0.16: allgemein über SC.TUNE.figur (Sandra und Senior Principal)
+  const FG = S => (S && S.figur && S.figur !== 'christian' && SC.TUNE.figur[S.figur]) || null;
+  // v0.16 Lernkurve (Senior Principal): Fachaktionen kosten an Tag 1 den Faktor f0, der bis Tag »bis« auf 1 sinkt (k = 2: anfangs schnell, dann flacher)
+  const lernAnteil = S => { const F = FG(S), L = F && F.lern; return L ? Math.pow(Math.max(0, (L.bis - S.day) / (L.bis - 1)), L.k || 1) : 0; };
+  const lernF = (S, id) => { const F = FG(S), L = F && F.lern; return L && L.ids.includes(id) ? 1 + (L.f0 - 1) * lernAnteil(S) : 1; };
   // v0.11: mit nurBis17 gilt Sandras Zeitvorteil (Faktor < 1) nur bis Feierabend; Schwächen (Faktor > 1) gelten immer
-  const figF = (S, id) => { const F = FG(S); const f = F && F.dauer[id] || 1; if (f < 1 && F.nurBis17 && S.minute >= SC.DAY_END + (S.partyMin || 0)) return 1; return f; };
+  const figF = (S, id) => { const F = FG(S); if (!F) return 1; let f = F.dauer[id] || 1; if (f < 1 && F.nurBis17 && S.minute >= SC.DAY_END + (S.partyMin || 0)) f = 1; if (F.lern) f *= lernF(S, id); return f; };
+  // v0.16 Zuschlag nach Feierabend: Senior Principal bleibt ruhiger unter Druck (eigener Faktor)
+  const spaetF = S => { const F = FG(S); return F && F.spaet ? F.spaet : T().ueber.spaet; };
   const SIREN = 14 * 60, HANDOVER = 14 * 60 + 20;
 
   function newModule(def, need) {
@@ -44,9 +50,9 @@
       auktion: null, nordLast: null, nordLastR: null, box: { n: 0, sorte: null, week: -1, day: 0, gast: null, stand: null, used: false }, audit: { streak: 0, day: 0 }, elon: { day: 0, n: 0, meet: 0 }, kopf: 0, vDay: 0, vN: 0, pfad: null,
       stats: { pappe: 0, aufzug: 0, fax: 0, elon: 0, elonThema: 0, meetings: 0, useless: 0, missed: 0, weekend: 0, overtime: 0, bugs: 0, coffee: 0, visits: 0, pyrRight: 0, pyrWrong: 0, faults: 0, repairs: 0, budgetSpent: 0, chaosDays: 0, flur: 0, bingo: 0, eggs: 0, immer: 0, tiramisu: 0, markt: 0, prognose: 0, treffer: 0, melone: 0, hotline: 0, auktion: 0, auktionWin: 0, kopf: 0, zwilling: 0, archiv: 0, suess: 0, suessGut: 0, suessMeck: 0, suessLetztes: 0 }
     };
-    const F = FG(S); if (F) Object.assign(S, F.start);
+    const F = FG(S); if (F) Object.assign(S, JSON.parse(JSON.stringify(F.start)));
     planDay(S);
-    if (F) say(S, SC.SANDRA_TAG1);
+    if (F) say(S, SC[F.tag1 || 'SANDRA_TAG1']);
     return S;
   }
   const weekday = S => (S.day - 1) % 5;
@@ -61,6 +67,8 @@
   function planDay(S) {
     S.excel = false; S.coffee = 0; S.lunch = false; S.dayLog = []; S.immerToday = 0; S.partyMin = 0;
     S.uselessYesterday = S.uselessToday; S.uselessToday = 0; S.uselessMin = 0;
+    // v0.16 Senior Principal: in der Einarbeitung jeden Morgen ein Fachbegriff (ohne Zufall, ohne Zeit)
+    { const F = FG(S); if (F && F.lern && S.day < F.lern.bis && SC.SENIOR_BEGRIFFE[S.day - 1]) say(S, 'Fachbegriff des Tages: ' + SC.SENIOR_BEGRIFFE[S.day - 1]); }
     // v0.9 Sandra als Kollegin bei Christian: nur eine Zeile, keine Zeitkosten, keine Würfe aus den Spielströmen
     if (S.figur !== 'sandra' && S.day >= 3 && rngA(S, 33400 + S.day % 100) < 0.3) say(S, SC.SANDRA_NPC[Math.floor(rngA(S, 33500 + S.day % 100) * SC.SANDRA_NPC.length)]);
     else if (S.figur !== 'sandra' && S.day >= 3 && rngA(S, 34300 + S.day % 100) < 0.2) say(S, SC.SANDRA_NPC2[Math.floor(rngA(S, 34400 + S.day % 100) * SC.SANDRA_NPC2.length)]);
@@ -366,7 +374,7 @@
           const m = targets.test(S);
           if (rng(S) < (S.schicht < 40 ? 0.8 - S.schicht / 100 : S.schicht < 60 ? 0.15 : 0)) { S._cost = 30; say(S, 'Der Schichtleiter: »Die ' + stName(m.station) + ' ist heute nicht frei. Hättest halt zu meinem Meeting kommen sollen.« (30 Minuten verloren)', true); return; }
           spend(S, T().cost.test);
-          const bug = 0.34 - m.spec * 0.03 - (isDone(S, 'qs') ? 0.05 : 0) + (S.chaosUntil >= S.day ? 0.12 : 0) + (S.kaffeeDef === S.day ? 0.08 : 0) - (S.tiramisu === S.day ? T().tiramisu : 0) - (FG(S) ? FG(S).testRisk : 0);
+          const bug = 0.34 - m.spec * 0.03 - (isDone(S, 'qs') ? 0.05 : 0) + (S.chaosUntil >= S.day ? 0.12 : 0) + (S.kaffeeDef === S.day ? 0.08 : 0) - (S.tiramisu === S.day ? T().tiramisu : 0) - (FG(S) ? FG(S).testRisk - (FG(S).lernBug || 0) * lernAnteil(S) : 0);
           const tira = S.tiramisu === S.day; S.tiramisu = 0; if (tira) { S.stats.tiramisu++; say(S, 'Tiramisu-Effekt: Die Spezifikation sitzt, der Testlauf geht mit weniger Fehlerrisiko an die Station.'); }
           if (rng(S) < Math.max(0, bug)) { m.impl = Math.max(0, m.impl - 1); m.deployed = false; S.stats.bugs++; say(S, 'Testlauf ' + m.name + ' an der ' + stName(m.station) + ': Bug gefunden! Zurück an den Schreibtisch (Implementierung ' + m.impl + '/' + m.need.impl + ').', true); return; }
           m.test++; say(S, 'Testlauf ' + m.name + ' an der ' + stName(m.station) + ' bestanden: ' + m.test + '/' + m.need.test + '.');
@@ -562,10 +570,10 @@
     const { cost: c0, rabatt, late } = costOf(S, room, id, a);
     let cost = c0;
     S.energy -= S.kaffeeDef === S.day ? Math.round(a.energy * 1.3) : a.energy;
-    const sch0 = S.schicht, F = FG(S);
+    const sch0 = S.schicht, chef0 = S.chef, bud0 = S.budget, F = FG(S);
     a.run(S);
-    if (F) figurNach(S, F, room, id, sch0);
-    if (S._cost !== undefined) { cost = late ? Math.round(S._cost * T().ueber.spaet) : S._cost; delete S._cost; } else if (rabatt) S.box.used = true;
+    if (F) figurNach(S, F, room, id, sch0, chef0, bud0);
+    if (S._cost !== undefined) { cost = late ? Math.round(S._cost * spaetF(S)) : S._cost; delete S._cost; } else if (rabatt) S.box.used = true;
     advance(S, cost);
     if (S.energy <= 0) S.burnout = true;
     return { ok: true };
@@ -574,7 +582,8 @@
   const SZ3_IDS = ['repair', 'care', 'notbehelf'];
   const SZ2_IDS = ['print', 'schichtplan', 'excel', 'gespraech', 'restart', 'abnahme', 'review', 'wartung', 'mail'];
   const SZ_IDS = ['req', 'spec', 'impl', 'deploy', 'migrate', 'bericht', 'test', 'linie'];
-  function figurNach(S, F, room, id, sch0) {
+  function figurNach(S, F, room, id, sch0, chef0, bud0) {
+    if (F.szenen === 'senior') return seniorNach(S, F, room, id, chef0, bud0);
     if (S.schicht > sch0) { const roh = S.schicht - sch0, neu = Math.round(roh * F.schichtF); S.schicht = sch0 + neu; if (neu < roh && S.day <= 5) say(S, 'Neu im Werk: Das Vertrauen des Schichtleiters wächst bei dir langsamer, Schichtleiter +' + neu + ' statt +' + roh + '.'); }
     if (id === 'abnahme') { S.chef += F.abnahmeChef; if (S.day <= 10) say(S, 'Die Werkleitung kennt dich noch nicht so lange: Werkleitung +' + (8 + F.abnahmeChef) + ' statt +8.'); }
     const k = SZ_IDS.indexOf(id);
@@ -584,6 +593,16 @@
     const k3 = SZ3_IDS.indexOf(id);
     if (k3 >= 0 && SC.SANDRA_SZENEN3[id] && rngA(S, 35000 + ((S.day * 17 + k3 * 7) % 100)) < 0.35) say(S, SC.SANDRA_SZENEN3[id]);
   }
+  // v0.16 Senior Principal: Gewicht bei der Werkleitung (Zuwächse mal chefF), Budgeterfahrung (Tranche +trancheBonus),
+  // beim ersten Mal wird der Fachbegriff der Aktion erklärt, eigene Szenen (Salze 38000 und 38500, nur rngA, keine Zeit)
+  const SEN_IDS = ['req', 'test', 'linie', 'spec', 'impl', 'migrate', 'deploy', 'restart', 'review', 'repair', 'wartung', 'bericht'];
+  function seniorNach(S, F, room, id, chef0, bud0) {
+    const k = SEN_IDS.indexOf(id);
+    if (S.chef > chef0) { const roh = S.chef - chef0, neu = Math.round(roh * F.chefF); S.chef = chef0 + neu; if (neu > roh && S.day <= 10 && rngA(S, 38500 + ((S.day * 7 + k * 3 + 50) % 100)) < 0.25) say(S, 'Die Werkleitung hört auf Senior Principal: Werkleitung +' + neu + ' statt +' + roh + '.'); }
+    if (id === 'tranche' && S.budget > bud0) { S.budget += F.trancheBonus; say(S, 'Budgeterfahrung aus vielen Projekten: Der Antrag sitzt beim ersten Lesen. Tranche +' + F.trancheBonus + ' k€ extra.'); }
+    if (F.lern && F.lern.ids.includes(id) && Array.isArray(S.gelernt) && !S.gelernt.includes(id)) { S.gelernt.push(id); if (SC.SENIOR_ERKL[id]) say(S, SC.SENIOR_ERKL[id]); }
+    else if (k >= 0 && SC.SENIOR_SZENEN[id] && rngA(S, 38000 + ((S.day * 13 + k * 7) % 100)) < 0.3) say(S, SC.SENIOR_SZENEN[id]);
+  }
   // echte Dauer einer Aktion (Gesamtprüfung v0.5: auch für die Anzeige auf den Knöpfen)
   function costOf(S, room, id, a) {
     a = a || (A[room] || []).find(x => x.id === id);
@@ -591,16 +610,16 @@
     if (FG(S)) { const f = figF(S, id); if (f !== 1) cost = Math.round(cost * f); }
     if (id === 'test') { if (S.testSlot === S.day) cost = Math.round(cost * 0.67); else if (eff(S) >= 70) cost = Math.round(cost * T().meet.testFactor); if (S.budget < 0) cost = Math.round(cost * 1.3); if (S.nordUntil >= S.day) cost = Math.round(cost * 1.5); }
     if (room === 'halle' && id === 'req') { const m = targets.req(S); if (m && faulted(S, m)) cost = Math.round(cost * 1.3); }
-    if (room === 'halle' && S.chaosUntil >= S.day) cost = Math.round(cost * 1.4);
+    if (room === 'halle' && S.chaosUntil >= S.day) cost = Math.round(cost * (FG(S) && FG(S).chaosF ? FG(S).chaosF.halle : 1.4));
     if (id === 'migrate' && S.sap.state === 'nacharbeit') cost = Math.round(cost * 1.25);
-    if (room === 'buero' && (id === 'spec' || id === 'impl') && S.chaosUntil >= S.day) cost = Math.round(cost * 1.25);
+    if (room === 'buero' && (id === 'spec' || id === 'impl') && S.chaosUntil >= S.day) cost = Math.round(cost * (FG(S) && FG(S).chaosF ? FG(S).chaosF.buero : 1.25));
     if (id === 'repair' && isDone(S, 'trace')) cost -= 15;
     if (id === 'bericht' && isDone(S, 'bde')) cost = 15;
     if (S.lunch && S.minute < 15 * 60 && cost > 20) cost = Math.round(cost * 0.9);
     const r0 = cost > 0 ? boxRabatt(S, room, id) : 0, cBox = cost; if (r0) cost = Math.min(cBox, Math.max(5, cost - r0)); const r = cBox - cost;
     // v0.6 Spätzuschlag: wer nach Feierabend noch etwas anfängt, ist langsamer (Party-Minuten zählen nicht)
-    const late = T().ueber.spaet !== 1 && S.minute >= SC.DAY_END + (S.partyMin || 0);
-    if (cost > 0 && late) cost = Math.round(cost * T().ueber.spaet);
+    const late = spaetF(S) !== 1 && S.minute >= SC.DAY_END + (S.partyMin || 0);
+    if (cost > 0 && late) cost = Math.round(cost * spaetF(S));
     return { cost, rabatt: r > 0, late };
   }
   const actCost = (S, room, id) => costOf(S, room, id).cost;
@@ -918,6 +937,6 @@
   }
   function highscores() { try { return JSON.parse(localStorage.getItem('mesmarathon-highscore') || '[]'); } catch (e) { return []; } }
 
-  SC.sim = { newGame, figF, act, actCost, elonHeute, aufzug, handoverWait, kalender, abschluss, saison, aushang, diagramm, wochenendGag, advance, events, endDay, weekend, startDay, progress, nextMeeting, activeMeeting, actions: A, targets, hm, weekday, week, save, load, slow,
+  SC.sim = { newGame, figF, lernF, act, actCost, elonHeute, aufzug, handoverWait, kalender, abschluss, saison, aushang, diagramm, wochenendGag, advance, events, endDay, weekend, startDay, progress, nextMeeting, activeMeeting, actions: A, targets, hm, weekday, week, save, load, slow,
     choose, visitOptions, visitText, oldSave, archiv, kopfhoerer, kopfWhy, nordRatio, rngA, closeAuktion, auktionOpen, bidPrice, auditOk, rngF, rngM, prognoseBand, rahmen, kpiScore, kpiIndex, kpiPath, kpiTarget, autoWork, addScore, highscores, stationOf, stName, rng };
 })(window.SC);

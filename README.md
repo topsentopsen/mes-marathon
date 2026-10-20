@@ -4,6 +4,10 @@ Retro-Managerspiel im Browser, inspiriert von **Mad TV** (1991) und abgeleitet a
 
 **Spielen:** https://topsentopsen.github.io/mes-marathon/
 
+## Neu in v0.16.0 »Senior Principal«
+
+Dritte spielbare Figur ohne Eigennamen: **Senior Principal**, eine erfahrene Führungskraft aus der Konzernstrategie mit hohem Titel, aber neu im Thema MES. Stärken: Gewicht bei der Werkleitung (Start 66, Zuwächse um ein Viertel größer), Routine bei Excel-Liste, Mails, Controlling, Berichten und Abnahmen, jede Tranche +5 k€, an Chaostagen nur etwa halber Zeitaufschlag. Schwäche: die MES-Lernkurve. Fachaktionen dauern an Tag 1 um 40 % länger, das sinkt bis Tag 12 auf normal; in der Einarbeitung gibt es etwas mehr Fehler im Testlauf. Zum Start eine Einarbeitungsmappe mit fünf Begriffen, bis Tag 11 jeden Morgen ein Fachbegriff, beim ersten Mal jeder Fachaktion eine kurze Erklärung. Christian kommt als Kollege vorbei, Sandra ist im Werk. Spielstände aus 0.7 bis 0.15 laden weiter. Balance mit 2000 Partien: `node tools/bot.js 2000 --alle --check`. Details: `docs/RELEASE-v0.16.0.md`.
+
 ## Neu in v0.15.0 »Selbst aufgefüllt«
 
 Die Süßigkeitenbox füllt deine Figur (Christian oder Sandra) jetzt selbst im Büro auf, nicht mehr am Kiosk der Kantine. Im Büro steht dafür eine Zeile mit drei Knöpfen (Schoko-Mix, Gummibärchen, Lakritz), dazu der Zettel, wer was mag. Preis, Dauer (2 Min.), Wochengrenze und Wirkung bleiben gleich. Die Kantine hat weiter Kaffee, Mittagessen und den Kiosk mit Saisonware. Spielstände aus 0.7 bis 0.14.1 laden weiter. Details: `docs/RELEASE-v0.15.0.md`.
@@ -82,7 +86,7 @@ Vanilla JavaScript ohne Build, Canvas-Pixelgrafik, Musik und Fabriklärm per Web
 
 - `js/data.js` Daten und Balance-Hebel (`SC.TUNE`), `js/sim.js` Spiellogik (läuft auch in Node), `js/ui.js` Oberfläche, `js/building.js` Fabrik, Aufzug und Figuren, `js/audio.js` Musik und Fabriklärm.
 - Tests: `node test/sim.test.js`, `node test/names.test.js`, Browser: `node test/browser-check.js [url]`, `node test/playthrough.js [tage] [seed]`, Handy-Ton `node test/mobile-audio.js` und seit v0.13 das Layout `node test/layout-check.js [url]` (puppeteer-core).
-- Balance-Bot: `node tools/bot.js 300 --check`.
+- Balance-Bot: `node tools/bot.js 300 --check`, drei Figuren im Vergleich: `node tools/bot.js 2000 --alle --check`.
 - Konzept und Plan: `docs/KONZEPT.md`, `docs/PHASEN.md`.
 
 Eigenes Fanprojekt, keine Original-Inhalte von Mad TV. Alle Figuren, Werke und Firmen sind frei erfunden.

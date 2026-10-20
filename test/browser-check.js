@@ -109,7 +109,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   await page.reload({ waitUntil: 'load' }); await wait(600);
   fig.cont = await page.evaluate(() => (document.querySelector('button[data-o="cont"]') || {}).textContent);
   await page.click('button[data-o="cont"]'); await wait(400); fig.loaded = await page.evaluate(() => [window.SC.S.figur, window.SC.S.name]);
-  fig.ok = fig.btns.join() === 'christian,sandra' && fig.imgs.length === 2 && fig.imgs.every(Boolean) && fig.christian.join() === 'christian,Christian,christian' && fig.sandra.join() === 'sandra,Sandra,55,42' &&
+  fig.ok = fig.btns.join() === 'christian,sandra,senior' && fig.imgs.length === 3 && fig.imgs.every(Boolean) && fig.christian.join() === 'christian,Christian,christian' && fig.sandra.join() === 'sandra,Sandra,55,42' &&
     /»die vom MES«/.test(fig.anrede) && !/Christian/.test(fig.anrede) && /Christian, der erfahrene Kollege/.test(fig.besuch) && !/\{C\}/.test(fig.besuch) && /Sandra/.test(fig.cont || '') && fig.loaded.join() === 'sandra,Sandra';
   if (!fig.ok) errs.push('v0.9-Figuren fehlerhaft: ' + JSON.stringify(fig).slice(0, 600));
   // v0.10: Leertaste im Raum, Tastaturfokus, Kontrast, Bestenliste mit Figur; Handy: Ton-Knopf über Dialogen, Raumhöhe
@@ -152,7 +152,24 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   await page.screenshot({ path: out + '-11-sandra-figurenkarte.png' }); await page.keyboard.press('Escape'); await wait(200);
   v11.ok = v11.hinweisBesuch.warned && v11.hinweisBesuch.visit && v11.hinweisBesuch.noHint && v11.hinweisBesuch.ticker && v11.hinweisBesuch.log && v11.vermerk.some(t => /schneller/.test(t)) && v11.vermerkHalle.some(t => /langsamer/.test(t)) && /Sandra/.test(v11.karte.btn) && /MES-Entwicklung/.test(v11.karte.txt) && /\+ /.test(v11.karte.txt);
   if (!v11.ok) errs.push('v0.11 fehlerhaft: ' + JSON.stringify(v11).slice(0, 600));
-  console.log(JSON.stringify({ title: title.text.slice(0, 160), nameField: title.name, visitShown, st, d2, v07, v09, fig, v10, v11, errs }, null, 1));
+  // v0.16 Senior Principal: Wahl über die Karte, Einarbeitungsmappe, Vermerke »lernt« und »Routine«, Figurenkarte, Christian als Kollege
+  const v16 = {};
+  await page.evaluate(() => { window.SC.ui.closeOverlay && window.SC.ui.closeOverlay(); window.SC.ui.closeRoom(); window.SC.ui.showTitle(); }); await wait(300);
+  await page.click('button[data-o="new"]'); await wait(300); await page.click('button[data-f="senior"]'); await wait(400);
+  v16.start = await page.evaluate(() => [window.SC.S.figur, window.SC.S.name, window.SC.S.chef, window.SC.S.schicht, localStorage.getItem('mesmarathon-figur')]);
+  v16.mappe = await page.evaluate(() => ({ open: window.SC.ui.overlayOpen(), txt: document.getElementById('overlay').innerText, img: (() => { const i = document.querySelector('#overlay img'); return !!i && i.complete && i.naturalWidth > 0; })() }));
+  await page.keyboard.press('Escape'); await wait(200);
+  await page.evaluate(() => { const S = window.SC.S; S.visits = []; S.pending = null; S.meetings = []; S.minute = 10 * 60; window.SC.ui.openRoom('buero'); }); await wait(300);
+  v16.buero = await page.evaluate(() => [...document.querySelectorAll('#room .fig')].map(x => x.textContent));
+  await page.evaluate(() => { window.SC.ui.closeRoom(); window.SC.ui.openRoom('halle'); }); await wait(300); v16.halle = await page.evaluate(() => [...document.querySelectorAll('#room .fig')].map(x => x.textContent));
+  await page.evaluate(() => window.SC.ui.closeRoom()); await wait(200); await page.click('#btn-figur'); await wait(300);
+  v16.karte = await page.evaluate(() => ({ btn: document.getElementById('btn-figur').textContent, txt: document.getElementById('overlay').innerText })); await page.keyboard.press('Escape'); await wait(200);
+  await page.evaluate(() => { const S = window.SC.S; S.visits = []; S.pending = { id: 'christian', at: S.minute, t: 0 }; }); await wait(400);
+  v16.besuch = await page.evaluate(() => document.getElementById('overlay').innerText); await page.evaluate(() => { const b = document.querySelector('#overlay button[data-v="spaeter"]'); if (b) b.click(); }); await wait(200);
+  v16.ok = v16.start.join() === 'senior,Senior Principal,66,48,senior' && v16.mappe.open && /Einarbeitungsmappe/.test(v16.mappe.txt) && v16.mappe.img && v16.buero.some(t => /^lernt \+40 %$/.test(t)) && v16.buero.some(t => /^Routine$/.test(t)) &&
+    v16.halle.some(t => /lernt/.test(t)) && /Senior Principal/.test(v16.karte.btn) && /Konzernstrategie/.test(v16.karte.txt) && /Christian, der erfahrene Kollege/.test(v16.besuch) && !/Sandra: /.test(v16.buero.join());
+  if (!v16.ok) errs.push('v0.16 fehlerhaft: ' + JSON.stringify(v16).slice(0, 900));
+  console.log(JSON.stringify({ title: title.text.slice(0, 160), nameField: title.name, visitShown, st, d2, v07, v09, fig, v10, v11, v16, errs }, null, 1));
   if (errs.length || d2 !== 2 || !visitShown || title.name) process.exitCode = 1;
   await browser.close();
 })();
