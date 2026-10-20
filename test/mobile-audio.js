@@ -50,11 +50,15 @@ async function slowTap(page, sel) { const r = await page.evaluate(s => { const b
     const p4 = await browser.newPage(); await p4.setUserAgent(d.ua); await p4.setViewport({ width: d.w, height: d.h, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
     await p4.goto(url, { waitUntil: 'load' }); await wait(800); await p4.keyboard.press('m'); await wait(300);
     const keyM = await p4.evaluate(() => Object.assign(window.SC.audio.state(), { btn: document.getElementById('btn-sound').textContent })); await p4.close();
+    // v0.9: Knöpfe mindestens 44 px hoch, ein langer Ticker-Text verschiebt das Spielfeld nicht
+    const p5 = await browser.newPage(); await p5.setUserAgent(d.ua); await p5.setViewport({ width: d.w, height: d.h, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+    await p5.goto(url, { waitUntil: 'load' }); await wait(600); await p5.evaluate(() => document.querySelector('button[data-o="new"]').click()); await wait(400);
+    const lay = await p5.evaluate(async () => { const top = () => document.getElementById('rooms').getBoundingClientRect().top; const t0 = top(); window.SC.ui.toast('Sehr lange Meldung: '.repeat(30)); await new Promise(r => setTimeout(r, 100)); return { tickerH: Math.round(document.getElementById('ticker').getBoundingClientRect().height), speedH: document.getElementById('btn-speed').getBoundingClientRect().height, shift: Math.round(top() - t0), tempo: document.getElementById('btn-speed').textContent }; }); await p5.close();
     await wait(1600); await slowTap(page, '#btn-sound'); await wait(200); const muted = await st();
     await tapSel(page, '#btn-sound'); await wait(300); const unmuted = await st();
-    const ok = before.ctx !== 'running' && after.ctx === 'running' && after.ready && susp.ctx === 'suspended' && again.ctx === 'running' && muted.muted && /aus/.test(muted.btn) && !unmuted.muted && unmuted.ctx === 'running' && /Ton an/.test(unmuted.btn) && hit && !first.muted && first.ctx === 'running' && edge.muted && /aus/.test(edge.btn) && !keyM.muted && keyM.ctx === 'running' && !errs.length &&
+    const ok = before.ctx !== 'running' && after.ctx === 'running' && after.ready && susp.ctx === 'suspended' && again.ctx === 'running' && muted.muted && /aus/.test(muted.btn) && !unmuted.muted && unmuted.ctx === 'running' && /Ton an/.test(unmuted.btn) && hit && !first.muted && first.ctx === 'running' && edge.muted && /aus/.test(edge.btn) && !keyM.muted && keyM.ctx === 'running' && lay.speedH >= 44 && Math.abs(lay.shift) <= 2 && lay.tickerH <= 120 && !errs.length &&
       (d.name !== 'iphone' || /Stummschalter/.test(after.ticker));
-    res.push({ dev: d.name, before: before.ctx, btnBefore: before.btn, after: after.ctx, el: after.el, btnAfter: after.btn, iosHint: /Stummschalter/.test(after.ticker), susp: susp.ctx, again: again.ctx, muted: muted.btn, unmuted: unmuted.btn, buttonOnTop: hit, firstTapButton: first.btn, first, edgeTapThenButton: edge.btn, edgeMuted: edge.muted, keyM: keyM.btn, keyMctx: keyM.ctx, errs, ok });
+    res.push({ dev: d.name, before: before.ctx, btnBefore: before.btn, after: after.ctx, el: after.el, btnAfter: after.btn, iosHint: /Stummschalter/.test(after.ticker), susp: susp.ctx, again: again.ctx, muted: muted.btn, unmuted: unmuted.btn, buttonOnTop: hit, firstTapButton: first.btn, first, edgeTapThenButton: edge.btn, edgeMuted: edge.muted, keyM: keyM.btn, keyMctx: keyM.ctx, lay, errs, ok });
     await page.close();
   }
   console.log(JSON.stringify(res, null, 1));
