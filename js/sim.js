@@ -757,7 +757,7 @@
     const left = Math.max(SC.DAY_END, S.minute);
     const over = Math.max(0, Math.round(left - SC.DAY_END) - (S.partyMin || 0));
     if (!S.excel) { S.chef -= 6; R.lines.push(['bad', 'Excel-Liste nicht gepflegt: Werkleitung −6']); }
-    if (over > 0) { const U = T().ueber, f = Math.max(over > U.frei ? U.min : 0, Math.round(over / U.div)); S.family -= f; S.stats.overtime += over; R.lines.push(f ? ['bad', 'Überstunden ' + over + ' Min.: Familie −' + f] : ['info', 'Überstunden ' + over + ' Min.: Das Abendessen ist noch warm. Familie unverändert.']); }
+    if (over > 0) { const U = T().ueber, f = Math.max(over > U.frei ? U.min : 0, Math.round(over / U.div)); S.family -= f; S.stats.overtime += over; const uz = (S.partyMin ? 'Nach der Party noch ' + over + ' Min. geblieben' : 'Überstunden ' + over + ' Min.'); R.lines.push(f ? ['bad', uz + ': Familie −' + f] : ['info', uz + ': Das Abendessen ist noch warm. Familie unverändert.']); }
     else { S.family += 4; R.lines.push(['good', 'Pünktlich daheim: Familie +4']); }
     // Stillstand und KPIs
     let down = S.downMin, overnight = false;
@@ -811,7 +811,7 @@
     const rest = 55 - Math.round(over / T().ueber.rest);
     S.energy = clamp(S.energy + rest, 15, 100);
     let fri = weekday(S) === 4;
-    if (S.burnout) { S.burnout = false; S.chef -= 8; S.family -= 4; S.energy = 70; R.lines.push(['bad', 'Am Schreibtisch eingeschlafen, Kopf auf der Tastatur. Ein Tag krank: Werkleitung −8.' + (weekday(S) === 3 ? ' Der Freitag fällt aus, das Wochenende kommt danach trotzdem.' : weekday(S) === 4 ? ' Das Wochenende kommt trotzdem, aber der Montag fällt aus.' : '')]); if (S.ev.kaffee === S.day && weekday(S) === 4) S.ev.kaffeeKrank = S.day + 1; S.day++; if (T().cost.daily) spend(S, T().cost.daily); if (weekday(S) === 4 && S.kredit > 0) { const z = Math.max(1, Math.round(S.kredit * T().kredit.zins)); spend(S, z); R.lines.push(['bad', 'Kreditzinsen (Saldo ' + S.kredit + ' k€): −' + z + ' k€']); } if (S.auktion && !S.auktion.res && S.day >= S.auktion.closeDay) closeAuktion(S, R); if (weekday(S) === 4) { fri = true; wochenRueckblick(S, R); S.chef = clamp(S.chef, 0, 100); S.image = clamp(S.image, 0, 100); auditFreitag(S, R); } }
+    if (S.burnout) { S.burnout = false; S.chef -= 8; S.family -= 4; S.energy = 70; R.lines.push(['bad', 'Am Schreibtisch eingeschlafen, Kopf auf der Tastatur. Ein Tag krank: Werkleitung −8, Familie −4.' + (weekday(S) === 3 ? ' Der Freitag fällt aus, das Wochenende kommt danach trotzdem.' : weekday(S) === 4 ? ' Das Wochenende kommt trotzdem, aber der Montag fällt aus.' : '')]); if (S.ev.kaffee === S.day && weekday(S) === 4) S.ev.kaffeeKrank = S.day + 1; S.day++; if (T().cost.daily) spend(S, T().cost.daily); if (weekday(S) === 4 && S.kredit > 0) { const z = Math.max(1, Math.round(S.kredit * T().kredit.zins)); spend(S, z); R.lines.push(['bad', 'Kreditzinsen (Saldo ' + S.kredit + ' k€): −' + z + ' k€']); } if (S.auktion && !S.auktion.res && S.day >= S.auktion.closeDay) closeAuktion(S, R); if (weekday(S) === 4) { fri = true; wochenRueckblick(S, R); S.chef = clamp(S.chef, 0, 100); S.image = clamp(S.image, 0, 100); auditFreitag(S, R); } }
     S.chef = clamp(S.chef, 0, 100); S.family = clamp(S.family, 0, 100); S.schicht = clamp(S.schicht, 0, 100);
     R.progress = me; R.rivals = S.rivals.map(r => ({ name: r.name, prog: r.prog })); R.budget = S.budget; R.kpiIndex = kpiIndex(S);
     R.friday = fri;

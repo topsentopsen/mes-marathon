@@ -11,12 +11,12 @@
   const SND_HINT = 'Ton an. Kein Ton? Stummschalter am iPhone prüfen und Lautstärke hoch.';
 
   UI.overlayOpen = () => UI._ov;
-  function overlay(html) { $('overlay').innerHTML = '<div class="box">' + html + '</div>'; $('overlay').classList.remove('hidden'); UI._ov = true; }
+  function overlay(html) { if (!/data-o="logzu"/.test(html)) UI._log = false; $('overlay').innerHTML = '<div class="box">' + html + '</div>'; $('overlay').classList.remove('hidden'); UI._ov = true; }
   function closeOverlay() { $('overlay').classList.add('hidden'); UI._ov = false; }
   UI.toast = function (t, bad) { const el = $('ticker'); el.innerHTML = '<span class="' + (bad ? 'bad' : '') + '">' + esc(t) + '</span>'; };
 
   // v0.8: Tipp auf den Ticker zeigt das Tagesprotokoll (das Overlay hält die Uhr an)
-  UI.showLog = function () { const s = S(); if (!s || s.phase !== 'tag' || UI._ov) return; overlay('<h2>Tagesprotokoll · Tag ' + s.day + '</h2>' + (s.dayLog.length ? '<ul class="log">' + s.dayLog.map(l => '<li>' + esc(l) + '</li>').join('') + '</ul>' : '<p class="dim">Noch nichts passiert. Verdächtig.</p>') + '<p><button data-o="logzu">Weiter</button></p>'); };
+  UI.showLog = function () { const s = S(); if (!s || s.phase !== 'tag' || UI._ov) return; UI._log = true; overlay('<h2>Tagesprotokoll · Tag ' + s.day + '</h2>' + (s.dayLog.length ? '<ul class="log">' + s.dayLog.map(l => '<li>' + esc(l) + '</li>').join('') + '</ul>' : '<p class="dim">Noch nichts passiert. Verdächtig.</p>') + '<p><button data-o="logzu">Weiter</button></p>'); };
   function flushMsgs() {
     const s = S(); if (!s) return;
     // v0.8: mehrere Meldungen in einem Takt überschreiben sich nicht mehr, die letzten zwei stehen zusammen im Ticker
@@ -267,7 +267,7 @@
       '<li><b>Neu in 0.7:</b> Im Schichtleiter-Büro hängt ein Abreißkalender, am Ende zeigt »Dein Werk in Zahlen«, was du so getrieben hast. Im Herbst gibt es am Kiosk Lebkuchen. Beim ersten Start gibt das Titelbild eine Kurzanleitung. Fällt der Freitag wegen eines Burnouts aus, kommt das Wochenende danach trotzdem.</li>' +
       '<li><b>Neu in 0.8:</b> Ein Tipp auf den Ticker unten zeigt das Tagesprotokoll (die Uhr steht so lange). Kommen mehrere Meldungen auf einmal, stehen die letzten zwei zusammen im Ticker. Am Werkstor hängt ein Aushang, im Leitstand das Diagramm des Tages. Ein Burnout am Freitag kostet den Montag. Spielstände aus 0.7 laden weiter.</li>' +
       '<li><b>Flurfunk (neu in 0.3):</b> Brandschutzübungen, Beamer-Kabel, Überraschungsgerichte und mehr. Die Werkleitung streut Buzzwords: fünf verschiedene sind ein Bingo (Punkte). Werksdurchsagen, die Werkszeitung am Abend und ein paar Easter Eggs.</li>' +
-      '<li><b>Excel-Liste</b> jeden Tag pflegen. Server und Drucker zicken. Kaffee und Mittagessen in der Kantine geben Energie. Bei Energie 0 schläfst du am Schreibtisch ein: Der nächste Tag fällt aus (krank, Werkleitung −8). Fällt so der Tag vor dem Go-Live-Termin aus, ist am Abend danach Schluss.</li>' +
+      '<li><b>Excel-Liste</b> jeden Tag pflegen. Server und Drucker zicken. Kaffee und Mittagessen in der Kantine geben Energie. Bei Energie 0 schläfst du am Schreibtisch ein: Der nächste Tag fällt aus (krank, Werkleitung −8, Familie −4; am Freitag trifft es den Montag). Fällt so der Tag vor dem Go-Live-Termin aus, ist am Abend danach Schluss.</li>' +
       '<li><b>Feierabend</b> über die Pforte ab 15:00. Überstunden bis 20:00 kosten Familie. Sirene um 14:00: Schichtwechsel.</li>' +
       '<li><b>Ton auf dem Handy:</b> Der Ton startet mit der ersten Berührung. Oben rechts schaltet der Ton-Knopf an und aus. Auf dem iPhone den Stummschalter prüfen.</li><li>Verloren: Werkleitung oder Familie auf null, Budget unter −40 k€ oder Go-Live-Termin verpasst.</li></ul><p class="small">Tasten: Leertaste Pause, + Tempo, Esc Raum verlassen, M Ton, K Kopfhörer.</p><p><button data-o="back">Zurück</button></p>');
   }
@@ -280,7 +280,7 @@
       const b = e.target.closest('button[data-o]'); if (!b) return; const o = b.dataset.o; aud('unlock');
       if (o === 'new') UI.newGame();
       else if (o === 'cont') { unpause(); SC.S = sim().load(); shown = SC.S.msgs.length; closeOverlay(); SC.building.reset(); UI._siren = SC.S.sirene; if (SC.S.phase === 'tag') { aud('play', 'tower'); morning(); } else showEvening(SC.S, SC.S.lastReport); }
-      else if (o === 'logzu') closeOverlay();
+      else if (o === 'logzu') { UI._log = false; closeOverlay(); }
       else if (o === 'help') help();
       else if (o === 'back' || o === 'title') UI.showTitle();
       else if (o === 'next') next();
@@ -317,6 +317,7 @@
     syncSnd();
     document.addEventListener('keydown', e => {
       if (e.target.tagName === 'INPUT') return;
+      if (e.key === 'Escape' && UI._log && UI._ov) { UI._log = false; closeOverlay(); return; }
       if (e.key === 'Escape' && UI.room) UI.closeRoom();
       if (e.key === ' ') { $('btn-pause').click(); e.preventDefault(); }
       if (e.key === '+') $('btn-speed').click();

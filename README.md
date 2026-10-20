@@ -4,6 +4,11 @@ Retro-Managerspiel im Browser, inspiriert von **Mad TV** (1991) und abgeleitet a
 
 **Spielen:** https://topsentopsen.github.io/mes-marathon/
 
+## Neu in v0.8.0 »Aushang«
+- Ein Tipp auf den Ticker zeigt das Tagesprotokoll (📋). Außerdem gibt es einen Aushang am Werkstor, das Diagramm des Tages im Leitstand und eine Zeile im Wochenend-Dialog. Spielstände aus 0.7.0 laden weiter.
+- Behoben: »Familie −0«, Meldungen im Ticker überschrieben sich, Jingle am Spielende über das Wochenende, Burnout am Freitag, doppelte Aufzählungspunkte im Protokoll.
+- Details: `docs/RELEASE-v0.8.md`. Balance: `docs/BALANCE-v0.8.md` (unverändert). Review: `docs/REVIEW-v0.8.md`. Plan: `docs/PLAN-v0.8.md`.
+
 ## Neu in v0.7.0 »Abreißkalender«
 - Abreißkalender im Schichtleiter-Büro, »Dein Werk in Zahlen« und ein Abschluss-Satz im Endbildschirm, Lebkuchen im Herbst, Kurzanleitung beim ersten Start.
 - Behoben: Überstunden mit Nachkommastellen, Kaffeeautomat nach Burnout am Freitag, Randfall der Süßigkeitenbox.
@@ -51,5 +56,5 @@ Vanilla JavaScript ohne Build, Canvas-Pixelgrafik, Musik und Fabriklärm per Web
 
 Eigenes Fanprojekt, keine Original-Inhalte von Mad TV. Alle Figuren, Werke und Firmen sind frei erfunden.
 
-## Balance (v0.7.0, `node tools/bot.js 1000 --check`)
-Siehe `docs/BALANCE-v0.7.md` (ältere: `-v0.6` bis `-v0.2`). Gegenüber v0.6 unverändert. Meeting-Marathon bleibt deutlich schwächer als planvolles Arbeiten (15 gegen 60 %). Überstunden lohnen sich weniger: fleissig 35 %, bis 17:30 bleiben 74,5 % (3000 Partien). Offen: Das ist weiter etwa 15 PP besser als pünktlich gehen.
+## Balance (v0.8.0, `node tools/bot.js 1000 --check`)
+Siehe `docs/BALANCE-v0.8.md` und `docs/BALANCE-v0.7.md` (ältere: `-v0.6` bis `-v0.2`). Seit v0.6 unverändert, in v0.8 ist die Bot-Tabelle identisch. Meeting-Marathon bleibt deutlich schwächer als planvolles Arbeiten (15 gegen 60 %). Überstunden lohnen sich weniger: fleissig 35 %, bis 17:30 bleiben 74,5 % (3000 Partien). Offen: Das ist weiter etwa 15 PP besser als pünktlich gehen.
