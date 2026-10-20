@@ -4,6 +4,12 @@ Retro-Managerspiel im Browser, inspiriert von **Mad TV** (1991) und abgeleitet a
 
 **Spielen:** https://topsentopsen.github.io/mes-marathon/
 
+## Neu in v0.10.0 »Feinschliff mit Sandra«
+- Neun neue Szenen für Sandra aus dem MES-Alltag, neue Tipps von Christian und neue Zeilen, wenn Sandra bei Christian vorbeischaut. Die Bestenliste zeigt die Figur.
+- Lesbarkeit: hellere Hinweistexte, Absätze höchstens 70 Zeichen, sichtbarer Tastaturfokus, Ticker per Tab und Enter. Auf dem Handy beginnen Dialoge unter dem Ton-Knopf, und Räume sind höher.
+- Tasten: Leertaste (Pause, im Raum und in Dialogen löst sie den Knopf aus), Enter, Esc (Raum verlassen, Hinweis schließen), Tab, + und − (Tempo), M (Ton), K (Kopfhörer).
+- Details: `docs/RELEASE-v0.10.md`. Balance: `docs/BALANCE-v0.10.md` (unverändert). Review: `docs/REVIEW-v0.10.md`. Plan: `docs/PLAN-v0.10.md`.
+
 ## Neu in v0.9.0 »Sandra«
 - Mehr Ruhe zum Lesen: In Räumen, Dialogen, Hinweisen und Textfeldern steht die Uhr, eine Aktion springt um ihre Dauer vor. Tempo Langsam, Normal, Schnell (Standard Langsam: 60 Echtsekunden pro Spielstunde, vorher 30). Der 17:00-Hinweis wartet auf »Weiter«. Größere und scharfe Schrift, Schalter »Schrift: Groß«.
 - Zweite Figur: Bei »Neues Spiel« wählst du Christian oder Sandra. Die andere Figur ist als Kollege oder Kollegin im Werk. Spielstände speichern die Figur, alte Stände laden mit Christian.
@@ -61,5 +67,5 @@ Vanilla JavaScript ohne Build, Canvas-Pixelgrafik, Musik und Fabriklärm per Web
 
 Eigenes Fanprojekt, keine Original-Inhalte von Mad TV. Alle Figuren, Werke und Firmen sind frei erfunden.
 
-## Balance (v0.9.0, `node tools/bot.js 1000 --check`, für Sandra mit `--figur=sandra`)
+## Balance (v0.10.0 unverändert zu v0.9.0, `node tools/bot.js 1000 --check`, für Sandra mit `--figur=sandra`)
 Siehe `docs/BALANCE-v0.9.md` (Christian unverändert, Sandra gut 56 gegen 58 %), `docs/BALANCE-v0.8.md` und `docs/BALANCE-v0.7.md` (ältere: `-v0.6` bis `-v0.2`). Seit v0.6 unverändert, in v0.8 ist die Bot-Tabelle identisch. Meeting-Marathon bleibt deutlich schwächer als planvolles Arbeiten (15 gegen 60 %). Überstunden lohnen sich weniger: fleissig 35 %, bis 17:30 bleiben 74,5 % (3000 Partien). Offen: Das ist weiter etwa 15 PP besser als pünktlich gehen.
