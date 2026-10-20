@@ -3,9 +3,9 @@
 'use strict';
 window.SC = window.SC || {};
 (function (SC) {
-  SC.VERSION = '0.13.0';
+  SC.VERSION = '0.14.0';
   // v0.8: Spielstände dieser Versionen laden weiter (kein neues Feld in S)
-  SC.SAVE_OK = ['0.7.0', '0.8.0', '0.9.0', '0.10.0', '0.11.0', '0.12.0'];
+  SC.SAVE_OK = ['0.7.0', '0.8.0', '0.9.0', '0.10.0', '0.11.0', '0.12.0', '0.13.0'];
   SC.DAY_START = 7 * 60 + 30;   // 07:30 Frühschicht-Beginn im Büro
   SC.DAY_END = 17 * 60;         // 17:00 regulärer Feierabend
   SC.LATEST = 20 * 60;          // 20:00 der Pförtner schließt ab
@@ -17,13 +17,17 @@ window.SC = window.SC || {};
   SC.PLAYER = { name: 'Christian', col: '#8cb8e8' };
   // v0.9 Figurenwahl: Christian (der Erfahrene) oder Sandra (die Kollegin aus der MES-Entwicklung).
   // Namensregel: Nur Christian und Sandra haben Namen. Alle anderen Figuren heißen nach ihrer Rolle.
+  // v0.14: Namensregel erweitert, dazu kommt Ivo (Quereinsteiger aus der Werkslogistik). Sonst bleibt es bei Rollen.
   SC.FIGUREN = {
     christian: { id: 'christian', name: 'Christian', col: '#8cb8e8', titel: 'MES-Projektleiter', kurz: 'mit langer Werkserfahrung',
       plus: ['Kennt jede Station und jeden Schichtleiter persönlich', 'Gute Beziehungen: Werkleitung 60, Schichtleiter 50'],
       minus: ['Steckt in vielen Gesprächen und Meetings', 'Kein Vorsprung bei Spezifikation, Umsetzung und Berichten'] },
     sandra: { id: 'sandra', name: 'Sandra', col: '#58b8a8', titel: 'MES-Spezialistin', kurz: 'die Kollegin aus der MES-Entwicklung',
       plus: ['Kennt die MES-Schnittstellen aus der Entwicklung: Spezifikation, Umsetzung, Deploy, Berichte und Migration gehen bis Feierabend flotter', 'Weniger Fehler im Testlauf, Mapping beim Altwerk in 18 statt 30 Min.'],
-      minus: ['Neu im Werk: Werkleitung 55, Schichtleiter 42, Beziehungen wachsen langsamer', 'Hallen-Anforderungen und Reparaturen dauern länger'] }
+      minus: ['Neu im Werk: Werkleitung 55, Schichtleiter 42, Beziehungen wachsen langsamer', 'Hallen-Anforderungen und Reparaturen dauern länger'] },
+    ivo: { id: 'ivo', name: 'Ivo', col: '#e8a040', titel: 'MES-Quereinsteiger', kurz: 'neu im MES, vorher in der Werkslogistik',
+      plus: ['Kennt Halle und Lager: Anforderungen, Linie und Gespräche mit der Schicht gehen schneller', 'Die Halle kennt ihn: Schichtleiter 58, Vertrauen wächst schneller'],
+      minus: ['Neu im MES: Büro- und Serveraufgaben dauern anfangs länger, ab Tag 10 normal', 'Werkleitung 50, Fachbegriffe und Pyramide sind noch Neuland'] }
   };
   // Christian als Kollege bei Sandra (Besuch, 12 Min.): erprobte Tipps aus der Halle
   SC.CHRISTIAN_TIPPS = [
@@ -83,13 +87,71 @@ window.SC = window.SC || {};
     notbehelf: 'Beim Notbehelf fallen 40 Teile Ausschuss an. Gebucht werden sie auf die Kostenstelle »Muss weg«. Du legst im MES einen echten Ausschussgrund an. Die Kostenstelle bleibt trotzdem.'
   };
   SC.SANDRA_TAG1 = 'Dein Werksausweis ist noch nicht gedruckt. Der Pförtner schreibt dir einen Besucherzettel: »MES, Ebene drei.« Das Formular hat kein Feld für »arbeitet hier«.';
+  // v0.14 Ivo: Quereinsteiger aus der Werkslogistik. Er ist neu im MES, nicht dumm. Der Humor geht über die Begriffe, nie über ihn.
+  SC.IVO_TAG1 = 'Erster Tag im MES-Projekt. Der Pförtner kennt dich noch aus der Logistik und winkt dich durch. Auf deinem neuen Zettel steht: »MES, Ebene drei.« Du suchst kurz das Hochregal. Dann den Aufzug.';
+  SC.IVO_LERN10 = 'Du sagst zum ersten Mal »Deployment«, ohne an eine Palette zu denken. Büro- und Serveraufgaben dauern ab heute so lange wie bei allen anderen.';
+  SC.IVO_KOLLEGE = '{C} erklärt dir an der Kaffeemaschine, wie das MES die Halle sieht. Du erklärst ihm, wie die Halle das MES sieht. Beide schreiben mit.';
+  // Einstieg beim Spielstart (eigener Dialog, Uhr steht): MES-Grundlagen in kurz
+  SC.IVO_INTRO = {
+    titel: 'Ivos erster Tag im MES',
+    text: 'Bisher hast du in der Werkslogistik dafür gesorgt, dass Material da ist, wo es sein soll. Seit heute bist du im MES-Projekt. Die Halle und die Leute kennst du schon, die Begriffe noch nicht. Das ändert sich jeden Tag ein Stück.',
+    glossar: [
+      ['MES', 'das System zwischen Halle und Büro. Es weiß, was gerade gebaut wird.'],
+      ['ERP', 'das System von Werkleitung und Controlling. Es weiß, was es kostet.'],
+      ['SPS', 'die Steuerung an der Maschine. Keine SMS.'],
+      ['Requirements', 'was die Halle wirklich braucht. Hier bist du stark.'],
+      ['Spezifikation, Implementierung, Deployment', 'aufschreiben, bauen, aufs System bringen.'],
+      ['Abnahme', 'die Werkleitung sagt »passt«. Dann zählt das Modul.']
+    ],
+    schluss: 'Bis Tag 10 dauern Büro- und Serveraufgaben bei dir etwas länger, jeden Tag ein bisschen weniger. Bis dahin hängt in jedem Raum ein Merkzettel. Und {C} schaut ab und zu vorbei.'
+  };
+  // Merkzettel je Raum (bis Tag 10, nur für Ivo)
+  SC.IVO_MERK = {
+    halle: 'Requirements = was die Halle wirklich braucht. Testlauf = das Modul an der Teststation ausprobieren. n.i.O. = nicht in Ordnung.',
+    schicht: 'Der Schichtleiter ist dein Draht in die Halle. Du kennst ihn schon. Das zählt hier doppelt.',
+    werkstatt: 'Instandhaltung = Reparatur und Wartung. Notbehelf = es läuft, aber frag nicht wie.',
+    buero: 'Spezifikation = aufschreiben, was das Modul tun soll. Implementierung = es bauen. Migration = alte Daten umziehen, wie ein Lagerumzug.',
+    leitstand: 'KPI = Kennzahl. OEE = wie gut eine Anlage wirklich läuft. Der Bericht sammelt beides.',
+    meeting: 'Ein Meeting lohnt sich, wenn danach jemand etwas tut. Steht »nützlich« dran, geh hin.',
+    kantine: 'Kaffee gibt Energie, Mittagessen auch. Beides ist im MES-Projekt ausdrücklich erlaubt.',
+    drucker: 'Ausdruck = das Papier für die Abnahme. Ja, auch im digitalen Projekt.',
+    server: 'Deployment = neue Software aufs System bringen, nicht Ware ins Regal. Restart = alles aus, alles an.',
+    it: 'Automatisierungspyramide: EG Feld, 1 Steuerung, 2 Leitebene, 3 MES, 4 ERP. Jede Etage hier ist eine Ebene.',
+    chef: 'Abnahme = die Werkleitung sagt »passt«. Vorher braucht sie den Ausdruck vom Drucker.',
+    controlling: 'Budget = was das Projekt ausgeben darf. Tranche = der nächste Teil davon, einmal pro Woche.',
+    pforte: 'Hier geht es nach Hause. Ab 17:00 wird jede Minute teurer, auch für Quereinsteiger.'
+  };
+  // Szenen nach Aktionen (nur für Ivo, keine Zeitkosten, eigene Zufallssalze 36000 und 37000)
+  SC.IVO_SZENEN = {
+    req: 'Du kennst die Halle aus der Logistik: Der Stapler fährt immer links, egal was das Schild sagt. Das steht jetzt in der Anforderung. Es ist die ehrlichste Zeile im Dokument.',
+    spec: 'Im Lastenheft steht »siehe Pflichtenheft«. Im Pflichtenheft steht »siehe Lastenheft«. Du malst einen Pfeil auf den Merkzettel. Er zeigt im Kreis, aber jetzt weißt du, warum.',
+    impl: 'Die Entwicklung sagt: »Das ist kein Bug, das ist ein Feature.« Du notierst beides. Auf dem Merkzettel steht jetzt: Feature = ein Fehler, den jemand bestellt hat.',
+    deploy: 'Der Admin sagt, das Deployment sei durch. Du fragst, auf welche Palette. Er erklärt es dir in zwei Sätzen. Eigentlich ist es eine Auslieferung, nur ohne Lieferschein.',
+    migrate: 'Migration heißt: alte Daten ins neue System. Du kennst das vom Umzug ins neue Lager. Auch hier gibt es eine Kiste »Sonstiges«, die niemand öffnen will.',
+    bericht: 'Der Bericht verlangt die OEE. Du schreibst erst »OEG«, dann schaust du nach: Gesamtanlageneffektivität. Das Wort ist länger als dein Bericht. Der Leitstand ist trotzdem zufrieden.',
+    test: 'Beim Testlauf ruft der Maschinenführer: »n.i.O.!« Du denkst kurz an eine neue Abteilung. Jetzt weißt du: nicht in Ordnung. Die Linie lacht mit dir, nicht über dich.',
+    linie: 'An der Linie fragst du, was »Takt« genau heißt. Der Maschinenführer klopft ihn dir auf den Tisch. Du erklärst ihm dafür, wie das Material morgens wirklich ankommt. Fairer Tausch.'
+  };
+  SC.IVO_SZENEN2 = {
+    schichtplan: 'Du fragst nach dem Schichtplan. Der Schichtleiter zeigt ihn ohne Seufzen. Du hast ihm mal bei der Inventur geholfen. Das vergisst hier niemand.',
+    gespraech: 'Der Schichtleiter fragt, ob das MES weiß, dass Tor 3 klemmt. Du weißt es. Das MES noch nicht. Du schreibst es auf. Er nickt, ganz ohne »Wir schauen mal«.',
+    restart: 'Jemand ruft: »Die SPS spinnt!« Du fragst, wer die SMS bekommen hat. Der Admin malt dir die SPS auf eine Serviette. Die hängt jetzt am Monitor, gleich neben deinem Merkzettel.',
+    abnahme: 'In der Mail steht: »Charge bitte freigeben.« Du gehst erst zur Werkleitung. Die schickt dich in die Halle. Dort liegt die Charge. Seitdem steht auf dem Merkzettel: Charge ist kein Chef.',
+    review: 'Im Code-Review sagt die IT: »Das ist hart codiert.« Du fragst, wie hart. Sie zeigt es dir. Ziemlich hart. Du findest trotzdem die Stelle, an der das Lager falsch heißt.',
+    excel: 'Die Excel-Liste hat 14 Reiter, drei heißen »Tabelle1«. Im Lager hättet ihr dafür ein Etikett gemacht. Du machst eins. Es hilft.',
+    print: 'Der Drucker will Papier aus »Fach 2«. Du kennst Fach 2 aus dem Hochregal. Es ist nicht dieses Fach 2. Der Ausdruck kommt trotzdem.',
+    mail: 'Eine Mail mit neun Abkürzungen. Du schlägst MES, ERP, BDE und KPI nach. Die anderen fünf kennt im Werk auch sonst niemand. Das beruhigt.',
+    wartung: 'Die Instandhaltung redet von vorbeugender Wartung. Du kennst das vom Stapler: Ölwechsel, bevor er stehen bleibt. Sie schaut überrascht. Genau das ist es.'
+  };
   // Anrede im Text: alle Spielertexte sind für Christian geschrieben, für Sandra werden sie angepasst.
   // Nur einmal je Text anwenden (an den Anzeigestellen), denn aus {C} wird »Christian«, und ein zweiter Lauf machte daraus »Sandra«.
-  SC.FILL = { sandra: [[/Christian/g, 'Sandra'], [/»der vom MES«/g, '»die vom MES«'], [/»den vom MES«/g, '»die vom MES«'], [/Hemd wie immer/g, 'Blazer wie immer'], [/»den Entsorger«/g, '»die Entsorgerin«'], [/wirst Imker\./g, 'wirst Imkerin.'], [/zum Schornsteinbeauftragten/g, 'zur Schornsteinbeauftragten'], [/Pappkameraden/g, 'Pappaufsteller'], [/Pappkamerad\b/g, 'Pappaufsteller'], [/MES-Projektleiter\b/g, 'MES-Spezialistin']] };
+  SC.FILL = { sandra: [[/Christian/g, 'Sandra'], [/»der vom MES«/g, '»die vom MES«'], [/»den vom MES«/g, '»die vom MES«'], [/Hemd wie immer/g, 'Blazer wie immer'], [/»den Entsorger«/g, '»die Entsorgerin«'], [/wirst Imker\./g, 'wirst Imkerin.'], [/zum Schornsteinbeauftragten/g, 'zur Schornsteinbeauftragten'], [/Pappkameraden/g, 'Pappaufsteller'], [/Pappkamerad\b/g, 'Pappaufsteller'], [/MES-Projektleiter\b/g, 'MES-Spezialistin']], ivo: [[/Christian/g, 'Ivo'], [/Hemd wie immer/g, 'Warnweste wie immer']] };
   // {C} steht in Texten, in denen Christian als Kollege vorkommt (wird nach der Anpassung eingesetzt)
   SC.fill = (S, t) => { if (t == null) return t; t = String(t); const L = S && SC.FILL[S.figur]; if (L) for (const [a, b] of L) t = t.replace(a, b); return t.replace(/\{C\}/g, 'Christian'); };
   SC.KOLLEGE_BUBBLES = {
     christian: ['Erst Kaffee, dann Frage.', 'Dein Mapping schlägt meinen SVERWEIS.', 'Kennst du schon den Schichtleiter?', 'Wir schauen mal. Das heißt Nein.', 'Rüsten? Setz dich dazu.', 'Erst fragen, dann ersetzen.', 'Charge? Frag das Papier.'],
+    // v0.14: Christian als Kollege bei Ivo (eigene Sprechblasen, freundlich und erklärend)
+    christianIvo: ['MES? Frag ruhig.', 'Deployment heißt Ausrollen.', 'Du kennst die Halle. Das zählt.', 'SPS ist die Steuerung.', 'Erst Kaffee, dann Glossar.', 'Zweimal fragen ist gut.', 'Charge? Steht in der Halle.'],
     sandra: ['Mapping? Gib mir 10 Min.', 'Frag mich zum BDE-Feed.', 'Ich hab ein Dashboard gebaut!', 'Echtzeit heißt jetzt, nicht abends.', 'Ich zeichne dir die Freigabe.', 'Etikett in 100 mal 60 mm?', 'Schnittstelle? Sag Bescheid.']
   };
   SC.PLANT = 'Werk Mitte';
@@ -143,7 +205,11 @@ window.SC = window.SC || {};
     // v0.9 Figuren: Christian ist die Basis (alles 1, keine Boni), nur Sandra hat Abweichungen
     figur: { sandra: { start: { chef: 55, schicht: 42 }, dauer: { spec: 0.95, impl: 0.9, deploy: 0.85, restart: 0.85, migrate: 0.9, bericht: 0.85, review: 0.8, req: 1.25, repair: 1.4, notbehelf: 1.4 },
       // v0.11 nurBis17: der Zeitvorteil gilt nur bis Feierabend (gemessen: fleissig 46 auf 33 %, gut1730 77 auf 75 %, gut bleibt 56 %)
-      nurBis17: true, schichtF: 0.6, abnahmeChef: -2, testRisk: 0.04, mapping: 18, erklaeren: 0.65, pyrFalsch: 25, kollege: { p: 0.45, min: 12, schicht: 4, ab: 2 } } },
+      nurBis17: true, schichtF: 0.6, abnahmeChef: -2, testRisk: 0.04, mapping: 18, erklaeren: 0.65, pyrFalsch: 25, kollege: { p: 0.45, min: 12, schicht: 4, ab: 2 } },
+      // v0.14 Ivo: stark in der Halle, im Büro und am Server mit Lernkurve (Faktor lern am Tag 1, sinkt linear bis Tag lernBis auf 1)
+      ivo: { start: { chef: 50, schicht: 58 }, dauer: { req: 0.8, linie: 0.85, gespraech: 0.85, schichtplan: 0.85 },
+        lern: { spec: 1.2, impl: 1.2, deploy: 1.2, migrate: 1.2, bericht: 1.2, review: 1.2, restart: 1.15 }, lernBis: 10,
+        nurBis17: false, schichtF: 1.2, abnahmeChef: 0, testRisk: 0, mapping: 38, erklaeren: 0.6, pyrFalsch: 35, kollege: { p: 0.5, min: 12, schicht: 3, ab: 2 } } },
     budgetStart: 110, tranche: 30, trancheLow: 15, berater: 25,
     kredit: { rahmen: 60, rahmenHoch: 80, schritt: 20, zins: 0.08 },
     rival: { p: 0.2, lead: 0.1, from: 4, cost: 5, cut: 15 },

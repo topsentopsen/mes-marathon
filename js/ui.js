@@ -117,10 +117,14 @@
       const why = a.check(s); let cost = sim().actCost(s, room, a.id); const label = typeof a.label === 'function' ? a.label(s) : a.label;
       const wait = sim().handoverWait(s, room), fertig = s.minute + wait + cost, spaet = fertig > SC.DAY_END + (s.partyMin || 0);
       // v0.11: Sandras Stärken und Schwächen sichtbar auf dem Knopf (nur Anzeige)
-      const ff = s.figur === 'sandra' && cost ? sim().figF(s, a.id) : 1, roh = s.figur === 'sandra' && cost ? (SC.TUNE.figur.sandra.dauer[a.id] || 1) : 1, fv = ff < 1 ? ' <span class="small good fig">Sandra: schneller</span>' : ff > 1 ? ' <span class="small warn fig">Sandra: langsamer</span>' : roh < 1 ? ' <span class="small dim fig">Sandra: Vorsprung nur bis 17:00</span>' : '';
+      const ff = s.figur === 'sandra' && cost ? sim().figF(s, a.id) : 1, roh = s.figur === 'sandra' && cost ? (SC.TUNE.figur.sandra.dauer[a.id] || 1) : 1;
+      let fv = ff < 1 ? ' <span class="small good fig">Sandra: schneller</span>' : ff > 1 ? ' <span class="small warn fig">Sandra: langsamer</span>' : roh < 1 ? ' <span class="small dim fig">Sandra: Vorsprung nur bis 17:00</span>' : '';
+      // v0.14 Ivo: schneller in der Halle, »lernt noch« bei Büro- und Serveraufgaben bis Tag 10 (nur Anzeige)
+      if (s.figur === 'ivo' && cost) { const fi = sim().figF(s, a.id); fv = fi < 1 ? ' <span class="small good fig">Ivo: schneller</span>' : fi > 1 ? ' <span class="small warn fig">Ivo: lernt noch</span>' : ''; }
       h += '<div class="act"><button data-a="' + a.id + '"' + (why ? ' disabled title="' + esc(why) + '"' : '') + '>' + esc(label) + (cost ? ' <span class="small">(' + cost + ' Min.' + (wait ? ' + ' + wait + ' Wartezeit' : '') + ', fertig ' + (spaet ? '⚠ ' : '') + hm(fertig) + (spaet ? ' nach Feierabend' : '') + ')</span>' : '') + fv + '</button>' + (why ? '<div class="small dim why">' + esc(why) + '</div>' : '') + '</div>';
     }
     h += '</div>';
+    if (s.figur === 'ivo' && s.day <= SC.TUNE.figur.ivo.lernBis && SC.IVO_MERK[room]) info += '<p class="small merk">📒 Merkzettel: ' + esc(SC.IVO_MERK[room]) + '</p>';
     if (room === 'halle' || room === 'buero') info += '<p class="small dim">Ablauf je Modul: Requirements (Hallen, Station) → Spezifikation → Implementierung (Büro) → Deployment (Serverraum) → Testlauf (Hallen, Teststation) → Ausdruck (Drucker) → Abnahme (Werkleitung).</p>';
     const fa = document.activeElement && $('room').contains(document.activeElement) && document.activeElement.dataset ? document.activeElement.dataset.a : null; // Fokus über das Neuzeichnen retten
     $('room').innerHTML = F(head + '<div class="room-cols' + (info ? '' : ' nur-acts') + '">' + (info ? '<div class="room-info">' + info + '</div>' : '') + '<div class="room-act">' + h + '</div></div>');
@@ -279,7 +283,7 @@
     return z.length ? '<h3>Dein Werk in Zahlen</h3><p class="small">' + z.map(x => esc(x[0]) + ': <b>' + x[1] + '</b>').join(' · ') + '</p>' : '';
   }
   // v0.10 Bestenliste mit Figur; im gefüllten Overlay steht {C} für Christian (sonst würde SC.fill daraus Sandra machen)
-  const figTag = (x, filled) => (x.figur === 'sandra' ? ', Sandra' : x.figur === 'christian' ? (filled ? ', {C}' : ', Christian') : '');
+  const figTag = (x, filled) => (x.figur === 'sandra' ? ', Sandra' : x.figur === 'ivo' ? ', Ivo' : x.figur === 'christian' ? (filled ? ', {C}' : ', Christian') : '');
   function highHtml(s) {
     if (!s._hs) { s._hs = true; s._hl = sim().addScore(s); }
     const L = s._hl || sim().highscores();
@@ -297,6 +301,7 @@
   // v0.9 Porträts: Christian hat die PNG-Datei, Sandra wird mit Rechtecken gezeichnet (kein getImageData, klappt auch unter file://)
   const PIMG = {};
   UI.portrait = function (fig) {
+    if (fig === 'ivo') return ivoPortrait();
     if (fig !== 'sandra') return 'img/portrait.png';
     if (PIMG.sandra) return PIMG.sandra;
     try {
@@ -312,6 +317,24 @@
     } catch (e) { PIMG.sandra = 'img/portrait.png'; }
     return PIMG.sandra;
   };
+  // v0.14 Ivo: dunkle kurze Haare, gepflegter dunkler Vollbart, wärmerer Hautton, Warnweste über grauem Pulli
+  function ivoPortrait() {
+    if (PIMG.ivo) return PIMG.ivo;
+    try {
+      const c = document.createElement('canvas'); c.width = 32; c.height = 32; const g = c.getContext('2d');
+      const r = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+      r(0, 0, 32, 32, '#1c2a3a'); r(0, 26, 32, 6, '#24384c');
+      r(9, 4, 14, 6, '#1a120c'); r(8, 7, 2, 6, '#1a120c'); r(22, 7, 2, 6, '#1a120c'); // kurze dunkle Haare
+      r(10, 9, 12, 13, '#c8905e'); r(9, 13, 1, 3, '#b8804e'); r(22, 13, 1, 3, '#b8804e'); // Gesicht und Ohren
+      r(11, 11, 4, 1, '#1a120c'); r(17, 11, 4, 1, '#1a120c'); r(12, 13, 2, 2, '#1a1410'); r(18, 13, 2, 2, '#1a1410'); // Brauen und Augen
+      r(10, 17, 2, 5, '#24180f'); r(20, 17, 2, 5, '#24180f'); r(11, 20, 10, 3, '#24180f'); r(13, 17, 6, 1, '#24180f'); // gepflegter Vollbart
+      r(14, 19, 4, 1, '#8a4a34'); // Mund
+      r(6, 23, 20, 9, '#8a8f98'); r(8, 23, 5, 9, '#e8a040'); r(19, 23, 5, 9, '#e8a040'); r(8, 28, 5, 1, '#f4f4d0'); r(19, 28, 5, 1, '#f4f4d0'); // Warnweste
+      r(20, 25, 3, 2, '#f0f0f0'); // Kuli in der Westentasche
+      PIMG.ivo = c.toDataURL();
+    } catch (e) { PIMG.ivo = 'img/portrait.png'; }
+    return PIMG.ivo;
+  }
   const pimg = (fig, cls, alt) => '<img src="' + UI.portrait(fig) + '" alt="' + (alt || '') + '" class="' + cls + '">';
   // v0.9 Figurenwahl: der erste Schritt bei »Neues Spiel«
   // v0.11: Figurenkarte im Spiel (Knopf mit dem Namen im HUD), Uhr steht solange
@@ -320,7 +343,7 @@
   UI.pickFigur = function () {
     const card = f => { const X = SC.FIGUREN[f]; return '<div class="figur" data-fig="' + f + '">' + pimg(f, 'pt big', X.name) + '<h3>' + X.name + '</h3><p class="small">' + X.titel + ', ' + X.kurz + '</p>' +
       '<ul class="small">' + X.plus.map(t => '<li class="good">+ ' + t + '</li>').join('') + X.minus.map(t => '<li class="warn">− ' + t + '</li>').join('') + '</ul><p><button data-f="' + f + '">Als ' + X.name + ' spielen</button></p></div>'; };
-    overlay('<h2>Wer bist du?</h2><p>Such dir aus, wer das MES diesmal wirklich einführt. Die andere Figur ist im Werk als Kollege oder Kollegin dabei.</p><div class="figuren">' + card('christian') + card('sandra') + '</div><p><button data-o="titel">Zurück</button></p>', true);
+    overlay('<h2>Wer bist du?</h2><p>Such dir aus, wer das MES diesmal wirklich einführt. Die andere Figur ist im Werk als Kollege oder Kollegin dabei.</p><div class="figuren">' + card('christian') + card('sandra') + card('ivo') + '</div><p><button data-o="titel">Zurück</button></p>', true);
   };
   UI.newGame = function (seed, figur) {
     figur = SC.FIGUREN[figur] ? figur : (store('mesmarathon-figur') || 'christian');
@@ -328,18 +351,22 @@
     if (UI.room) UI.closeRoom();
     unpause(); store('mesmarathon-figur', figur); SC.S = sim().newGame(seed || (Date.now() & 0x7fffffff), figur); shown = 0; UI._siren = 0;
     SC.building.reset(); closeOverlay(); aud('unlock'); aud('play', 'tower'); morning(); sim().save(SC.S);
+    if (SC.S.figur === 'ivo' && SC.S.introIvo === false) UI.ivoIntro();
   };
+  // v0.14 Ivo: eigener Einstieg mit kurzem Glossar (Uhr steht, solange der Dialog offen ist)
+  UI.ivoIntro = function () { const s = S(); if (!s) return; s.introIvo = true; sim().save(s); const I = SC.IVO_INTRO;
+    overlay('<h2>' + esc(I.titel) + '</h2><div class="chefin">' + pimg('ivo', 'pt', 'Ivo') + '<div><p>' + esc(I.text) + '</p></div></div><ul class="small glossar">' + I.glossar.map(g => '<li><b>' + esc(g[0]) + ':</b> ' + esc(g[1]) + '</li>').join('') + '</ul><p>' + esc(I.schluss) + '</p><p><button data-o="weiter">Los geht’s</button></p>'); };
   UI.showTitle = function () {
     const fv = document.getElementById('foot-v'); if (fv) fv.textContent = 'v' + SC.VERSION;
     const sv = sim().load();
     overlay('<div class="title"><h1 class="logo">MES-MARATHON</h1><p class="dim">Ein Werk. Sieben Stationen. Fünf Module. Zwanzig Tage. Unendlich viele Meetings.</p>' +
-      '<p class="figuren-mini">' + pimg('christian', 'pt', 'Christian') + ' ' + pimg('sandra', 'pt', 'Sandra') + '</p><p>Du bist <b>Christian</b>, der erfahrene MES-Projektleiter, oder <b>Sandra</b>, die Kollegin aus der MES-Entwicklung. Seit Jahren wird in ' + SC.PLANT + ' das MES eingeführt. Diesmal wirklich.</p>' +
+      '<p class="figuren-mini">' + pimg('christian', 'pt', 'Christian') + ' ' + pimg('sandra', 'pt', 'Sandra') + ' ' + pimg('ivo', 'pt', 'Ivo') + '</p><p>Du bist <b>Christian</b>, der erfahrene MES-Projektleiter, oder <b>Sandra</b>, die Kollegin aus der MES-Entwicklung. Seit Jahren wird in ' + SC.PLANT + ' das MES eingeführt. Diesmal wirklich.</p><p class="small">Neu: <b>Ivo</b> aus der Werkslogistik. Er kennt die Halle, das MES noch nicht.</p>' +
       (sim().oldSave && sim().oldSave() ? '<p class="small warn">Dein Spielstand stammt aus Version ' + esc(sim().oldSave()) + ' und passt nicht zu ' + SC.VERSION + '. Bitte neu starten.</p>' : '') +
       (!sv && !sim().highscores().length && !UI.seenHint() ? '<p class="small">Erstes Mal hier? Die Anleitung erklärt alles. Kurz: Module durch die Pipeline bringen, Meetings klug wählen, ab 17:00 wird es teuer. <span class="nur-tasten">Tasten: Leertaste (Pause), + und − (Tempo), M (Ton), K (Kopfhörer). </span>In Räumen steht die Uhr.</p>' : '') + '<p><button data-o="new">Neues Spiel</button> ' + (sv && sv.phase !== 'ende' ? '<button data-o="cont">Weiterspielen (Tag ' + sv.day + ', ' + esc(sv.name || 'Christian') + ')</button> ' : '') + '<button data-o="help">Anleitung</button> <button data-o="schrift" id="btn-schrift">' + (document.body.classList.contains('gross') ? 'Schrift: Groß' : 'Schrift: Normal') + '</button></p>' +
       '<p class="small dim">Inspiriert von Mad TV (1991). Eigenes Fanprojekt, alle Figuren frei erfunden. Version ' + SC.VERSION + '</p>' + (sim().highscores().length ? '<p class="small">Bestenliste: ' + sim().highscores().map((x, i) => (i + 1) + '. ' + x.score + figTag(x, false)).join(' · ') + '</p>' : '') + '</div>', true);
   };
   function help() {
-    overlay('<h2>Anleitung</h2><div class="hilfe"><p>Du bist {C} (erfahrener Projektleiter fürs MES) oder Sandra (Spezialistin aus der MES-Entwicklung) in ' + SC.PLANT + '. Die Wahl kommt bei »Neues Spiel«. Bis Tag ' + SC.DEADLINE + ' müssen alle Module des neuen Manufacturing Execution Systems abgenommen sein. Werk Nord und Werk Süd machen dasselbe, und die Werkleitung vergleicht.</p>' +
+    overlay('<h2>Anleitung</h2><div class="hilfe"><p>Du bist {C} (erfahrener Projektleiter fürs MES) oder Sandra (Spezialistin aus der MES-Entwicklung) in ' + SC.PLANT + '. Die Wahl kommt bei »Neues Spiel«. Bis Tag ' + SC.DEADLINE + ' müssen alle Module des neuen Manufacturing Execution Systems abgenommen sein. Werk Nord und Werk Süd machen dasselbe, und die Werkleitung vergleicht.</p><p>Neu ab 0.14: Du kannst auch Ivo sein, den Quereinsteiger aus der Werkslogistik. Er kennt Halle und Lager, das MES lernt er gerade. Für ihn hängt bis Tag 10 in jedem Raum ein Merkzettel mit den wichtigsten Begriffen.</p>' +
       '<ul><li><b>Das Werk ist die Automatisierungspyramide:</b> EG Feld (Pforte, Schichtleiter, Hallen), 1 Steuerung (Werkstatt, Drucker, Kantine), 2 Leitebene (Büro, Leitstand, Meeting), 3 MES (Server, IT), 4 ERP (Werkleitung, Controlling). Die IT-Chefin fragt gern danach.</li>' +
       '<li><b>Klick auf eine Tür</b> (oder die Knöpfe unten): Deine Figur läuft hin, Aufzug inklusive. Beim Laufen läuft die Uhr. In einem Raum, bei Besuchen, Hinweisen und in der Pause steht sie: Lies in Ruhe. Zeit kosten nur das Laufen und die Aktionen: Eine Aktion springt die Uhr um ihre Dauer vor. Auch während du in ein Textfeld tippst, steht die Uhr.</li><li><b>Tempo:</b> Knopf oben oder Tasten + und −. Langsam (Standard): eine Spielstunde dauert 60 Sekunden, Normal 40, Schnell 30. <b>Schrift:</b> im Menü auf Groß stellen.</li>' +
       '<li><b>Ablauf je Modul:</b> Requirements (Hallen, an der Station des Moduls) → Spezifikation → Implementierung (Büro) → Deployment (Serverraum) → Testlauf (Hallen, Teststation) → Ausdruck (Drucker) → Abnahme (Werkleitung).</li>' +
@@ -354,6 +381,7 @@
       '<li><b>Neu in 0.5:</b> Dienstags hängt im Controlling eine Ausschreibung aus (Ersatzteile, Beraterkontingent oder Wartungspaket). Gebote bis Mittwoch 15:00, im Controlling oder per Mail aus dem Büro. Werk Nord bietet verdeckt, gezahlt wird nur beim Zuschlag. Zweiter Weg zum Sieg: das Konzernaudit »Vorzeigewerk« (Freitag ab Tag 15, sehr hohes Image und KPI-Index, mindestens 3 Module). Der Knopf 🎧 setzt Kopfhörer auf: Tesla-Kollege, Ahnungslose und Altwerk halten sich dann kurz. Im Serverraum wohnt jetzt ein digitaler Zwilling, und das Archiv hat Fundstücke. Christian bringt immer Süßigkeiten mit: Die Box im Büro füllst du einmal pro Woche am Kiosk der Kantine auf (Schoko-Mix, Gummibärchen oder Lakritz). Jeden Tag schaut ein Stammgast vorbei. Passt die Sorte, hilft er dir (zum Beispiel eine Reparatur oder ein Testlauf 10 Min. kürzer), sonst wird gemeckert. Das letzte Stück nimmt niemand. Und der Tesla-Kollege erzählt dir jetzt dauernd, was »Elon« angeblich alles anders machen würde (Elon-Zähler oben). Thema wechseln geht meistens.</li>' +
       '<li><b>Neu in 0.6:</b> Die Aktionsknöpfe zeigen, wann du fertig bist (⚠: nach Feierabend), in den Hallen auch die Wartezeit der Schichtübergabe. Wer nach 17:00 noch etwas anfängt, hat weniger Energie und braucht länger. Tasten: Leertaste Pause, + Tempo, M Ton, K Kopfhörer. Im Büro wartet ein Pappkamerad, im Druckerraum ein Fax-Gerät, und der Aufzug (Klick auf die Kabine) hat ein Geheimnis. Fällt der Dienstag aus, hängt die Ausschreibung am Mittwoch aus.</li>' +
       '<li><b>Neu in 0.7:</b> Im Schichtleiter-Büro hängt ein Abreißkalender, am Ende zeigt »Dein Werk in Zahlen«, was du so getrieben hast. Im Herbst gibt es am Kiosk Lebkuchen. Beim ersten Start gibt das Titelbild eine Kurzanleitung. Fällt der Freitag aus, weil die Energie auf null war, kommt das Wochenende danach trotzdem.</li>' +
+      '<li><b>Neu in 0.14:</b> Dritte Figur Ivo, der Quereinsteiger aus der Werkslogistik. Er ist in der Halle schneller, lernt Büro- und Serveraufgaben bis Tag 10 und hat einen eigenen Einstieg, Merkzettel in jedem Raum und eigene Szenen. Spielstände aus 0.7 bis 0.13 laden weiter.</li>' +
       '<li><b>Neu in 0.13:</b> Breiteres Layout: Am PC passen Räume, Dialoge und die Anleitung ohne Scrollen auf den Bildschirm. In Räumen stehen links die Infos und rechts die Aktionen, die Raumknöpfe stehen neben dem Werk. Die Anleitung blättert mit ◀ und ▶. Spielstände aus 0.7 bis 0.12 laden weiter.</li>' +
       '<li><b>Neu in 0.12:</b> Alle Dialoge überarbeitet: weniger Widersprüche, Anrede passt für beide Figuren, ein paar Pointen sitzen besser. Auf dem Handy passen Dialoge und Räume besser auf den Bildschirm. Spielstände aus 0.7 bis 0.11 laden weiter.</li>' +
       '<li><b>Neu in 0.11:</b> Der Knopf mit dem Namen oben zeigt die Figurenkarte mit Stärken und Schwächen. Bei Sandra steht auf den Aktionsknöpfen, was ihr schneller oder langsamer gelingt; ihr Vorsprung am Rechner gilt bis Feierabend. Drei neue MES-Szenen. Kommt 17:00 mitten in einem Besuch, steht der Hinweis im Ticker. Spielstände aus 0.7 bis 0.10 laden weiter.</li>' +
@@ -402,7 +430,7 @@
       const b = e.target.closest('button[data-o]'); if (!b) return; const o = b.dataset.o; aud('unlock');
       if (o === 'new') UI.pickFigur();
       else if (o === 'titel') UI.showTitle();
-      else if (o === 'cont') { if (UI.room) UI.closeRoom(); unpause(); SC.S = sim().load(); shown = SC.S.msgs.length; closeOverlay(); SC.building.reset(); UI._siren = SC.S.sirene; if (SC.S.phase === 'tag') { aud('play', 'tower'); morning(); } else showEvening(SC.S, SC.S.lastReport); }
+      else if (o === 'cont') { if (UI.room) UI.closeRoom(); unpause(); SC.S = sim().load(); shown = SC.S.msgs.length; closeOverlay(); SC.building.reset(); UI._siren = SC.S.sirene; if (SC.S.phase === 'tag') { aud('play', 'tower'); morning(); if (SC.S.figur === 'ivo' && SC.S.introIvo === false) UI.ivoIntro(); } else showEvening(SC.S, SC.S.lastReport); }
       else if (o === 'logzu') { UI._log = false; closeOverlay(); }
       else if (o === 'weiter') closeOverlay();
       else if (o === 'schrift') { UI.setGross(!document.body.classList.contains('gross')); }

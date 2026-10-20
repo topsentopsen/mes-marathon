@@ -270,3 +270,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, #ticker:focus-v
   .box h2 { font-size: 22px; letter-spacing: 1px; hyphens: auto; overflow-wrap: anywhere; }
   .box, #room { overflow-wrap: break-word; hyphens: auto; }
 }
+/* v0.14 Ivo: Merkzettel im Raum und Glossar im Einstieg */
+.merk { border-left: 3px solid #e8a040; padding: 2px 0 2px 8px; color: #f0dcb0; }
+.glossar { text-align: left; padding-left: 18px; margin: 6px 0; }
+.glossar li { margin: 2px 0; }

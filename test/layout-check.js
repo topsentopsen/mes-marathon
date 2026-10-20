@@ -10,9 +10,9 @@ const url = process.argv.find(a => /^(file|https?):/.test(a)) || 'file://' + pat
 const SHOTDIR = process.env.SHOTS || '/workspace/mes-layout-shots';
 const SHOTS = process.argv.includes('--shots'), GROSS = process.argv.includes('--gross');
 const VPS = (process.env.VPS || '1366x768,1440x900,1920x1080,390x844').split(',').map(v => v.split('x').map(Number));
-// Spielstände: drei Partien (Christian »gut«, Sandra »vorzeig«, Christian »sapChaos«), jeweils zu Tagesbeginn
+// Spielstände: vier Partien (Christian »gut«, Sandra »vorzeig«, Christian »sapChaos«, ab v0.14 Ivo »gut«), jeweils zu Tagesbeginn
 const states = (() => { const SC = require('./helper.js'), sim = SC.sim, { POL, playDay } = require('../tools/bot.js'), out = [];
-  for (const [figur, seed, pol] of [['christian', 4242, 'gut'], ['sandra', 777, 'vorzeig'], ['christian', 99, 'sapChaos']]) {
+  for (const [figur, seed, pol] of [['christian', 4242, 'gut'], ['sandra', 777, 'vorzeig'], ['christian', 99, 'sapChaos'], ['ivo', 555, 'gut']]) {
     const S = sim.newGame(seed, figur); let g = 0;
     while (S.phase !== 'ende' && g++ < 40) { if (S.phase === 'tag' && !S.pending) out.push({ label: figur + '-' + pol + '-tag' + S.day, s: JSON.parse(JSON.stringify(S)) }); playDay(S, POL[pol]); }
   }
@@ -58,7 +58,11 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     if (SHOTS) await page.screenshot({ path: SHOTDIR + '/' + w + 'x' + h + '-anleitung.png' });
     await page.evaluate(() => document.querySelector('button[data-o="back"]').click()); await wait(50);
     await page.evaluate(() => document.querySelector('button[data-o="new"]').click()); await wait(100); note('dialogs', 'figurenwahl', await meas());
-    await page.evaluate(() => document.querySelector('button[data-f="christian"]').click()); await wait(300);
+    // v0.14: Ivo wählen, sein Einstieg (eigener Dialog mit Glossar) muss ebenfalls ohne Scrollen passen
+    await page.evaluate(() => document.querySelector('button[data-f="ivo"]').click()); await wait(300); note('dialogs', 'ivo-einstieg', await meas());
+    if (!(await page.evaluate(() => !!document.querySelector('#overlay .glossar')))) note('dialogs', 'ivo-einstieg', ['Ivo-Einstieg fehlt']);
+    if (SHOTS) await page.screenshot({ path: SHOTDIR + '/' + w + 'x' + h + '-ivo-einstieg.png' });
+    await page.evaluate(() => document.querySelector('#overlay button[data-o="weiter"]').click()); await wait(100);
     const rooms = await page.evaluate(() => Object.keys(window.SC.ROOMS));
     for (const st of states) {
       for (const late of [false, true]) {
