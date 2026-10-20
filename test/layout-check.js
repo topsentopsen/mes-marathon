@@ -10,9 +10,9 @@ const url = process.argv.find(a => /^(file|https?):/.test(a)) || 'file://' + pat
 const SHOTDIR = process.env.SHOTS || '/workspace/mes-layout-shots';
 const SHOTS = process.argv.includes('--shots'), GROSS = process.argv.includes('--gross');
 const VPS = (process.env.VPS || '1366x768,1440x900,1920x1080,390x844').split(',').map(v => v.split('x').map(Number));
-// Spielstände (Early Access: nur Woche 1, Tag 1 bis 5): sieben Partien (Christian »gut«, Sandra »vorzeig«, Christian »sapChaos«, Ivo »gut«, dazu Sandra »einfach«, Ivo »meetingfan«, Christian »fleissig«), jeweils zu Tagesbeginn
+// Spielstände (Early Access: nur Woche 1, Tag 1 bis 5): fünf Partien (Christian »gut«, Sandra »vorzeig«, Christian »sapChaos«, dazu Sandra »einfach« und Christian »fleissig«), jeweils zu Tagesbeginn
 const states = (() => { const SC = require('./helper.js'), sim = SC.sim, { POL, playDay } = require('../tools/bot.js'), out = [];
-  for (const [figur, seed, pol] of [['christian', 4242, 'gut'], ['sandra', 777, 'vorzeig'], ['christian', 99, 'sapChaos'], ['ivo', 555, 'gut'], ['sandra', 31, 'einfach'], ['ivo', 77, 'meetingfan'], ['christian', 12, 'fleissig']]) {
+  for (const [figur, seed, pol] of [['christian', 4242, 'gut'], ['sandra', 777, 'vorzeig'], ['christian', 99, 'sapChaos'], ['sandra', 31, 'einfach'], ['christian', 12, 'fleissig']]) {
     const S = sim.newGame(seed, figur); let g = 0;
     while (S.phase !== 'ende' && g++ < 40) { if (S.phase === 'tag' && !S.pending) out.push({ label: figur + '-' + pol + '-tag' + S.day, s: JSON.parse(JSON.stringify(S)) }); playDay(S, POL[pol]); }
   }
@@ -58,14 +58,10 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     if (SHOTS) await page.screenshot({ path: SHOTDIR + '/' + w + 'x' + h + '-anleitung.png' });
     await page.evaluate(() => document.querySelector('button[data-o="back"]').click()); await wait(50);
     await page.evaluate(() => document.querySelector('button[data-o="new"]').click()); await wait(100); note('dialogs', 'figurenwahl', await meas());
-    // v0.14: Ivo wählen, sein Einstieg (eigener Dialog mit Glossar) muss ebenfalls ohne Scrollen passen
-    await page.evaluate(() => document.querySelector('button[data-f="ivo"]').click()); await wait(300);
-    // Early Access: zuerst der Level-Start, danach Ivos Einstieg
+    await page.evaluate(() => document.querySelector('button[data-f="christian"]').click()); await wait(300);
+    // Early Access: zuerst der Level-Start
     note('dialogs', 'ea-start', await meas()); if (!(await page.evaluate(() => !!document.querySelector('#overlay .ea-badge')))) note('dialogs', 'ea-start', ['Level-Start fehlt']);
     if (SHOTS) await page.screenshot({ path: SHOTDIR + '/' + w + 'x' + h + '-ea-start.png' });
-    await page.evaluate(() => document.querySelector('#overlay button[data-o="weiter"]').click()); await wait(150); note('dialogs', 'ivo-einstieg', await meas());
-    if (!(await page.evaluate(() => !!document.querySelector('#overlay .glossar')))) note('dialogs', 'ivo-einstieg', ['Ivo-Einstieg fehlt']);
-    if (SHOTS) await page.screenshot({ path: SHOTDIR + '/' + w + 'x' + h + '-ivo-einstieg.png' });
     await page.evaluate(() => document.querySelector('#overlay button[data-o="weiter"]').click()); await wait(100);
     const rooms = await page.evaluate(() => Object.keys(window.SC.ROOMS));
     for (const st of states) {

@@ -1,5 +1,5 @@
 // Balance-Bot: spielt viele Partien mit einfachen Strategien.
-// Aufruf: node tools/bot.js [anzahl] [--check] [--figur=sandra|ivo] [--ea]
+// Aufruf: node tools/bot.js [anzahl] [--check] [--figur=sandra] [--ea]
 // Early Access: ohne --ea misst der Bot das volle Spiel (SC.EA = null), mit --ea das eine Level (Woche 1, Sieg = Ziel der Woche erreicht)
 'use strict';
 const SC = require('../test/helper.js'); const sim = SC.sim;
@@ -165,18 +165,17 @@ function run(n, figur) {
 if (require.main === module) {
   const n = +process.argv[2] || 200;
   if (!process.argv.includes('--ea')) SC.EA = null;
-  else { // Early Access: Level »Woche 1« für alle drei Figuren, eigene Grenzen
+  else { // Early Access: Level »Woche 1« für beide Figuren, eigene Grenzen
     const keep = ['passiv', 'einfach', 'gut', 'meetingfan', 'ablenkbar', 'workaholic', 'fleissig', 'gut1730', 'naschbox', 'bieter'];
     for (const k of Object.keys(POL)) if (!keep.includes(k)) delete POL[k];
     const errs = [], all = {};
-    for (const f of ['christian', 'sandra', 'ivo']) { const R = run(n, f); all[f] = R; console.log('Woche 1, ' + f + ': ' + Object.entries(R).map(([k, x]) => k + ' ' + x.win + ' %').join(', ')); }
+    for (const f of ['christian', 'sandra']) { const R = run(n, f); all[f] = R; console.log('Woche 1, ' + f + ': ' + Object.entries(R).map(([k, x]) => k + ' ' + x.win + ' %').join(', ')); }
     if (process.argv.includes('--check')) {
       for (const [f, R] of Object.entries(all)) {
         if (R.gut.win < 60 || R.gut.win > 92) errs.push(f + ': gut ' + R.gut.win + ' % nicht in 60 bis 92');
         if (R.passiv.win > 15) errs.push(f + ': passiv ' + R.passiv.win + ' % über 15');
         if (R.meetingfan.win >= R.gut.win) errs.push(f + ': meetingfan nicht unter gut');
         if (R.einfach.win < 30) errs.push(f + ': einfach unter 30 %');
-        // Ivo lernt das MES noch (Lernkurve bis Tag 10), in einer einzigen Woche ist er darum etwas schwerer zu spielen
         if (Math.abs(R.gut.win - all.christian.gut.win) > 15) errs.push(f + ': gut weicht mehr als 15 PP von Christian ab');
       }
       console.log(errs.length ? 'EA-CHECK FEHLER: ' + errs.join('; ') : 'EA-CHECK OK (Woche 1)'); if (errs.length) process.exitCode = 1;

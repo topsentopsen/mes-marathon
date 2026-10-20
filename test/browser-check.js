@@ -111,7 +111,7 @@ const EA_SEEN = []; const closeEa = async p => { const ea = await p.evaluate(() 
   await page.reload({ waitUntil: 'load' }); await wait(600);
   fig.cont = await page.evaluate(() => (document.querySelector('button[data-o="cont"]') || {}).textContent);
   await page.click('button[data-o="cont"]'); await wait(400); fig.loaded = await page.evaluate(() => [window.SC.S.figur, window.SC.S.name]);
-  fig.ok = fig.btns.join() === 'christian,sandra,ivo' && fig.imgs.length === 3 && fig.imgs.every(Boolean) && fig.christian.join() === 'christian,Christian,christian' && fig.sandra.join() === 'sandra,Sandra,55,42' &&
+  fig.ok = fig.btns.join() === 'christian,sandra' && fig.imgs.length === 2 && fig.imgs.every(Boolean) && fig.christian.join() === 'christian,Christian,christian' && fig.sandra.join() === 'sandra,Sandra,55,42' &&
     /»die vom MES«/.test(fig.anrede) && !/Christian/.test(fig.anrede) && /Christian, der erfahrene Kollege/.test(fig.besuch) && !/\{C\}/.test(fig.besuch) && /Sandra/.test(fig.cont || '') && fig.loaded.join() === 'sandra,Sandra';
   if (!fig.ok) errs.push('v0.9-Figuren fehlerhaft: ' + JSON.stringify(fig).slice(0, 600));
   // v0.10: Leertaste im Raum, Tastaturfokus, Kontrast, Bestenliste mit Figur; Handy: Ton-Knopf über Dialogen, Raumhöhe
@@ -154,22 +154,6 @@ const EA_SEEN = []; const closeEa = async p => { const ea = await p.evaluate(() 
   await page.screenshot({ path: out + '-11-sandra-figurenkarte.png' }); await page.keyboard.press('Escape'); await wait(200);
   v11.ok = v11.hinweisBesuch.warned && v11.hinweisBesuch.visit && v11.hinweisBesuch.noHint && v11.hinweisBesuch.ticker && v11.hinweisBesuch.log && v11.vermerk.some(t => /schneller/.test(t)) && v11.vermerkHalle.some(t => /langsamer/.test(t)) && /Sandra/.test(v11.karte.btn) && /MES-Entwicklung/.test(v11.karte.txt) && /\+ /.test(v11.karte.txt);
   if (!v11.ok) errs.push('v0.11 fehlerhaft: ' + JSON.stringify(v11).slice(0, 600));
-  // v0.14 Ivo: Figurenwahl, eigener Einstieg mit Glossar, Merkzettel und Knopfvermerke, Christian als Kollege
-  const v14 = {};
-  await page.evaluate(() => { const o = document.getElementById('overlay'); o.classList.add('hidden'); window.SC.ui._ov = false; if (window.SC.ui.room) window.SC.ui.closeRoom(); window.SC.ui.showTitle(); }); await wait(200);
-  await page.click('button[data-o="new"]'); await wait(300); await page.click('button[data-f="ivo"]'); await wait(500); await closeEa(page);
-  v14.start = await page.evaluate(() => [window.SC.S.figur, window.SC.S.name, window.SC.S.chef, window.SC.S.schicht, window.SC.S.introIvo]);
-  v14.intro = await page.evaluate(() => ({ glossar: document.querySelectorAll('#overlay .glossar li').length, text: document.getElementById('overlay').innerText, img: (document.querySelector('#overlay img.pt') || {}).naturalWidth || 0 }));
-  await page.click('#overlay button[data-o="weiter"]'); await wait(200);
-  await page.evaluate(() => { const S = window.SC.S; S.visits = []; S.pending = null; S.minute = 9 * 60; window.SC.ui.openRoom('buero'); }); await wait(200);
-  v14.buero = await page.evaluate(() => document.getElementById('room').innerText);
-  await page.evaluate(() => { window.SC.ui.closeRoom(); window.SC.ui.openRoom('halle'); }); await wait(200);
-  v14.halle = await page.evaluate(() => document.getElementById('room').innerText);
-  await page.evaluate(() => window.SC.ui.closeRoom());
-  v14.ok = v14.start.join() === 'ivo,Ivo,50,58,true' && v14.intro.glossar >= 5 && /Ivos erster Tag im MES/.test(v14.intro.text) && /Christian schaut ab und zu vorbei/.test(v14.intro.text) && v14.intro.img > 0 &&
-    /Merkzettel/.test(v14.buero) && /Ivo: lernt noch/.test(v14.buero) && /Ivo: schneller/.test(v14.halle) && !/\{C\}/.test(v14.intro.text + v14.buero + v14.halle);
-  if (!v14.ok) errs.push('v0.14-Ivo fehlerhaft: ' + JSON.stringify({ start: v14.start, glossar: v14.intro.glossar, img: v14.intro.img }) + ' ' + v14.intro.text.slice(0, 200));
-  delete v14.buero; delete v14.halle; v14.intro = v14.intro.glossar;
   // Early Access: Titel, Level-Start, HUD Tag x/5, Zusagen ausgeblendet, Ende-Bildschirm nach dem Freitag
   const ea = { titel: /Early Access/.test(title.text), start: EA_SEEN.filter(Boolean).length >= 3 && EA_SEEN.filter(Boolean).every(t => /Ziel:/.test(t) && /gesperrt/.test(t)) };
   await page.evaluate(() => { const o = document.getElementById('overlay'); o.classList.add('hidden'); window.SC.ui._ov = false; if (window.SC.ui.room) window.SC.ui.closeRoom(); window.SC.ui.newGame(4711, 'christian'); }); await wait(400); await closeEa(page);
@@ -182,12 +166,12 @@ const EA_SEEN = []; const closeEa = async p => { const ea = await p.evaluate(() 
   await page.screenshot({ path: out + '-ea-ende.png' });
   ea.ok = ea.titel && ea.start && /^Tag 1\/5/.test(ea.hud) && !ea.chefButtons.some(x => /^z_/.test(x)) && ea.chefButtons.includes('abnahme') && ea.chefSays && ea.ende.phase === 'ende' && ea.ende.ea && /Ende der Early-Access-Version/.test(ea.ende.txt) && /Mehr folgt/.test(ea.ende.txt) && /WOCHE 1 GESCHAFFT/.test(ea.ende.txt) && ea.ende.btns.includes('new') && ea.ende.btns.includes('title') && !/Wochenende!/.test(ea.ende.txt);
   if (!ea.ok) errs.push('Early Access fehlerhaft: ' + JSON.stringify({ titel: ea.titel, start: ea.start, hud: ea.hud, chef: ea.chefButtons, says: ea.chefSays, phase: ea.ende.phase, btns: ea.ende.btns }) + ' ' + ea.ende.txt.slice(0, 300));
-  await page.evaluate(() => { const o = document.getElementById('overlay'); o.classList.add('hidden'); window.SC.ui._ov = false; window.SC.ui.newGame(4712, 'ivo'); }); await wait(400); await closeEa(page);
+  await page.evaluate(() => { const o = document.getElementById('overlay'); o.classList.add('hidden'); window.SC.ui._ov = false; window.SC.ui.newGame(4712, 'sandra'); }); await wait(400); await closeEa(page);
   await page.evaluate(() => { const o = document.getElementById('overlay'); o.classList.add('hidden'); window.SC.ui._ov = false; const S = window.SC.S; S.visits = []; S.pending = null; S.day = 5; S.minute = window.SC.DAY_END + 5; S._warned = true; window.SC.ui.endDay(); }); await wait(400);
   ea.verloren = await page.evaluate(() => { const t = document.getElementById('overlay').innerText; return /WOCHE 1 IST UM/.test(t) && /Ende der Early-Access-Version/.test(t) && window.SC.S.result.ea && !window.SC.S.result.win; });
   if (!ea.verloren) errs.push('Early Access: Ende-Bildschirm ohne Modul fehlerhaft');
   ea.ende = ea.ende.phase;
-  console.log(JSON.stringify({ title: title.text.slice(0, 160), nameField: title.name, visitShown, st, d2, v07, v09, fig, v10, v11, v14, ea, errs }, null, 1));
+  console.log(JSON.stringify({ title: title.text.slice(0, 160), nameField: title.name, visitShown, st, d2, v07, v09, fig, v10, v11, ea, errs }, null, 1));
   if (errs.length || d2 !== 2 || !visitShown || title.name) process.exitCode = 1;
   await browser.close();
 })();

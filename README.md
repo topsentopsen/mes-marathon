@@ -1,16 +1,16 @@
 # MES-Marathon
 
-Retro-Managerspiel im Browser, inspiriert von **Mad TV** (1991) und abgeleitet aus [Sender-Chef](https://github.com/topsentopsen/sender-chef). Statt eines Fernsehsenders führst du als **Christian** (ca. 40, sehr viel graue Haare, kein Bart, Hemd) oder seit v0.9 als **Sandra** (Kollegin aus der MES-Entwicklung, braune Haare, Blazer) seit Jahren ein MES (Manufacturing Execution System) in *Werk Mitte* ein. Diesmal wirklich. Comedy, kein Drama. Seit v0.14 gibt es als dritte Figur **Ivo** (Quereinsteiger aus der Werkslogistik, dunkle Haare, dunkler Bart, Warnweste), der vom MES noch keine Ahnung hat.
+Retro-Managerspiel im Browser, inspiriert von **Mad TV** (1991) und abgeleitet aus [Sender-Chef](https://github.com/topsentopsen/sender-chef). Statt eines Fernsehsenders führst du als **Christian** (ca. 40, sehr viel graue Haare, kein Bart, Hemd) oder seit v0.9 als **Sandra** (Kollegin aus der MES-Entwicklung, braune Haare, Blazer) seit Jahren ein MES (Manufacturing Execution System) in *Werk Mitte* ein. Diesmal wirklich. Comedy, kein Drama.
 
 **Spielen:** https://topsentopsen.github.io/mes-marathon/
 
-## Early Access 0.14.0-ea.1 »Woche 1« (Branch early-access)
+## Early Access 0.14.1-ea.1 »Woche 1« (Branch early-access)
 
-Eine Teaser-Version mit genau einem Level: die erste Woche, Montag bis Freitag. Ziel: bis Freitag 17:00 mindestens ein Modul abgenommen. Danach kommt statt des Wochenendes der Ende-Bildschirm »Ende der Early-Access-Version«. Alle drei Figuren sind wählbar. Gesperrt sind Wochenenden, SAP-Migration, Firmenübernahme, Konzernaudit, Zusagen an die Werkleitung und alles ab Tag 6. Die Version hat eigene Spielstände (localStorage-Schlüssel `mesmarathon-ea-…`), Stände des Hauptspiels werden nicht geladen. Umgesetzt als Schalter `SC.EA` in `js/data.js` (`SC.EA = null` ist das volle Spiel, so laufen die Logiktests). Level-Bot: `node tools/bot.js 300 --ea --check`. Details: `docs/RELEASE-v0.14.0-ea.1.md`.
+Eine Teaser-Version mit genau einem Level: die erste Woche, Montag bis Freitag. Ziel: bis Freitag 17:00 mindestens ein Modul abgenommen. Danach kommt statt des Wochenendes der Ende-Bildschirm »Ende der Early-Access-Version«. Wählbar sind Christian und Sandra. Gesperrt sind Wochenenden, SAP-Migration, Firmenübernahme, Konzernaudit, Zusagen an die Werkleitung und alles ab Tag 6. Die Version hat eigene Spielstände (localStorage-Schlüssel `mesmarathon-ea-…`), Stände des Hauptspiels werden nicht geladen. Umgesetzt als Schalter `SC.EA` in `js/data.js` (`SC.EA = null` ist das volle Spiel, so laufen die Logiktests). Level-Bot: `node tools/bot.js 300 --ea --check`. Details: `docs/RELEASE-v0.14.1-ea.1.md`.
 
-## Neu in v0.14.0 »Quereinsteiger«
+## v0.14.1
 
-Dritte spielbare Figur: **Ivo** kommt aus der Werkslogistik und ist neu im MES-Projekt. Er kennt Halle, Lager und Leute, aber nicht die Begriffe. Hallen-Anforderungen, Linie und Gespräche mit der Schicht gehen bei ihm schneller, das Vertrauen des Schichtleiters wächst schneller (Start: Werkleitung 50, Schichtleiter 58). Büro- und Serveraufgaben dauern am Anfang länger und werden jeden Tag ein Stück schneller, ab Tag 10 sind sie normal (Lernkurve, auf den Knöpfen steht »Ivo: lernt noch«). Ivo hat einen eigenen Einstieg mit kurzem Glossar, bis Tag 10 hängt in jedem Raum ein Merkzettel, und es gibt eigene Szenen, in denen er Begriffe verwechselt und lernt. Christian kommt als Kollege vorbei. Christian und Sandra bleiben unverändert, Spielstände aus 0.7 bis 0.13 laden weiter. Test und Bot: `FIGUR=ivo node test/playthrough.js`, `node tools/bot.js 300 --check --figur=ivo`. Details: `docs/RELEASE-v0.14.md`.
+Die mit v0.14.0 hinzugekommene dritte Figur ist wieder entfernt. Spielbar sind wie in v0.13 nur Christian und Sandra, Texte, Werte und Layout entsprechen v0.13.0. Spielstände aus 0.7 bis 0.14 laden weiter. Ein Spielstand mit der entfernten Figur lädt nicht, »Neues Spiel« führt dann zur Figurenwahl. Details: `docs/RELEASE-v0.14.1.md`.
 
 ## Neu in v0.13.0 »Breitbild«
 
@@ -82,7 +82,7 @@ Vanilla JavaScript ohne Build, Canvas-Pixelgrafik, Musik und Fabriklärm per Web
 
 - `js/data.js` Daten und Balance-Hebel (`SC.TUNE`), `js/sim.js` Spiellogik (läuft auch in Node), `js/ui.js` Oberfläche, `js/building.js` Fabrik, Aufzug und Figuren, `js/audio.js` Musik und Fabriklärm.
 - Tests: `node test/sim.test.js`, `node test/names.test.js`, Browser: `node test/browser-check.js [url]`, `node test/playthrough.js [tage] [seed]`, Handy-Ton `node test/mobile-audio.js` und seit v0.13 das Layout `node test/layout-check.js [url]` (puppeteer-core).
-- Balance-Bot: `node tools/bot.js 300 --check`, für die anderen Figuren mit `--figur=sandra` oder `--figur=ivo`. Durchspieltest für eine Figur: `FIGUR=sandra` oder `FIGUR=ivo` vor `node test/playthrough.js`.
+- Balance-Bot: `node tools/bot.js 300 --check`.
 - Konzept und Plan: `docs/KONZEPT.md`, `docs/PHASEN.md`.
 
 Eigenes Fanprojekt, keine Original-Inhalte von Mad TV. Alle Figuren, Werke und Firmen sind frei erfunden.
