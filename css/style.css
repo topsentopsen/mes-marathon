@@ -131,3 +131,17 @@ body.gross #room, body.gross #overlay .box, body.gross #ticker, body.gross #cale
 .figur ul { list-style: none; padding-left: 0; text-align: left; }
 .figur li { margin: 4px 0; }
 .figuren-mini img { margin: 0 6px; }
+/* v0.10 Lesbarkeit: Kontrast, Zeilenlänge, sichtbarer Tastaturfokus */
+.dim { color: #cde; }
+.foot { color: #999; }
+button:disabled { background: #8a8a8a; color: #222; }
+#room p, .box p { max-width: 70ch; }
+button:focus-visible, select:focus-visible, input:focus-visible, #ticker:focus-visible { outline: 3px solid #ffcc00; outline-offset: 2px; }
+.vopts button { min-height: 44px; }
+@media (max-width: 640px) {
+  /* Dialoge beginnen unter dem Ton-Knopf (Abstand setzt overlay() in ui.js), der Knopf bleibt erreichbar */
+  #overlay { align-items: flex-start; }
+  #overlay .box { max-height: 100%; overflow: auto; }
+  /* Raum auf dem Handy höher, das Haus dahinter ist ohnehin verdeckt */
+  body.raum #stage { aspect-ratio: auto; height: 72vh; min-height: 360px; }
+}

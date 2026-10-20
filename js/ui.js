@@ -22,7 +22,9 @@
   UI.overlayOpen = () => UI._ov;
   // v0.9: Texte sind für Christian geschrieben, SC.fill passt sie für Sandra an (raw: Figurenwahl, dort stehen beide Namen)
   const F = h => SC.fill ? SC.fill(SC.S, h) : h;
-  function overlay(html, raw) { if (!raw) html = F(html); UI._ovAt = performance.now(); if (!/data-o="logzu"/.test(html)) UI._log = false; $('overlay').innerHTML = '<div class="box">' + html + '</div>'; $('overlay').classList.remove('hidden'); UI._ov = true; }
+  function overlay(html, raw) { if (!raw) html = F(html); UI._ovAt = performance.now(); if (!/data-o="logzu"/.test(html)) UI._log = false; $('overlay').innerHTML = '<div class="box">' + html + '</div>'; $('overlay').classList.remove('hidden'); UI._ov = true; padOverlay(); }
+  // v0.10: Auf dem Handy liegt der Ton-Knopf über Dialogen; der Dialog beginnt deshalb darunter
+  function padOverlay() { const o = $('overlay'), b = document.getElementById('btn-sound'); if (window.innerWidth > 640 || !b) { o.style.paddingTop = ''; return; } const r = b.getBoundingClientRect(); o.style.paddingTop = (r.bottom > 0 && r.bottom < window.innerHeight * 0.5 ? Math.round(r.bottom + 6) : 10) + 'px'; }
   function closeOverlay() { $('overlay').classList.add('hidden'); UI._ov = false; UI._ovAt = 0; }
   UI.toast = function (t, bad) { const el = $('ticker'); el.innerHTML = F('<span class="' + (bad ? 'bad' : '') + '">' + esc(t) + '</span>'); };
 
@@ -68,9 +70,9 @@
   };
   UI.openRoom = function (room) {
     if (!S() || S().phase !== 'tag') { SC.building.showPlayer(); return; }
-    UI.room = room; aud('jingle', 'door'); aud('zone', room); renderRoom(); $('room').classList.remove('hidden');
+    UI.room = room; document.body.classList.add('raum'); aud('jingle', 'door'); aud('zone', room); renderRoom(); $('room').classList.remove('hidden');
   };
-  UI.closeRoom = function () { UI.room = null; $('room').classList.add('hidden'); aud('zone', null); SC.building.showPlayer(); if (S()) sim().save(S()); };
+  UI.closeRoom = function () { UI.room = null; document.body.classList.remove('raum'); $('room').classList.add('hidden'); aud('zone', null); SC.building.showPlayer(); if (S()) sim().save(S()); };
 
   function modTable(s) {
     const c = (v, n) => '<td class="' + (v >= n ? 'good' : v > 0 ? '' : 'dim') + '">' + v + '/' + n + '</td>';
@@ -235,10 +237,12 @@
     const st = s.stats, z = [['Elon-Erwähnungen', st.elon], ['Blicke auf den Pappkameraden', st.pappe], ['Faxe', st.fax], ['Aufzugknopf gedrückt', st.aufzug], ['Süßigkeitenbox aufgefüllt', st.suess], ['»Das hatten wir schon immer so«', st.immer], ['Kopfhörer aufgesetzt', st.kopf], ['Easter Eggs', st.eggs]].filter(x => x[1]);
     return z.length ? '<h3>Dein Werk in Zahlen</h3><p class="small">' + z.map(x => esc(x[0]) + ': <b>' + x[1] + '</b>').join(' · ') + '</p>' : '';
   }
+  // v0.10 Bestenliste mit Figur; im gefüllten Overlay steht {C} für Christian (sonst würde SC.fill daraus Sandra machen)
+  const figTag = (x, filled) => (x.figur === 'sandra' ? ', Sandra' : x.figur === 'christian' ? (filled ? ', {C}' : ', Christian') : '');
   function highHtml(s) {
     if (!s._hs) { s._hs = true; s._hl = sim().addScore(s); }
     const L = s._hl || sim().highscores();
-    return L.length ? '<p class="small">Bestenliste: ' + L.map((x, i) => (i + 1) + '. ' + x.score + (x.win ? ' (Go-Live Tag ' + x.day + ')' : '')).join(' · ') + '</p>' : '';
+    return L.length ? '<p class="small">Bestenliste: ' + L.map((x, i) => (i + 1) + '. ' + x.score + figTag(x, true) + (x.win ? ' (Go-Live Tag ' + x.day + ')' : '')).join(' · ') + '</p>' : '';
   }
   function next() { const s = S(); sim().startDay(s); s._warned = false; shown = 0; closeOverlay(); SC.building.reset(); aud('play', 'tower'); morning(); sim().save(s); }
   function morning() {
@@ -288,7 +292,7 @@
       '<p class="figuren-mini">' + pimg('christian', 'pt', 'Christian') + ' ' + pimg('sandra', 'pt', 'Sandra') + '</p><p>Du bist <b>Christian</b>, der erfahrene MES-Projektleiter, oder <b>Sandra</b>, die jüngere Kollegin aus der MES-Entwicklung. Seit Jahren wird in ' + SC.PLANT + ' das MES eingeführt. Diesmal wirklich.</p>' +
       (sim().oldSave && sim().oldSave() ? '<p class="small warn">Dein Spielstand stammt aus Version ' + esc(sim().oldSave()) + ' und passt nicht zu ' + SC.VERSION + '. Bitte neu starten.</p>' : '') +
       (!sv && !sim().highscores().length && !UI.seenHint() ? '<p class="small">Erstes Mal hier? Die Anleitung erklärt alles. Kurz: Module durch die Pipeline bringen, Meetings klug wählen, ab 17:00 wird es teuer. Tasten: Leertaste (Pause), + und − (Tempo), M (Ton), K. In Räumen steht die Uhr.</p>' : '') + '<p><button data-o="new">Neues Spiel</button> ' + (sv && sv.phase !== 'ende' ? '<button data-o="cont">Weiterspielen (Tag ' + sv.day + ', ' + esc(sv.name || 'Christian') + ')</button> ' : '') + '<button data-o="help">Anleitung</button> <button data-o="schrift" id="btn-schrift">' + (document.body.classList.contains('gross') ? 'Schrift: Groß' : 'Schrift: Normal') + '</button></p>' +
-      '<p class="small dim">Inspiriert von Mad TV (1991). Eigenes Fanprojekt, alle Figuren frei erfunden. Version ' + SC.VERSION + '</p>' + (sim().highscores().length ? '<p class="small">Bestenliste: ' + sim().highscores().map((x, i) => (i + 1) + '. ' + x.score).join(' · ') + '</p>' : '') + '</div>', true);
+      '<p class="small dim">Inspiriert von Mad TV (1991). Eigenes Fanprojekt, alle Figuren frei erfunden. Version ' + SC.VERSION + '</p>' + (sim().highscores().length ? '<p class="small">Bestenliste: ' + sim().highscores().map((x, i) => (i + 1) + '. ' + x.score + figTag(x, false)).join(' · ') + '</p>' : '') + '</div>', true);
   };
   function help() {
     overlay('<h2>Anleitung</h2><p>Du bist {C} (erfahrener Projektleiter fürs MES) oder Sandra (Spezialistin aus der MES-Entwicklung) in ' + SC.PLANT + '. Die Wahl kommt bei »Neues Spiel«. Bis Tag ' + SC.DEADLINE + ' müssen alle Module des neuen Manufacturing Execution Systems abgenommen sein. Werk Nord und Werk Süd machen dasselbe, und die Werkleitung vergleicht.</p>' +
@@ -335,6 +339,7 @@
     const nav = $('rooms');
     nav.innerHTML = SC.FLOORS.map((f, i) => '<span class="floor-grp"><span class="fl">' + (i === 0 ? 'EG' : i) + ' ' + f.name + '</span>' + f.doors.filter(d => d.room).map(d => '<button data-r="' + d.room + '">' + esc(SC.ROOMS[d.room].title.split(' (')[0]) + '</button>').join('') + '</span>').reverse().join('');
     $('ticker').addEventListener('click', () => UI.showLog());
+    $('ticker').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); UI.showLog(); } });
     nav.addEventListener('click', e => { const b = e.target.closest('button[data-r]'); if (b) UI.walkTo(b.dataset.r); });
     const cv = $('cv');
     cv.addEventListener('mousemove', e => { const [x, y] = SC.building.toLogical(e); const p = SC.building.pick(x, y); SC.building.setHover(p); cv.style.cursor = p ? 'pointer' : 'default'; });
@@ -368,7 +373,8 @@
       // v0.9: Bei offenem Dialog schaltet die Leertaste nicht mehr die Pause um; hat der Dialog genau einen Knopf, lösen Leertaste und Enter ihn aus
       // (gehaltene Taste und die ersten 400 ms nach dem Öffnen zählen nicht, damit niemand einen Hinweis ungelesen wegdrückt)
       if (UI._ov && (e.key === ' ' || e.key === 'Enter')) { const bs = document.querySelectorAll('#overlay button'); if (bs.length === 1 && !document.querySelector('#overlay button[data-v]')) { e.preventDefault(); if (!e.repeat && performance.now() - (UI._ovAt || 0) > 400) bs[0].click(); } return; }
-      if (e.key === ' ') { $('btn-pause').click(); e.preventDefault(); }
+      // v0.10: im Raum steht die Uhr ohnehin; die Leertaste löst dort einen fokussierten Knopf aus statt die Pause
+      if (e.key === ' ') { if (UI.room) return; $('btn-pause').click(); e.preventDefault(); }
       if (e.key === '+') UI.setTempo(UI.tempo + 1);
       if (e.key === '-' || e.key === '−') UI.setTempo(UI.tempo - 1);
       if (e.key === 'm' || e.key === 'M') $('btn-sound').click();

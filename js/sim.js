@@ -62,6 +62,7 @@
     S.uselessYesterday = S.uselessToday; S.uselessToday = 0; S.uselessMin = 0;
     // v0.9 Sandra als Kollegin bei Christian: nur eine Zeile, keine Zeitkosten, keine Würfe aus den Spielströmen
     if (S.figur !== 'sandra' && S.day >= 3 && rngA(S, 33400 + S.day % 100) < 0.3) say(S, SC.SANDRA_NPC[Math.floor(rngA(S, 33500 + S.day % 100) * SC.SANDRA_NPC.length)]);
+    else if (S.figur !== 'sandra' && S.day >= 3 && rngA(S, 34300 + S.day % 100) < 0.2) say(S, SC.SANDRA_NPC2[Math.floor(rngA(S, 34400 + S.day % 100) * SC.SANDRA_NPC2.length)]);
     const big = [];
     // Großereignisse
     if (S.day >= 6 && S.sap.state === 'none') {
@@ -569,12 +570,15 @@
     return { ok: true };
   }
   // v0.9 Sandra: Beziehungen wachsen langsamer, Abnahme bringt etwas weniger, eigene Szenen (Salz 33300)
+  const SZ2_IDS = ['print', 'schichtplan', 'excel', 'gespraech', 'restart', 'abnahme', 'review', 'wartung', 'mail'];
   const SZ_IDS = ['req', 'spec', 'impl', 'deploy', 'migrate', 'bericht', 'test', 'linie'];
   function figurNach(S, F, room, id, sch0) {
     if (S.schicht > sch0) S.schicht = sch0 + Math.round((S.schicht - sch0) * F.schichtF);
     if (id === 'abnahme') S.chef += F.abnahmeChef;
     const k = SZ_IDS.indexOf(id);
     if (k >= 0 && SC.SANDRA_SZENEN[id] && rngA(S, 33300 + ((S.day * 13 + k * 7) % 100)) < 0.35) say(S, SC.SANDRA_SZENEN[id]);
+    const k2 = SZ2_IDS.indexOf(id);
+    if (k2 >= 0 && SC.SANDRA_SZENEN2[id] && rngA(S, 34000 + ((S.day * 11 + k2 * 7) % 100)) < 0.3) say(S, SC.SANDRA_SZENEN2[id]);
   }
   // echte Dauer einer Aktion (Gesamtprüfung v0.5: auch für die Anzeige auf den Knöpfen)
   function costOf(S, room, id, a) {
@@ -628,7 +632,7 @@
       case 'itchefin': return { who: 'Die IT-Chefin (mit der Automatisierungspyramide)', text: '»' + VT.itchefin[p.open % VT.itchefin.length] + ' ' + SC.PYRAMID_Q[p.q].q + '«', pyr: true };
       case 'ahnungslos': return { who: 'Ein Kollege ohne Ahnung', text: of(VT.ahnungslos) };
       case 'altwerk': return { who: 'Der Kollege vom Altwerk', text: of(VT.altwerk) };
-      case 'christian': return { who: '{C}, der erfahrene Kollege', text: '{C} lehnt sich in die Tür: ' + SC.CHRISTIAN_TIPPS[Math.floor(rngA(S, 33200 + S.day % 100) * SC.CHRISTIAN_TIPPS.length)] };
+      case 'christian': return { who: '{C}, der erfahrene Kollege', text: '{C} lehnt sich in die Tür: ' + (rngA(S, 34100 + S.day % 100) < 0.4 ? SC.CHRISTIAN_TIPPS2[Math.floor(rngA(S, 34200 + S.day % 100) * SC.CHRISTIAN_TIPPS2.length)] : SC.CHRISTIAN_TIPPS[Math.floor(rngA(S, 33200 + S.day % 100) * SC.CHRISTIAN_TIPPS.length)]) };
       case 'rivale': return { who: SC.RIVAL_EVT[p.r].who, text: SC.RIVAL_EVT[p.r].text };
       case 'kaffee': return { who: 'Die Kantinenkraft (Aushang am Kaffeeautomaten)', text: (S.sap.state === 'migration' && weekday(S) === 4 ? 'Pünktlich zum SAP-Cutover-Wochenende ist der Kaffeeautomat defekt.' : 'Der Kaffeeautomat ist defekt. Seit dem SAP-Umstieg findet er seine Materialnummer für Kaffeebohnen nicht.') + ' Display: »Bitte Wartung rufen«. Die Wartung steckt im Cutover. Die Kantine kocht notfalls Filterkaffee, aber die Schlange ist lang.' + (weekday(S) === 4 ? ' Am Wochenende bleibt er kaputt (Wochenendschicht: Energie −4 je Tag).' : '') };
       case 'kreis': return { who: 'Die IT-Chefin (mit einer neuen Folie)', text: '»Christian, die Pyramide ist vorbei. Ab heute: Industrie 5.0. Als Kreis! Alles ist mit allem verbunden, nichts ist oben, und das MES ist überall. Ich hab 45 Minuten im Besprechungsraum geblockt.«' };
@@ -904,7 +908,7 @@
   function load() { try { const s = JSON.parse(localStorage.getItem(SAVE)); if (!s || (s.v !== SC.VERSION && !(SC.SAVE_OK || []).includes(s.v))) return null; s.v = SC.VERSION; const d = newGame(s.seed || 1); for (const k of Object.keys(d)) if (s[k] === undefined) s[k] = d[k]; for (const k of Object.keys(d.stats)) if (s.stats[k] === undefined) s.stats[k] = 0; if (!SC.FIGUREN[s.figur]) s.figur = 'christian'; s.name = SC.FIGUREN[s.figur].name; return s; } catch (e) { return null; } }
   // Highscore (lokal, Top 5) wie bei Mad TV
   function addScore(S) {
-    try { const k = 'mesmarathon-highscore'; const L = JSON.parse(localStorage.getItem(k) || '[]'); L.push({ score: S.result.score, win: S.result.win, day: S.day }); L.sort((a, b) => b.score - a.score); localStorage.setItem(k, JSON.stringify(L.slice(0, 5))); return L.slice(0, 5); } catch (e) { return []; }
+    try { const k = 'mesmarathon-highscore'; const L = JSON.parse(localStorage.getItem(k) || '[]'); L.push({ score: S.result.score, win: S.result.win, day: S.day, figur: S.figur || 'christian' }); L.sort((a, b) => b.score - a.score); localStorage.setItem(k, JSON.stringify(L.slice(0, 5))); return L.slice(0, 5); } catch (e) { return []; }
   }
   function highscores() { try { return JSON.parse(localStorage.getItem('mesmarathon-highscore') || '[]'); } catch (e) { return []; } }
 

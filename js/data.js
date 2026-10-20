@@ -3,9 +3,9 @@
 'use strict';
 window.SC = window.SC || {};
 (function (SC) {
-  SC.VERSION = '0.9.0';
+  SC.VERSION = '0.10.0';
   // v0.8: Spielstände dieser Versionen laden weiter (kein neues Feld in S)
-  SC.SAVE_OK = ['0.7.0', '0.8.0'];
+  SC.SAVE_OK = ['0.7.0', '0.8.0', '0.9.0'];
   SC.DAY_START = 7 * 60 + 30;   // 07:30 Frühschicht-Beginn im Büro
   SC.DAY_END = 17 * 60;         // 17:00 regulärer Feierabend
   SC.LATEST = 20 * 60;          // 20:00 der Pförtner schließt ab
@@ -27,11 +27,24 @@ window.SC = window.SC || {};
   };
   // Christian als Kollege bei Sandra (Besuch, 12 Min.): erprobte Tipps aus der Halle
   SC.CHRISTIAN_TIPPS = [
-    '»Der Schichtleiter sagt nie Nein. Er sagt »Wir schauen mal«. Das heißt Nein.«',
+    '»Der Schichtleiter sagt nie Nein. Er sagt ›Wir schauen mal‹. Das heißt Nein.«',
     '»Frag nicht nach dem Ticket. Frag die Werkstatt, ob sie einen Kaffee will.«',
     '»Die Excel-Liste ist nicht schön. Aber sie stimmt. Meistens.«',
     '»Wenn die Presse steht, steht sie nicht wegen des MES. Sag das trotzdem nicht laut.«',
     '»Bring zur Frühschicht Brezeln mit. Das ist kein Trick, das ist Projektmanagement.«'
+  ];
+  // v0.10: weitere Tipps von Christian (Salze 34100 und 34200)
+  SC.CHRISTIAN_TIPPS2 = [
+    '»Wenn der Bediener ›gleich‹ sagt, meint er nach der Pause. Notier dir beides.«',
+    '»Beim Rüsten stehen alle gern still daneben. Setz dich dazu. Nach zehn Minuten erzählen sie dir das Wichtigste.«',
+    '»Auf den Chargen läuft in der Halle Papier mit. Das Papier weiß mehr als jedes Konzept. Frag, bevor du ersetzt.«',
+    '»Etiketten liest im Werk jeder. Mach die Schrift groß.«'
+  ];
+  // v0.10: weitere Zeilen, wenn Sandra bei Christian vorbeischaut (Salze 34300 und 34400)
+  SC.SANDRA_NPC2 = [
+    'Sandra aus der MES-Entwicklung bringt eine Skizze zur Auftragsfreigabe mit. Du ergänzt, wer in der Halle wirklich freigibt. Sie zeichnet einen zweiten Pfeil ein.',
+    'Sandra fragt nach den Rückmeldungen aus der Halle. Du zeigst deine Excel-Liste. Sie will daraus eine Schnittstelle machen. Du sagst: »Die Liste bleibt.« Sie nickt und baut die Schnittstelle so, dass die Liste bleibt.',
+    'Sandra hat Etiketten-Muster im Postfach. Gemeinsam sucht ihr die Schrift, die man in der Halle auf zwei Meter Abstand liest.'
   ];
   // Sandra als Kollegin bei Christian: nur eine Zeile im Protokoll, keine Zeitkosten
   SC.SANDRA_NPC = [
@@ -51,6 +64,18 @@ window.SC = window.SC || {};
     test: 'Der Bediener: »Die Stückzahl tippen wir abends nach.« Du schreibst »Echtzeit« aufs Whiteboard und streichst es nicht durch.',
     linie: 'Die Schicht zeigt dir die Stempeluhr von 1994. Du bist ehrlich beeindruckt, und die Schicht freut sich darüber.'
   };
+  // v0.10: weitere Szenen für Sandra (Salz 34000), nur bei Aktionen ohne bisherige Szene
+  SC.SANDRA_SZENEN2 = {
+    print: 'Auf dem Etikett fehlt die Chargennummer. Im Datensatz steht sie. Dazwischen liegt ein Drucker mit eigenem Kopf.',
+    schichtplan: 'Rüsten dauert laut Plan 20 Minuten. Die Schicht zeigt dir den Trick mit dem zweiten Wagen: Jetzt sind es zwölf. Der Trick steht ab heute im MES.',
+    excel: 'Die Rückmeldung kommt als Foto vom Zettel. Du liest eine 3, die Schicht liest eine 8. Ihr einigt euch auf ein Terminal in Reichweite.',
+    gespraech: 'Der Schichtleiter gibt den Auftrag frei, sobald das Material da ist. Das MES, sobald es das weiß. Du baust die Brücke: ein Knopf am Terminal.',
+    restart: 'Nach dem Neustart melden sich die Schnittstellen der Reihe nach zurück. Die Waage braucht am längsten. Sie war schon immer gründlich.',
+    abnahme: 'Du nennst eine Charge, und die Schicht zeigt in zwei Minuten, wo jede Palette war. Die Werkleitung nickt. Dafür ist das MES da.',
+    review: 'Die IT-Chefin fragt nach der Fußnote auf Seite vier der Schnittstellenbeschreibung. Du hast die Seite. Und die Fußnote.',
+    wartung: 'Am Automaten klebt ein Zettel: »Nicht anfassen, läuft.« Du fotografierst ihn für die Dokumentation und fasst nichts an.',
+    mail: 'Im Postfach: 14 Mails mit »Dringend«, zwei mit Inhalt. Du sortierst nach Inhalt, nicht nach Ausrufezeichen.'
+  };
   SC.SANDRA_TAG1 = 'Dein Werksausweis ist noch nicht gedruckt. Der Pförtner schreibt dir einen Besucherzettel: »MES, Ebene drei.« Das Formular hat kein Feld für »arbeitet hier«.';
   // Anrede im Text: alle Spielertexte sind für Christian geschrieben, für Sandra werden sie angepasst.
   // Nur einmal je Text anwenden (an den Anzeigestellen), denn aus {C} wird »Christian«, und ein zweiter Lauf machte daraus »Sandra«.
@@ -58,8 +83,8 @@ window.SC = window.SC || {};
   // {C} steht in Texten, in denen Christian als Kollege vorkommt (wird nach der Anpassung eingesetzt)
   SC.fill = (S, t) => { if (t == null) return t; t = String(t); const L = S && SC.FILL[S.figur]; if (L) for (const [a, b] of L) t = t.replace(a, b); return t.replace(/\{C\}/g, 'Christian'); };
   SC.KOLLEGE_BUBBLES = {
-    christian: ['Erst Kaffee, dann Frage.', 'Dein Mapping ist besser als mein SVERWEIS.', 'Kennst du schon den Schichtleiter?', 'Wir schauen mal. Das heißt Nein.'],
-    sandra: ['Mapping? Gib mir 10 Min.', 'Frag mich zum BDE-Feed.', 'Ich hab ein Dashboard gebaut!', 'Echtzeit heißt jetzt, nicht abends.']
+    christian: ['Erst Kaffee, dann Frage.', 'Dein Mapping schlägt meinen SVERWEIS.', 'Kennst du schon den Schichtleiter?', 'Wir schauen mal. Das heißt Nein.', 'Rüsten? Setz dich dazu.', 'Erst fragen, dann ersetzen.', 'Charge? Frag das Papier.'],
+    sandra: ['Mapping? Gib mir 10 Min.', 'Frag mich zum BDE-Feed.', 'Ich hab ein Dashboard gebaut!', 'Echtzeit heißt jetzt, nicht abends.', 'Ich zeichne dir die Freigabe.', 'Etikett in 100 mal 60?', 'Schnittstelle? Sag Bescheid.']
   };
   SC.PLANT = 'Werk Mitte';
   SC.RIVALS = [

@@ -35,7 +35,7 @@ t('Excel fehlt am Abend', () => { const S = sim.newGame(5); S.minute = SC.DAY_EN
 t('Feierabend erst ab 15 Uhr', () => { const S = sim.newGame(5); clearDay(S); assert.ok(!sim.act(S, 'pforte', 'home').ok); S.minute = 15 * 60; assert.ok(sim.act(S, 'pforte', 'home').ok); });
 t('Wochenendschicht kostet Familie', () => { const S = sim.newGame(5); const f = S.family; sim.weekend(S, 2); assert.strictEqual(S.family, f - 26); });
 t('Spiel endet spätestens am Termin', () => { const S = sim.newGame(9); let g = 0; while (S.phase !== 'ende' && g++ < 40) { S.pending = null; S.minute = SC.DAY_END; sim.endDay(S); if (S.phase === 'wochenende') sim.weekend(S, 0); sim.startDay(S); } assert.strictEqual(S.phase, 'ende'); assert.ok(!S.result.win); });
-t('Speicherversion 0.9.0', () => { const store = {}; global.localStorage = { getItem: k => store[k] || null, setItem: (k, v) => { store[k] = v; } }; const S = sim.newGame(3); sim.save(S); assert.strictEqual(sim.load().v, '0.9.0'); assert.strictEqual(SC.VERSION, require('fs').readFileSync(require('path').join(__dirname, '..', 'VERSION'), 'utf8').trim()); store['mesmarathon-save'] = JSON.stringify(Object.assign({}, S, { v: '0.2.0' })); assert.strictEqual(sim.load(), null); });
+t('Speicherversion 0.9.0', () => { const store = {}; global.localStorage = { getItem: k => store[k] || null, setItem: (k, v) => { store[k] = v; } }; const S = sim.newGame(3); sim.save(S); assert.strictEqual(sim.load().v, '0.10.0'); assert.strictEqual(SC.VERSION, require('fs').readFileSync(require('path').join(__dirname, '..', 'VERSION'), 'utf8').trim()); store['mesmarathon-save'] = JSON.stringify(Object.assign({}, S, { v: '0.2.0' })); assert.strictEqual(sim.load(), null); });
 t('SAP-Chaos-Pfad: Cutover ohne Wochenendschicht, Nacharbeit sperrt ERP-Abnahme, Chaos bis sauber', () => {
   const S = sim.newGame(12); toDay(S, 10); S.minute = SC.DAY_END; S.pending = null; S.sap.pk = 1; sim.endDay(S); assert.ok(S.sap.cutover); const c = S.chef;
   const out = sim.weekend(S, 0); assert.strictEqual(S.sap.state, 'nacharbeit'); assert.ok(S.chaosUntil >= S.day + 3); assert.ok(S.chef <= c - 8 + 0.001 || S.chef === 0); assert.ok(/Nacharbeit|nachgearbeitet/.test(out.join(' ')));
@@ -248,7 +248,7 @@ t('v0.8 Wochenend-Text passt zur Spiellogik (Energie −12/−16, 4 Pakete)', ()
   const m = simSrc.match(/S\.energy -= (\d+) \+ \(kaffeeKaputt\(S\) \? (\d+) : 0\)/); assert.ok(m); const e = +m[1], k = +m[2]; assert.ok(ui.includes('Energie (−' + e + ', bei kaputtem Kaffeeautomaten −' + (e + k) + ')')); const p = simSrc.match(/const use = Math\.min\((\d+), sapRest\)/); assert.ok(p && ui.includes('bis zu ' + p[1] + ' Arbeitspakete')); });
 // v0.9
 t('v0.9 Spielstände aus 0.8.0 und 0.7.0 laden, 0.6.0 nicht; kein neues Feld in S', () => { const store = {}; global.localStorage = { getItem: k => store[k] || null, setItem: (k, v) => { store[k] = v; } }; const S = sim.newGame(900);
-  for (const v of ['0.8.0', '0.7.0']) { store['mesmarathon-save'] = JSON.stringify(Object.assign({}, S, { v })); assert.strictEqual(sim.oldSave(), null, v); const L = sim.load(); assert.ok(L && L.v === SC.VERSION, v); }
+  for (const v of ['0.9.0', '0.8.0', '0.7.0']) { store['mesmarathon-save'] = JSON.stringify(Object.assign({}, S, { v })); assert.strictEqual(sim.oldSave(), null, v); const L = sim.load(); assert.ok(L && L.v === SC.VERSION, v); }
   store['mesmarathon-save'] = JSON.stringify(Object.assign({}, S, { v: '0.6.0' })); assert.strictEqual(sim.load(), null); assert.strictEqual(sim.oldSave(), '0.6.0'); delete global.localStorage;
   assert.deepStrictEqual(Object.keys(sim.newGame(1)).sort(), KEYS); });
 t('v0.9 Tempo-Stufen: Langsam, Normal, Schnell mit 60, 40, 30 Echtsekunden pro Spielstunde, Standard zuerst', () => { assert.deepStrictEqual(SC.TEMPO.map(t => t.id), ['langsam', 'normal', 'schnell']); const sek = SC.TEMPO.map(t => 60 / (SC.MIN_PER_SEC * t.f)); assert.deepStrictEqual(sek, [60, 40, 30]); for (let i = 1; i < SC.TEMPO.length; i++) assert.ok(SC.TEMPO[i].f > SC.TEMPO[i - 1].f); assert.strictEqual(SC.MIN_PER_SEC, 2, 'Grundwert unverändert'); });
@@ -291,4 +291,22 @@ t('v0.9 Sandra-Szenen und Sandra als Kollegin bei Christian nutzen nur rngA (Sal
   assert.ok(npc > 5 && npc < 60, 'Sandra bei Christian ' + npc);
   assert.ok(szenen > 5 && szenen < 60, 'Szenen ' + szenen);
   const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', 'sim.js'), 'utf8'); for (const b of [33000, 33100, 33200, 33300, 33400, 33500]) assert.ok(src.includes('rngA(S, ' + b), 'Salz ' + b); });
+// v0.10
+t('v0.10 Sandra spielt exakt wie v0.9.0 (Goldwerte: voller Bot-Lauf, Hash über den Endzustand ohne Texte)', () => { const B = require('../tools/bot.js'), crypto = require('crypto');
+  const SKIP = new Set(['msgs', 'dayLog', 'v', 'figur', 'name', 'lastReport']), GOLD = ['6e294e6f8c306e7a:22:2327', '3e41f35d7d5d117b:20:4154', 'dfb3ef563020bfb8:21:3466'];
+  [11, 4343, 90001].forEach((seed, i) => { const S = sim.newGame(seed, 'sandra'); let g = 0; while (S.phase !== 'ende' && g++ < 40) B.playDay(S, B.POL.gut); const o = {}; for (const k of Object.keys(S).sort()) if (!SKIP.has(k)) o[k] = S[k];
+    assert.strictEqual(crypto.createHash('sha1').update(JSON.stringify(o)).digest('hex').slice(0, 16) + ':' + S.day + ':' + S.result.score, GOLD[i], 'Seed ' + seed); }); });
+t('v0.10 neue Szenen und Zeilen: erscheinen, kosten keine Zeit, Salze 34000 bis 34400', () => { const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', 'sim.js'), 'utf8');
+  for (const b of [34000, 34100, 34200, 34300, 34400]) assert.ok(src.includes('rngA(S, ' + b), 'Salz ' + b);
+  let sz = 0, tipp2 = 0, npc2 = 0; for (let s = 1; s < 120; s++) { const D = sim.newGame(s, 'sandra'); clearDay(D); D.pending = null; const n0 = D.msgs.length, m0 = D.minute, c = sim.actCost(D, 'buero', 'excel'); sim.act(D, 'buero', 'excel'); if (D.msgs.slice(n0).some(m => m.t === SC.SANDRA_SZENEN2.excel)) sz++; assert.ok(D.minute - m0 <= c + 2);
+    D.pending = { id: 'christian', at: D.minute }; if (SC.CHRISTIAN_TIPPS2.some(x => sim.visitText(D).text.includes(x))) tipp2++;
+    const C = sim.newGame(s); C.day = 2; sim.startDay(C); if (C.msgs.some(m => SC.SANDRA_NPC2.includes(m.t))) npc2++; }
+  assert.ok(sz > 10 && sz < 80, 'Szenen ' + sz); assert.ok(tipp2 > 10, 'Tipps ' + tipp2); assert.ok(npc2 > 3, 'Sandra bei Christian ' + npc2);
+  const all = [].concat(Object.values(SC.SANDRA_SZENEN2), SC.CHRISTIAN_TIPPS2, SC.SANDRA_NPC2, SC.KOLLEGE_BUBBLES.christian, SC.KOLLEGE_BUBBLES.sandra, SC.CHRISTIAN_TIPPS);
+  for (const x of all) { assert.ok(!/[–—]/.test(x), 'Gedankenstrich: ' + x); assert.strictEqual((x.match(/»/g) || []).length, (x.match(/«/g) || []).length, 'Anführung: ' + x); assert.ok(!/\{\w+\}/.test(SC.fill(sim.newGame(1, 'sandra'), x))); }
+  for (const x of [].concat(SC.KOLLEGE_BUBBLES.christian, SC.KOLLEGE_BUBBLES.sandra)) assert.ok(x.length <= 40, 'Blase zu lang: ' + x);
+  for (const x of SC.CHRISTIAN_TIPPS) assert.ok(!/»[^«]*»/.test(x), 'verschachtelte »«: ' + x); });
+t('v0.10 Bestenliste speichert die Figur, Reihenfolge nur nach Punkten, alte Einträge ohne Figur gehen', () => { const store = { 'mesmarathon-highscore': JSON.stringify([{ score: 50, win: false, day: 20 }]) }; global.localStorage = { getItem: k => store[k] || null, setItem: (k, v) => { store[k] = v; } };
+  const A = sim.newGame(1), B = sim.newGame(2, 'sandra'); A.result = { score: 100, win: true }; B.result = { score: 200, win: false }; sim.addScore(A); const L = sim.addScore(B);
+  assert.deepStrictEqual(L.map(x => x.score), [200, 100, 50]); assert.deepStrictEqual(L.map(x => x.figur), ['sandra', 'christian', undefined]); assert.strictEqual(sim.highscores().length, 3); delete global.localStorage; });
 console.log(n + ' Tests ok');
