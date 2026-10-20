@@ -49,14 +49,20 @@
   // Bildschirmauflösung (devicePixelRatio) auf ganze Pixel gezeichnet, mit dunkler Kontur und Mindestgröße (9 CSS-Pixel)
   let Q = [], clipR = null;
   const TXT_MIN_CSS = 9;
-  function qtext(t, x, y, c, size, align, maxW, outline) {
+  // Pixeldichte höchstens 2 (Review v0.9: bei DPR 3 sonst bis zu 3600 Pixel Breite je Bild); Breite des Canvas wird gecacht
+  const DPR = () => Math.min(2, window.devicePixelRatio || 1);
+  let cssW = 0;
+  // Faktor, um den ein Text dieser Größe durch die Mindestgröße wächst (für Kästen um Text, z. B. Sprechblasen)
+  const growF = size => Math.max(1, TXT_MIN_CSS * DPR() / (size * (cv.width / W)));
+  function qtext(t, x, y, c, size, align, maxW, outline, top) {
     ctx.font = 'bold ' + size + 'px monospace';
-    Q.push({ t: String(t), x, y, c, size, align: align || 'center', mw: maxW || ctx.measureText(String(t)).width, fit: !!maxW, o: outline || 'rgba(0,0,0,0.9)', clip: clipR, m: ctx.getTransform() });
+    Q.push({ t: String(t), x, y, c, size, align: align || 'center', mw: maxW || ctx.measureText(String(t)).width, fit: !!maxW, o: outline || 'rgba(0,0,0,0.9)', clip: clipR, m: ctx.getTransform(), top: !!top });
   }
   function text(t, x, y, c, size, align) { qtext(t, x, y, c, size || 7, align); }
   function present() {
-    const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
-    const bw = Math.max(W, Math.round((r.width || W) * dpr)), bh = Math.round(bw * H / W);
+    if (!cssW || typeof ResizeObserver === 'undefined') cssW = cv.getBoundingClientRect().width || W;
+    const dpr = DPR();
+    const bw = Math.max(W, Math.round(cssW * dpr)), bh = Math.round(bw * H / W);
     if (cv.width !== bw || cv.height !== bh) { cv.width = bw; cv.height = bh; }
     const v = vctx; v.setTransform(1, 0, 0, 1, 0, 0); v.imageSmoothingEnabled = false; v.drawImage(off, 0, 0, bw, bh);
     const s = bw / W, minPx = TXT_MIN_CSS * dpr;
@@ -68,7 +74,7 @@
       v.save();
       if (q.clip) { v.beginPath(); v.rect(Math.round(q.clip[0] * s), Math.round(q.clip[1] * s), Math.round(q.clip[2] * s), Math.round(q.clip[3] * s)); v.clip(); }
       if (rot) { v.setTransform(s * m.a, s * m.b, s * m.c, s * m.d, Math.round(s * lx), Math.round(s * ly)); v.font = 'bold ' + q.size + 'px monospace'; }
-      else { v.setTransform(1, 0, 0, 1, Math.round(s * lx), Math.round(s * ly - (grow ? (px - base) / 2 : 0))); v.font = 'bold ' + px + 'px monospace'; }
+      else { v.setTransform(1, 0, 0, 1, Math.round(s * lx), Math.round(s * ly - (grow && !q.top ? (px - base) / 2 : 0))); v.font = 'bold ' + px + 'px monospace'; }
       v.textAlign = q.align;
       const maxW = rot ? undefined : (q.fit ? q.mw * s : grow ? q.mw * s * 1.25 : undefined);
       v.lineWidth = rot ? 1.5 : Math.max(2, px * 0.24); v.strokeStyle = q.o;
@@ -323,11 +329,11 @@
   function drawBubble() {
     const n = bub.n; if (!n || !bub.t) return;
     ctx.font = 'bold 8px monospace';
-    const w = Math.ceil(ctx.measureText(bub.t).width) + 6, h = 12;
-    const x = Math.round(Math.max(BX0 + 2, Math.min(BX1 - w - 2, n.x - w / 2))), y = Math.round(floorY(n.f) - 38);
+    const g = growF(8), w = Math.ceil(ctx.measureText(bub.t).width * g) + 6, h = Math.ceil(8 * g) + 4;
+    const x = Math.round(Math.max(BX0 + 2, Math.min(BX1 - w - 2, n.x - w / 2))), y = Math.round(floorY(n.f) - 26 - h);
     rect(x - 1, y - 1, w + 2, h + 2, '#000'); rect(x, y, w, h, '#fffbe8');
     rect(Math.round(n.x) - 1, y + h, 3, 2, '#fffbe8'); rect(Math.round(n.x), y + h + 2, 1, 2, '#fffbe8');
-    qtext(bub.t, x + 3, y + 2, '#151515', 8, 'left', w - 6, '#fffbe8');
+    qtext(bub.t, x + 3, y + 2, '#151515', 8, 'left', w - 6, '#fffbe8', true);
   }
   function updateNpcs(dt) {
     tick++;
@@ -349,7 +355,8 @@
 
   const B = {
     W, H,
-    init(canvas) { cv = canvas; vctx = cv.getContext('2d'); off = document.createElement('canvas'); off.width = W; off.height = H; ctx = off.getContext('2d'); ctx.imageSmoothingEnabled = false; },
+    init(canvas) { cv = canvas; vctx = cv.getContext('2d'); off = document.createElement('canvas'); off.width = W; off.height = H; ctx = off.getContext('2d'); ctx.imageSmoothingEnabled = false;
+      if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => { cssW = 0; }).observe(cv); else window.addEventListener('resize', () => { cssW = 0; }); },
     reset() { P.x = 190; P.f = 0; P.queue = []; P.visible = true; P.inLift = false; lift.pos = 0; B.dismiss(); },
     // Besuch: die Figur kommt zu Christian auf die Etage (Dialog läuft in ui.js)
     summon(id) {

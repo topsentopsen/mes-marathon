@@ -606,7 +606,7 @@
       case 'italien': return [{ id: 'zuhoeren', label: 'Zuhören und mitessen (12 Min.)' }, { id: 'vertagen', label: '»Erzähl es mir beim Essen« (2 Min.)' }];
       case 'itchefin': return p.opts.map((l, i) => ({ id: 'a' + i, label: 'Ebene ' + l + ': ' + SC.PYR[l] })).concat([{ id: 'skip', label: 'Folie überspringen (10 Min.)' }]);
       case 'ahnungslos': return [{ id: 'erklaeren', label: 'Geduldig erklären (15 Min.)' }, { id: 'abkuerzen', label: '»Das MES ist wie Excel, nur anders.« (5 Min.)' }];
-      case 'christian': return [{ id: 'zuhoeren', label: 'Zuhören und Kaffee mitbringen (' + FG(S).kollege.min + ' Min.)' }, { id: 'spaeter', label: '»Später gern!« (2 Min.)' }];
+      case 'christian': return [{ id: 'zuhoeren', label: 'Zuhören und mitschreiben (' + (FG(S) || SC.TUNE.figur.sandra).kollege.min + ' Min.)' }, { id: 'spaeter', label: '»Später gern!« (2 Min.)' }];
       case 'altwerk': return [{ id: 'mapping', label: 'Mapping zusammen anlegen (' + (FG(S) ? FG(S).mapping : 30) + ' Min.)' }, { id: 'spaeter', label: 'Später (3 Min.)' }];
       case 'rivale': return [{ id: 'gegen', label: SC.RIVAL_EVT[p.r].gegen.replace('{k}', T().rival.cost) }, { id: 'hin', label: SC.RIVAL_EVT[p.r].hin.replace('{t}', T().rival.cut) }];
       case 'kaffee': return [{ id: 'kantine', label: 'In die Kantine, Filterkaffee (30 Min.)' }, { id: 'durchhalten', label: 'Durchhalten ohne Kaffee (höheres Fehlerrisiko im Testlauf)' }];
@@ -701,7 +701,7 @@
         say(S, 'Party: ' + k.msg); break; }
       case 'flur': { const o = SC.FLUR[p.k].opts[+String(opt).slice(1)] || SC.FLUR[p.k].opts[1]; S.stats.flur++; min = o.min; S.energy += o.energy || 0; S.schicht += o.schicht || 0; say(S, o.msg, (o.energy || 0) < 0 || (o.schicht || 0) < 0); break; }
       case 'christian':
-        if (opt === 'zuhoeren') { const K = FG(S).kollege; min = K.min; S.schicht += K.schicht; say(S, '{C} erzählt, wie die Halle wirklich tickt. Du bringst ihm einen Kaffee mit. Schichtleiter +' + K.schicht + '.'); }
+        if (opt === 'zuhoeren') { const K = (FG(S) || SC.TUNE.figur.sandra).kollege; min = K.min; S.schicht += K.schicht; say(S, '{C} erzählt, wie die Halle wirklich tickt. Du schreibst mit. Schichtleiter +' + K.schicht + '.'); }
         else { min = 2; say(S, '{C} nickt: »Später ist gut. Später ist hier immer.«'); }
         break;
       case 'lieferant': S.partsUntil = Math.max(S.partsUntil, S.day + 2); say(S, 'Ersatzteile im Lager: Reparaturen kosten drei Tage lang nur 2 k€.'); break;

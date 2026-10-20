@@ -52,7 +52,7 @@
     if (s.pending && !UI._ov) showVisit();
     if (s.sirene === s.day && UI._siren !== s.day) { UI._siren = s.day; aud('jingle', 'siren'); }
     const nm = sim().nextMeeting(s), act = sim().activeMeeting(s);
-    $('calendar').innerHTML = (act ? '<b class="blink">JETZT ' + hm(act.start) + ' ' + esc(act.title) + ' → MEETING (2. OG)</b>' : nm ? 'Nächster Termin: <b>' + hm(nm.start) + '</b> ' + esc(nm.title) + ' <span class="dim">(' + nm.dur + ' Min.)</span>' : '<span class="dim">Keine Termine mehr heute.</span>') +
+    $('calendar').innerHTML = F(act ? '<b class="blink">JETZT ' + hm(act.start) + ' ' + esc(act.title) + ' → MEETING (2. OG)</b>' : nm ? 'Nächster Termin: <b>' + hm(nm.start) + '</b> ' + esc(nm.title) + ' <span class="dim">(' + nm.dur + ' Min.)</span>' : '<span class="dim">Keine Termine mehr heute.</span>') +
       ' · Server: ' + (s.server.up ? '<span class="good">läuft</span>' : '<span class="bad">DOWN</span>') + (s.printer.jam ? ' · <span class="bad">Drucker: Papierstau</span>' : '') +
       (s.stations.some(x => x.fault) ? ' · <span class="bad">Störung: ' + s.stations.filter(x => x.fault).map(x => sim().stName(x.id)).join(', ') + '</span>' : '') +
       (s.sap.state === 'migration' || s.sap.state === 'nacharbeit' ? ' · <span class="warn">SAP-' + (s.sap.state === 'nacharbeit' ? 'Nacharbeit ' : 'Migration ') + s.sap.pk + '/' + s.sap.need + '</span>' : '') + (s.chaosUntil >= s.day ? ' · <span class="bad">SAP-Chaos</span>' : '') + (s.excel ? '' : ' · <span class="bad">Excel-Liste offen</span>') + (s.tiramisu === s.day ? ' · <span class="good">Tiramisu: nächster Testlauf −15 % Fehlerrisiko</span>' : s.itStreak > 0 ? ' · <span class="dim">Tiramisu ' + s.itStreak + '/3</span>' : '') + (s.kaffeeDef === s.day ? ' · <span class="bad">Kaffeeautomat defekt</span>' : '') + (s.nordUntil >= s.day ? ' · <span class="bad">Bediener fehlt (Werk Nord)</span>' : '') + (s.zusage ? ' · <span class="warn">Zusage bis Tag ' + s.zusage.until + '</span>' : '') + (s.prog && s.prog.week === sim().week(s) && s.prog.k !== null ? ' · <span class="dim">Prognose: ' + ['unter', 'im', 'über'][s.prog.k] + ' Plan</span>' : '') + (sim().auktionOpen(s) ? ' · <span class="warn">Ausschreibung bis Mi 15:00' + (s.auktion.bid !== null ? ' (Gebot ' + s.auktion.bid + ' k€)' : '') + '</span>' : '') + (s.kopf === s.day ? ' · <span class="dim">🎧 Kopfhörer auf</span>' : '') + (sim().elonHeute(s) ? ' · 🚀 Elon-Zähler ' + sim().elonHeute(s) : '') + (s.day >= SC.TUNE.suess.from ? ' · <span class="' + (s.box.n <= 1 ? 'bad' : s.box.stand === 'falsch' ? 'warn' : 'dim') + '">🍬 Box ' + (s.box.n <= 1 ? (s.box.n === 1 ? 'leer (nur das letzte Stück)' : 'leer') : s.box.n + '/' + SC.TUNE.suess.stk + ' ' + SC.SORTEN[s.box.sorte]) + '</span>' : '');
@@ -145,7 +145,7 @@
   }
   function rivals(s) {
     const me = sim().progress(s);
-    const rows = [{ name: SC.PLANT + ' (Christian)', prog: me, me: true }].concat(s.rivals).sort((a, b) => b.prog - a.prog);
+    const rows = [{ name: SC.PLANT + ' (' + (s.name || 'Christian') + ')', prog: me, me: true }].concat(s.rivals).sort((a, b) => b.prog - a.prog);
     return '<table>' + rows.map(r => '<tr><td>' + (r.me ? '<b>' + esc(r.name) + '</b>' : esc(r.name)) + '</td><td><span class="qbox"><span class="qbar" style="width:' + r.prog + '%"></span></span> ' + Math.round(r.prog) + ' %</td></tr>').join('') + '</table>';
   }
   function chefSays(s) {
@@ -157,7 +157,7 @@
   }
   function schichtSays(s) {
     if (s.schicht < 30) return 'Der Schichtleiter: »Ach, DU. Die Linie ist leider voll. Die ganze Woche. Vielleicht.«';
-    if (s.schicht > 75) return 'Der Schichtleiter: »Mein bester Mann! Kommst du nachher zu meiner Runde? Und zur danach?«';
+    if (s.schicht > 75) return 'Der Schichtleiter: »Auf dich ist Verlass! Kommst du nachher zu meiner Runde? Und zur danach?«';
     return 'Der Schichtleiter: »Ich hab da noch ein Meeting angesetzt. Ist wichtig. Glaub ich.«';
   }
   function stationTable(s) {
@@ -291,9 +291,9 @@
       '<p class="small dim">Inspiriert von Mad TV (1991). Eigenes Fanprojekt, alle Figuren frei erfunden. Version ' + SC.VERSION + '</p>' + (sim().highscores().length ? '<p class="small">Bestenliste: ' + sim().highscores().map((x, i) => (i + 1) + '. ' + x.score).join(' · ') + '</p>' : '') + '</div>', true);
   };
   function help() {
-    overlay('<h2>Anleitung</h2><p>Du bist Christian, MES-Projektleiter in ' + SC.PLANT + '. Bis Tag ' + SC.DEADLINE + ' müssen alle Module des neuen Manufacturing Execution Systems abgenommen sein. Werk Nord und Werk Süd machen dasselbe, und die Werkleitung vergleicht.</p>' +
+    overlay('<h2>Anleitung</h2><p>Du bist {C} (erfahrener Projektleiter fürs MES) oder Sandra (Spezialistin aus der MES-Entwicklung) in ' + SC.PLANT + '. Die Wahl kommt bei »Neues Spiel«. Bis Tag ' + SC.DEADLINE + ' müssen alle Module des neuen Manufacturing Execution Systems abgenommen sein. Werk Nord und Werk Süd machen dasselbe, und die Werkleitung vergleicht.</p>' +
       '<ul><li><b>Das Werk ist die Automatisierungspyramide:</b> EG Feld (Pforte, Schichtleiter, Hallen), 1 Steuerung (Werkstatt, Drucker, Kantine), 2 Leitebene (Büro, Leitstand, Meeting), 3 MES (Server, IT), 4 ERP (Werkleitung, Controlling). Die IT-Chefin fragt gern danach.</li>' +
-      '<li><b>Klick auf eine Tür</b> (oder die Knöpfe unten): Christian läuft hin, Aufzug inklusive. Beim Laufen läuft die Uhr. In einem Raum, bei Besuchen, Hinweisen und in der Pause steht sie: Lies in Ruhe. Zeit kosten nur das Laufen und die Aktionen: Eine Aktion springt die Uhr um ihre Dauer vor. Auch während du in ein Textfeld tippst, steht die Uhr.</li><li><b>Tempo:</b> Knopf oben oder Tasten + und −. Langsam (Standard): eine Spielstunde dauert 60 Sekunden, Normal 40, Schnell 30. <b>Schrift:</b> im Menü auf Groß stellen.</li>' +
+      '<li><b>Klick auf eine Tür</b> (oder die Knöpfe unten): Deine Figur läuft hin, Aufzug inklusive. Beim Laufen läuft die Uhr. In einem Raum, bei Besuchen, Hinweisen und in der Pause steht sie: Lies in Ruhe. Zeit kosten nur das Laufen und die Aktionen: Eine Aktion springt die Uhr um ihre Dauer vor. Auch während du in ein Textfeld tippst, steht die Uhr.</li><li><b>Tempo:</b> Knopf oben oder Tasten + und −. Langsam (Standard): eine Spielstunde dauert 60 Sekunden, Normal 40, Schnell 30. <b>Schrift:</b> im Menü auf Groß stellen.</li>' +
       '<li><b>Ablauf je Modul:</b> Requirements (Hallen, an der Station des Moduls) → Spezifikation → Implementierung (Büro) → Deployment (Serverraum) → Testlauf (Hallen, Teststation) → Ausdruck (Drucker) → Abnahme (Werkleitung).</li>' +
       '<li><b>Stationen:</b> DEA, DEC, EEA, Extrusion, Innenverpackung, Außenverpackung, Sterilisation. Der Verpackungsautomat fällt ständig aus. Steht eine Teststation, hilft die Werkstatt.</li>' +
       '<li><b>Meetings:</b> Die Werkleitung hasst Schwänzer. Der Schichtleiter lädt ständig zu nutzlosen Meetings ein. Eins tut ihm gut, jedes weitere bringt weniger, und ab 90 Minuten am Tag zählt die Werkleitung mit. Besser: im Schichtleiter-Büro den Schichtplan abstimmen.</li>' +

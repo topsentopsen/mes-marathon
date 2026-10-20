@@ -20,9 +20,9 @@ window.SC = window.SC || {};
   SC.FIGUREN = {
     christian: { id: 'christian', name: 'Christian', col: '#8cb8e8', titel: 'MES-Projektleiter', kurz: 'der Erfahrene',
       plus: ['Kennt jede Station und jeden Schichtleiter persönlich', 'Gute Beziehungen: Werkleitung 60, Schichtleiter 50'],
-      minus: ['Neue Werkzeuge sind nicht seins', 'Spezifikation, Umsetzung und Berichte dauern normal lang'] },
+      minus: ['Steckt in vielen Gesprächen und Meetings', 'Kein Vorsprung bei Spezifikation, Umsetzung und Berichten'] },
     sandra: { id: 'sandra', name: 'Sandra', col: '#58b8a8', titel: 'MES-Spezialistin', kurz: 'die jüngere Kollegin aus der MES-Entwicklung',
-      plus: ['Schnell am Rechner: Spezifikation, Umsetzung, Deploy, Berichte und Migration gehen flotter', 'Weniger Fehler im Testlauf, Mapping beim Altwerk in 18 statt 30 Min.'],
+      plus: ['Kennt die MES-Schnittstellen aus der Entwicklung: Spezifikation, Umsetzung, Deploy, Berichte und Migration gehen flotter', 'Weniger Fehler im Testlauf, Mapping beim Altwerk in 18 statt 30 Min.'],
       minus: ['Neu im Werk: Werkleitung 55, Schichtleiter 42, Beziehungen wachsen langsamer', 'Hallen-Anforderungen und Reparaturen dauern länger'] }
   };
   // Christian als Kollege bei Sandra (Besuch, 12 Min.): erprobte Tipps aus der Halle
@@ -35,25 +35,26 @@ window.SC = window.SC || {};
   ];
   // Sandra als Kollegin bei Christian: nur eine Zeile im Protokoll, keine Zeitkosten
   SC.SANDRA_NPC = [
-    'Sandra, die Kollegin aus der MES-Entwicklung, schaut kurz rein: »Dein SVERWEIS ist beeindruckend. Ich hab ihn nachgebaut. Hat drei Tage gedauert.«',
+    'Sandra, die Kollegin aus der MES-Entwicklung, schaut kurz rein: »Dein SVERWEIS ist das einzige Dokument, das die Schicht wirklich liest. Ich hab ihn dokumentiert.«',
     'Sandra aus der MES-Entwicklung fragt nach dem BDE-Feed. Du erklärst ihn mit drei Kaffeetassen und einem Bleistift. Sie macht ein Foto.',
-    'Sandra hat über Nacht ein Dashboard gebaut. Der Schichtleiter fragt, ob man das ausdrucken kann.',
-    'Sandra schickt dir ein Mapping. Es hat Spaltenüberschriften. Du bist kurz gerührt.'
+    'Sandra zeigt dir ein neues Dashboard. Der Schichtleiter fragt, ob man das ausdrucken kann.',
+    'Sandra schickt dir ein Mapping. Es hat Spaltenüberschriften. Du nickst anerkennend.'
   ];
   // Sandras eigene Szenen: erscheinen manchmal nach passenden Aktionen
   SC.SANDRA_SZENEN = {
-    req: 'Sandra fragt die Schicht: »Warum machen wir das so?« Antwort: »Schon immer.« Es folgt die längste Pause des Tages.',
-    spec: 'Excel-Liste mit 47 Spalten. Sandra markiert sechs fürs MES. Die Spalte »Bemerkung« enthält alle Geschäftsregeln.',
-    impl: 'Sandra zeichnet die Schnittstelle auf das Whiteboard. Der Drucker meldet sich als Teilnehmer an.',
+    req: 'Du fragst die Schicht: »Warum machen wir das so?« Antwort: »Schon immer.« Es folgt die längste Pause des Tages.',
+    spec: 'Excel-Liste mit 47 Spalten. Du markierst sechs fürs MES. Die Spalte »Bemerkung« enthält alle Geschäftsregeln.',
+    impl: 'Du zeichnest die Schnittstelle auf das Whiteboard. Der Drucker meldet sich als Teilnehmer an.',
     deploy: 'Sieben Tools für die Auftragsübergabe: vier tun dasselbe, eines tut nichts, das siebte ist der Schichtleiter.',
-    migrate: 'Stammdaten: 11.000-mal »Schraube«. Sandra fragt: »Welche?« Die Werkstatt: »Die große.«',
-    bericht: 'Drei Leute, drei Formeln für die OEE. Sandra nimmt die vierte: die dokumentierte.',
-    test: 'Der Bediener: »Die Stückzahl tippen wir abends nach.« Sandra schreibt »Echtzeit« aufs Whiteboard und streicht es nicht durch.',
-    linie: 'Die Schicht zeigt Sandra die Stempeluhr von 1994. Sie ist ehrlich beeindruckt. Die Schicht auch.'
+    migrate: 'Stammdaten: 11.000-mal »Schraube«. Du fragst: »Welche?« Die Werkstatt: »Die große.«',
+    bericht: 'Drei Leute, drei Formeln für die OEE. Du nimmst die vierte: die dokumentierte.',
+    test: 'Der Bediener: »Die Stückzahl tippen wir abends nach.« Du schreibst »Echtzeit« aufs Whiteboard und streichst es nicht durch.',
+    linie: 'Die Schicht zeigt dir die Stempeluhr von 1994. Du bist ehrlich beeindruckt, und die Schicht freut sich darüber.'
   };
-  SC.SANDRA_TAG1 = 'Der Pförtner gibt dir einen Ausweis: »Gast«. Nach Rückfrage: »MES, Ebene drei.« Er schreibt »Ebene drei« drauf.';
-  // Anrede im Text: alle Spielertexte sind für Christian geschrieben, für Sandra werden sie angepasst
-  SC.FILL = { sandra: [[/Christian/g, 'Sandra'], [/»der vom MES«/g, '»die vom MES«'], [/»den vom MES«/g, '»die vom MES«'], [/Hemd wie immer/g, 'Blazer wie immer'], [/MES-Projektleiter\b/g, 'MES-Spezialistin']] };
+  SC.SANDRA_TAG1 = 'Dein Werksausweis ist noch nicht gedruckt. Der Pförtner schreibt dir einen Besucherzettel: »MES, Ebene drei.« Das Formular hat kein Feld für »arbeitet hier«.';
+  // Anrede im Text: alle Spielertexte sind für Christian geschrieben, für Sandra werden sie angepasst.
+  // Nur einmal je Text anwenden (an den Anzeigestellen), denn aus {C} wird »Christian«, und ein zweiter Lauf machte daraus »Sandra«.
+  SC.FILL = { sandra: [[/Christian/g, 'Sandra'], [/»der vom MES«/g, '»die vom MES«'], [/»den vom MES«/g, '»die vom MES«'], [/Hemd wie immer/g, 'Blazer wie immer'], [/»den Entsorger«/g, '»die Entsorgerin«'], [/MES-Projektleiter\b/g, 'MES-Spezialistin']] };
   // {C} steht in Texten, in denen Christian als Kollege vorkommt (wird nach der Anpassung eingesetzt)
   SC.fill = (S, t) => { if (t == null) return t; t = String(t); const L = S && SC.FILL[S.figur]; if (L) for (const [a, b] of L) t = t.replace(a, b); return t.replace(/\{C\}/g, 'Christian'); };
   SC.KOLLEGE_BUBBLES = {
