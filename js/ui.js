@@ -24,6 +24,7 @@
   const F = h => SC.fill ? SC.fill(SC.S, h) : h;
   function overlay(html, raw) { if (!raw) html = F(html); UI._ovAt = performance.now(); if (!/data-o="logzu"/.test(html)) UI._log = false; $('overlay').innerHTML = '<div class="box">' + html + '</div>'; $('overlay').classList.remove('hidden'); UI._ov = true; padOverlay(); }
   // v0.10: Auf dem Handy liegt der Ton-Knopf über Dialogen; der Dialog beginnt deshalb darunter
+  window.addEventListener('resize', () => { if (UI._ov) padOverlay(); });
   function padOverlay() { const o = $('overlay'), b = document.getElementById('btn-sound'); if (window.innerWidth > 640 || !b) { o.style.paddingTop = ''; return; } const r = b.getBoundingClientRect(); o.style.paddingTop = (r.bottom > 0 && r.bottom < window.innerHeight * 0.5 ? Math.round(r.bottom + 6) : 10) + 'px'; }
   function closeOverlay() { $('overlay').classList.add('hidden'); UI._ov = false; UI._ovAt = 0; }
   UI.toast = function (t, bad) { const el = $('ticker'); el.innerHTML = F('<span class="' + (bad ? 'bad' : '') + '">' + esc(t) + '</span>'); };
@@ -374,7 +375,7 @@
       // (gehaltene Taste und die ersten 400 ms nach dem Öffnen zählen nicht, damit niemand einen Hinweis ungelesen wegdrückt)
       if (UI._ov && (e.key === ' ' || e.key === 'Enter')) { const bs = document.querySelectorAll('#overlay button'); if (bs.length === 1 && !document.querySelector('#overlay button[data-v]')) { e.preventDefault(); if (!e.repeat && performance.now() - (UI._ovAt || 0) > 400) bs[0].click(); } return; }
       // v0.10: im Raum steht die Uhr ohnehin; die Leertaste löst dort einen fokussierten Knopf aus statt die Pause
-      if (e.key === ' ') { if (UI.room) return; $('btn-pause').click(); e.preventDefault(); }
+      if (e.key === ' ') { if (UI.room) { const t = document.activeElement && document.activeElement.tagName; if (!/^(BUTTON|SELECT|INPUT|A)$/.test(t || '')) e.preventDefault(); return; } $('btn-pause').click(); e.preventDefault(); }
       if (e.key === '+') UI.setTempo(UI.tempo + 1);
       if (e.key === '-' || e.key === '−') UI.setTempo(UI.tempo - 1);
       if (e.key === 'm' || e.key === 'M') $('btn-sound').click();

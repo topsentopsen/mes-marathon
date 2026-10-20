@@ -309,4 +309,5 @@ t('v0.10 neue Szenen und Zeilen: erscheinen, kosten keine Zeit, Salze 34000 bis 
 t('v0.10 Bestenliste speichert die Figur, Reihenfolge nur nach Punkten, alte Einträge ohne Figur gehen', () => { const store = { 'mesmarathon-highscore': JSON.stringify([{ score: 50, win: false, day: 20 }]) }; global.localStorage = { getItem: k => store[k] || null, setItem: (k, v) => { store[k] = v; } };
   const A = sim.newGame(1), B = sim.newGame(2, 'sandra'); A.result = { score: 100, win: true }; B.result = { score: 200, win: false }; sim.addScore(A); const L = sim.addScore(B);
   assert.deepStrictEqual(L.map(x => x.score), [200, 100, 50]); assert.deepStrictEqual(L.map(x => x.figur), ['sandra', 'christian', undefined]); assert.strictEqual(sim.highscores().length, 3); delete global.localStorage; });
+t('v0.10 alle Szenen-IDs sind echte Aktionen', () => { const ids = new Set([].concat(...Object.values(sim.actions).map(l => l.map(a => a.id)))); for (const id of Object.keys(SC.SANDRA_SZENEN2).concat(Object.keys(SC.SANDRA_SZENEN))) assert.ok(ids.has(id), id); });
 console.log(n + ' Tests ok');
