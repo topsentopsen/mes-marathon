@@ -1,7 +1,7 @@
 // MES-Marathon: prozedurale Musik, Jingles und Fabriklärm (Web Audio API). Eigene Kompositionen, keine fremden Melodien oder Samples.
 'use strict';
 (function (SC) {
-  const KEY = 'mesmarathon-audio';
+  const KEY = 'mesmarathon-ea-audio';
   const A = SC.audio = {
     ready: false, muted: false, volume: 0.5, _ctx: null, _master: null, _comp: null,
     _timer: null, _track: null, _nextNote: 0, _step: 0, _voices: [], _duckUntil: 0

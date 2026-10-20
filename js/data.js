@@ -1,11 +1,29 @@
 // MES-Marathon: Spieldaten. Alle Figuren, Firmen und Texte sind frei erfunden.
-// Namensregel: Nur Christian und Sandra haben Namen. Alle anderen Figuren heißen nur nach ihrer Rolle.
+// Namensregel: Nur Christian und Sandra haben Namen. Alle anderen Figuren heißen nur nach ihrer Rolle. (v0.14: dazu Ivo)
 'use strict';
 window.SC = window.SC || {};
 (function (SC) {
-  SC.VERSION = '0.14.0';
+  SC.VERSION = '0.14.0-ea.1';
   // v0.8: Spielstände dieser Versionen laden weiter (kein neues Feld in S)
-  SC.SAVE_OK = ['0.7.0', '0.8.0', '0.9.0', '0.10.0', '0.11.0', '0.12.0', '0.13.0'];
+  // Early Access: eigene Spielstände (Schlüssel mesmarathon-ea-...), Stände des Hauptspiels werden nicht geladen
+  SC.SAVE_OK = [];
+  // Early Access: genau ein Level, Woche 1 (Montag bis Freitag). Ziel: bis Freitag Feierabend mindestens ein Modul abgenommen.
+  // Danach kommt statt des Wochenendes der Ende-Bildschirm. SC.EA = null schaltet das volle Spiel ein (nur für Tests und Bot).
+  SC.EA = {
+    tage: 5, ziel: 1,
+    gesperrt: ['z_kurz', 'z_mittel', 'z_lang'],
+    titel: 'Woche 1: Das erste Modul',
+    kurz: 'Early Access: Woche 1',
+    start: 'Montag, 07:30, Werk Mitte. Die Werkleitung will bis Freitag Feierabend das erste MES-Modul abgenommen sehen. Welches, ist ihr egal. Hauptsache, es steht ein Haken in der Excel-Liste.',
+    ablauf: 'So geht ein Modul: Requirements in den Hallen, Spezifikation und Implementierung im Büro, Deployment im Serverraum, Testlauf in den Hallen, Ausdruck am Drucker, Abnahme bei der Werkleitung.',
+    gesperrtText: 'In dieser Version endet das Spiel nach dem Freitag. Wochenenden, die SAP-Migration, die Firmenübernahme, das Konzernaudit, Zusagen an die Werkleitung und alles ab Tag 6 sind noch gesperrt.',
+    chef: 'Die Werkleitung: »Bis Freitag will ich ein abgenommenes Modul sehen. Eins. Das ist ja wohl zu schaffen.«',
+    gewonnen: 'Freitag, Feierabend: Das erste Modul ist abgenommen. Die Werkleitung macht einen Haken in die Excel-Liste und rahmt ihn fast ein.',
+    gewonnen2: 'Freitag, Feierabend: Mehr als ein Modul abgenommen. Die Werkleitung prüft zweimal, ob die Excel-Liste kaputt ist.',
+    verloren: 'Freitag, Feierabend: Noch kein Modul abgenommen. Die Werkleitung nennt es »Lernwoche« und plant ein Kick-off zum Kick-off.',
+    ende: 'Hier endet die Early-Access-Version. Mehr folgt.',
+    endeKlein: 'Danke fürs Spielen! In der Vollversion geht es nach dem Wochenende weiter, mit SAP-Migration, Firmenübernahme und 20 Tagen bis zum Go-Live.'
+  };
   SC.DAY_START = 7 * 60 + 30;   // 07:30 Frühschicht-Beginn im Büro
   SC.DAY_END = 17 * 60;         // 17:00 regulärer Feierabend
   SC.LATEST = 20 * 60;          // 20:00 der Pförtner schließt ab

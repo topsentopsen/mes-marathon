@@ -274,3 +274,8 @@ button:focus-visible, select:focus-visible, input:focus-visible, #ticker:focus-v
 .merk { border-left: 3px solid #e8a040; padding: 2px 0 2px 8px; color: #f0dcb0; }
 .glossar { text-align: left; padding-left: 18px; margin: 6px 0; }
 .glossar li { margin: 2px 0; }
+/* Early Access: Kennzeichen im Titel und im Level-Start, Hinweis am Ende */
+.ea-badge { display: inline-block; margin: 4px 0; padding: 2px 10px; border: 2px solid #ffcc00; border-radius: 4px; color: #ffcc00; font-weight: bold; letter-spacing: 1px; }
+.ea-ende { margin-top: 10px; padding: 8px 10px; border: 2px dashed #ffcc00; border-radius: 6px; background: rgba(40, 32, 0, .35); }
+.ea-ende h3 { margin: 2px 0 4px; color: #ffcc00; }
+.ea-hilfe { border-left: 3px solid #ffcc00; padding-left: 8px; }

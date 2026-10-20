@@ -10,9 +10,9 @@ const url = process.argv.find(a => /^(file|https?):/.test(a)) || 'file://' + pat
 const SHOTDIR = process.env.SHOTS || '/workspace/mes-layout-shots';
 const SHOTS = process.argv.includes('--shots'), GROSS = process.argv.includes('--gross');
 const VPS = (process.env.VPS || '1366x768,1440x900,1920x1080,390x844').split(',').map(v => v.split('x').map(Number));
-// Spielstände: vier Partien (Christian »gut«, Sandra »vorzeig«, Christian »sapChaos«, ab v0.14 Ivo »gut«), jeweils zu Tagesbeginn
+// Spielstände (Early Access: nur Woche 1, Tag 1 bis 5): sieben Partien (Christian »gut«, Sandra »vorzeig«, Christian »sapChaos«, Ivo »gut«, dazu Sandra »einfach«, Ivo »meetingfan«, Christian »fleissig«), jeweils zu Tagesbeginn
 const states = (() => { const SC = require('./helper.js'), sim = SC.sim, { POL, playDay } = require('../tools/bot.js'), out = [];
-  for (const [figur, seed, pol] of [['christian', 4242, 'gut'], ['sandra', 777, 'vorzeig'], ['christian', 99, 'sapChaos'], ['ivo', 555, 'gut']]) {
+  for (const [figur, seed, pol] of [['christian', 4242, 'gut'], ['sandra', 777, 'vorzeig'], ['christian', 99, 'sapChaos'], ['ivo', 555, 'gut'], ['sandra', 31, 'einfach'], ['ivo', 77, 'meetingfan'], ['christian', 12, 'fleissig']]) {
     const S = sim.newGame(seed, figur); let g = 0;
     while (S.phase !== 'ende' && g++ < 40) { if (S.phase === 'tag' && !S.pending) out.push({ label: figur + '-' + pol + '-tag' + S.day, s: JSON.parse(JSON.stringify(S)) }); playDay(S, POL[pol]); }
   }
@@ -59,7 +59,11 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     await page.evaluate(() => document.querySelector('button[data-o="back"]').click()); await wait(50);
     await page.evaluate(() => document.querySelector('button[data-o="new"]').click()); await wait(100); note('dialogs', 'figurenwahl', await meas());
     // v0.14: Ivo wählen, sein Einstieg (eigener Dialog mit Glossar) muss ebenfalls ohne Scrollen passen
-    await page.evaluate(() => document.querySelector('button[data-f="ivo"]').click()); await wait(300); note('dialogs', 'ivo-einstieg', await meas());
+    await page.evaluate(() => document.querySelector('button[data-f="ivo"]').click()); await wait(300);
+    // Early Access: zuerst der Level-Start, danach Ivos Einstieg
+    note('dialogs', 'ea-start', await meas()); if (!(await page.evaluate(() => !!document.querySelector('#overlay .ea-badge')))) note('dialogs', 'ea-start', ['Level-Start fehlt']);
+    if (SHOTS) await page.screenshot({ path: SHOTDIR + '/' + w + 'x' + h + '-ea-start.png' });
+    await page.evaluate(() => document.querySelector('#overlay button[data-o="weiter"]').click()); await wait(150); note('dialogs', 'ivo-einstieg', await meas());
     if (!(await page.evaluate(() => !!document.querySelector('#overlay .glossar')))) note('dialogs', 'ivo-einstieg', ['Ivo-Einstieg fehlt']);
     if (SHOTS) await page.screenshot({ path: SHOTDIR + '/' + w + 'x' + h + '-ivo-einstieg.png' });
     await page.evaluate(() => document.querySelector('#overlay button[data-o="weiter"]').click()); await wait(100);
@@ -68,7 +72,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
       for (const late of [false, true]) {
         const r = await page.evaluate((s, late, rooms) => {
           const SC = window.SC, UI = SC.ui; if (late) { s.minute = 16 * 60 + 50; s._warned = true; }
-          localStorage.setItem('mesmarathon-save', JSON.stringify(s)); SC.S = SC.sim.load(); SC.S.pending = null;
+          localStorage.setItem('mesmarathon-ea-save', JSON.stringify(s)); SC.S = SC.sim.load(); SC.S.pending = null;
           if (UI.overlayOpen()) document.getElementById('overlay').classList.add('hidden'), UI._ov = false;
           if (UI.room) UI.closeRoom(); UI.hud(); const out = {};
           for (const room of rooms) {
@@ -98,10 +102,10 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     }
     // Dialoge im Spiel: Besuche, Abend, Wochenende, Protokoll, Hinweis, Figurenkarte, Menü
     const st = states.find(x => /tag9$/.test(x.label)) || states[8];
-    await page.evaluate(s => { localStorage.setItem('mesmarathon-save', JSON.stringify(s)); window.SC.S = window.SC.sim.load(); }, st.s);
+    await page.evaluate(s => { localStorage.setItem('mesmarathon-ea-save', JSON.stringify(s)); window.SC.S = window.SC.sim.load(); }, st.s);
     let vshot = false;
     for (const s2 of states) {
-      const n = await page.evaluate(s => { localStorage.setItem('mesmarathon-save', JSON.stringify(s)); window.SC.S = window.SC.sim.load(); return window.SC.S.visits.length; }, s2.s);
+      const n = await page.evaluate(s => { localStorage.setItem('mesmarathon-ea-save', JSON.stringify(s)); window.SC.S = window.SC.sim.load(); return window.SC.S.visits.length; }, s2.s);
       for (let i = 0; i < n; i++) {
         const vid = await page.evaluate(i => { const S = window.SC.S, UI = window.SC.ui; if (UI.overlayOpen()) { document.getElementById('overlay').classList.add('hidden'); UI._ov = false; } const v = S.visits[i]; S.minute = Math.max(S.minute, v.at || S.minute); S.pending = v; try { UI.hud(); } catch (e) { return 'FEHLER ' + v.id + ' ' + e.message; } return v.id; }, i); await wait(10);
         note('dialogs', 'besuch-' + vid.replace(/ .*/, ''), (await meas()).map(t => s2.label + ' ' + t));
@@ -109,21 +113,27 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
         await page.evaluate(() => { window.SC.S.pending = null; });
       }
     }
-    await page.evaluate(s => { localStorage.setItem('mesmarathon-save', JSON.stringify(s)); window.SC.S = window.SC.sim.load(); }, st.s);
+    await page.evaluate(s => { localStorage.setItem('mesmarathon-ea-save', JSON.stringify(s)); window.SC.S = window.SC.sim.load(); }, st.s);
     await page.evaluate(() => { const UI = window.SC.ui; document.getElementById('overlay').classList.add('hidden'); UI._ov = false; UI.showLog(); }); note('dialogs', 'protokoll', await meas());
     await page.evaluate(() => { const UI = window.SC.ui; document.getElementById('overlay').classList.add('hidden'); UI._ov = false; UI.hinweis('17:00 Feierabend! Überstunden gehen bis 20:00, kosten aber Familie, und was du jetzt noch anfängst, dauert länger (Spätzuschlag: ×1,2). Raus über die Pforte (EG).'); }); note('dialogs', 'hinweis', await meas());
     await page.evaluate(() => { const UI = window.SC.ui; document.getElementById('overlay').classList.add('hidden'); UI._ov = false; document.getElementById('btn-figur').click(); }); await wait(30); note('dialogs', 'figurenkarte', await meas());
     await page.evaluate(() => { const UI = window.SC.ui; document.getElementById('overlay').classList.add('hidden'); UI._ov = false; document.getElementById('btn-menu').click(); }); await wait(30); note('dialogs', 'menue', await meas());
     for (const s2 of states.filter((x, i) => i % 3 === 0)) {
-      await page.evaluate(s => { const UI = window.SC.ui; document.getElementById('overlay').classList.add('hidden'); UI._ov = false; localStorage.setItem('mesmarathon-save', JSON.stringify(s)); window.SC.S = window.SC.sim.load(); window.SC.S.pending = null; UI.endDay(); }, s2.s); await wait(30);
+      await page.evaluate(s => { const UI = window.SC.ui; document.getElementById('overlay').classList.add('hidden'); UI._ov = false; localStorage.setItem('mesmarathon-ea-save', JSON.stringify(s)); window.SC.S = window.SC.sim.load(); window.SC.S.pending = null; UI.endDay(); }, s2.s); await wait(30);
       note('dialogs', 'abend', (await meas()).map(t => s2.label + ' ' + t));
       await page.evaluate(() => { const d = document.querySelector('#overlay details'); if (d) d.open = true; }); await wait(10);
       note('dialogs', 'abend-protokoll-offen', (await meas()).map(t => s2.label + ' ' + t));
     }
+    // Early Access: Ende-Bildschirm nach dem Freitag, gewonnen und verloren, für jede Partie
+    for (const s2 of states.filter(x => /tag5$/.test(x.label))) for (const win of [true, false]) {
+      const ph = await page.evaluate((s, win) => { const UI = window.SC.ui; document.getElementById('overlay').classList.add('hidden'); UI._ov = false; s = JSON.parse(JSON.stringify(s)); s.modules.forEach((m, i) => { m.done = win && i < 2 ? true : m.done && win; }); localStorage.setItem('mesmarathon-ea-save', JSON.stringify(s)); window.SC.S = window.SC.sim.load(); window.SC.S.pending = null; UI.endDay(); return window.SC.S.phase + (window.SC.S.result && window.SC.S.result.ea ? '-ea' : ''); }, s2.s, win); await wait(30);
+      note('dialogs', 'ea-ende', (await meas()).map(t => s2.label + ' ' + t)); if (ph !== 'ende-ea') note('dialogs', 'ea-ende', [s2.label + ' kein Level-Ende: ' + ph]);
+      if (SHOTS && win && /^christian/.test(s2.label)) await page.screenshot({ path: SHOTDIR + '/' + w + 'x' + h + '-ea-ende.png' });
+    }
     // Screenshots typischer Raum (Leitstand, Tag 9, 16:50) und Fabrik
     if (SHOTS) {
       for (const [room, lab] of [['leitstand', 'leitstand'], ['buero', 'buero'], ['controlling', 'controlling']]) {
-        await page.evaluate((s, room) => { const UI = window.SC.ui; document.getElementById('overlay').classList.add('hidden'); UI._ov = false; s = JSON.parse(JSON.stringify(s)); s.minute = 16 * 60 + 50; s._warned = true; localStorage.setItem('mesmarathon-save', JSON.stringify(s)); window.SC.S = window.SC.sim.load(); window.SC.S.pending = null; if (UI.room) UI.closeRoom(); UI.openRoom(room); UI.hud(); }, st.s, room); await wait(200);
+        await page.evaluate((s, room) => { const UI = window.SC.ui; document.getElementById('overlay').classList.add('hidden'); UI._ov = false; s = JSON.parse(JSON.stringify(s)); s.minute = 16 * 60 + 50; s._warned = true; localStorage.setItem('mesmarathon-ea-save', JSON.stringify(s)); window.SC.S = window.SC.sim.load(); window.SC.S.pending = null; if (UI.room) UI.closeRoom(); UI.openRoom(room); UI.hud(); }, st.s, room); await wait(200);
         await page.screenshot({ path: SHOTDIR + '/' + w + 'x' + h + '-' + lab + '.png' });
       }
       await page.evaluate(() => { const UI = window.SC.ui; if (UI.room) UI.closeRoom(); }); await wait(300);

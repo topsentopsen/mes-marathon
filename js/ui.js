@@ -9,13 +9,13 @@
   const UI = SC.ui = { paused: false, speed: 1, room: null, _ov: false };
   // v0.9 Tempo-Stufe (gemerkt im Browser, Standard Langsam) und Schriftgröße
   const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } return null; };
-  UI.tempo = Math.max(0, SC.TEMPO.findIndex(t => t.id === store('mesmarathon-tempo')));
+  UI.tempo = Math.max(0, SC.TEMPO.findIndex(t => t.id === store('mesmarathon-ea-tempo')));
   UI.speed = SC.TEMPO[UI.tempo].f;
-  UI.setTempo = function (i) { UI.tempo = Math.max(0, Math.min(SC.TEMPO.length - 1, i)); UI.speed = SC.TEMPO[UI.tempo].f; store('mesmarathon-tempo', SC.TEMPO[UI.tempo].id); const b = document.getElementById('btn-speed'); if (b) b.textContent = 'Tempo: ' + SC.TEMPO[UI.tempo].name; };
+  UI.setTempo = function (i) { UI.tempo = Math.max(0, Math.min(SC.TEMPO.length - 1, i)); UI.speed = SC.TEMPO[UI.tempo].f; store('mesmarathon-ea-tempo', SC.TEMPO[UI.tempo].id); const b = document.getElementById('btn-speed'); if (b) b.textContent = 'Tempo: ' + SC.TEMPO[UI.tempo].name; };
   // v0.9: Auch ein offenes Textfeld (Fokus in input oder textarea, z. B. mit Handy-Tastatur) hält die Uhr an
   UI.typing = () => { const a = document.activeElement; if (!a) return false; if (a.isContentEditable || a.tagName === 'TEXTAREA') return true; return a.tagName === 'INPUT' && !/^(range|checkbox|radio|button|submit|reset|color|file|image|hidden)$/i.test(a.type || 'text'); };
   UI.clockRuns = () => { const s = SC.S; return !!(s && s.phase === 'tag' && !UI.paused && !UI._ov && !UI.room && !UI.typing()); };
-  UI.setGross = function (on) { document.body.classList.toggle('gross', !!on); store('mesmarathon-schrift', on ? 'gross' : 'normal'); const b = document.getElementById('btn-schrift'); if (b) b.textContent = on ? 'Schrift: Groß' : 'Schrift: Normal'; if (UI.room && UI.fitRoom) UI.fitRoom(); };
+  UI.setGross = function (on) { document.body.classList.toggle('gross', !!on); store('mesmarathon-ea-schrift', on ? 'gross' : 'normal'); const b = document.getElementById('btn-schrift'); if (b) b.textContent = on ? 'Schrift: Groß' : 'Schrift: Normal'; if (UI.room && UI.fitRoom) UI.fitRoom(); };
   let shown = 0;
   const SND_HINT = 'Ton an. Kein Ton? Stummschalter am iPhone prüfen und Lautstärke hoch.';
 
@@ -41,7 +41,7 @@
   UI.hud = function () {
     const s = S(); if (!s) return;
     flushMsgs();
-    $('hud-day').textContent = 'Tag ' + s.day + '/' + s.deadline + ' · ' + SC.WEEKDAYS[sim().weekday(s)].slice(0, 2);
+    $('hud-day').textContent = 'Tag ' + s.day + '/' + (SC.EA ? SC.EA.tage : s.deadline) + ' · ' + SC.WEEKDAYS[sim().weekday(s)].slice(0, 2);
     $('hud-clock').textContent = (s.phase === 'tag' && !UI.clockRuns() ? '⏸ ' : '') + hm(s.minute);
     $('hud-clock').title = UI.clockRuns() ? 'Die Uhr läuft' : 'Die Uhr steht (Raum, Dialog oder Pause)';
     $('hud-clock').className = 'hud-item' + (s.minute >= SC.DAY_END ? ' late' : '');
@@ -101,6 +101,7 @@
     if (room === 'buero' || room === 'kantine') h += boxHtml(s, room === 'kantine');
     if (room === 'buero' || room === 'chef') h += '<h3>' + (room === 'buero' ? 'Excel-Liste »MES_Rollout_final_v7_NEU.xlsx«' : 'Werksvergleich') + '</h3>' + (room === 'buero' ? modTable(s) : rivals(s));
     if (room === 'chef') h += '<div class="say">' + chefSays(s) + '</div>';
+    if (SC.EA && room === 'chef' && chefSays(s) !== SC.EA.chef) h += '<p class="small ea-hilfe">' + esc(SC.EA.chef) + '</p>'; // Early Access: Ziel der Woche
     if (room === 'chef') h += '<p>Image im Konzern: <b>' + Math.round(s.image) + '</b>/100 · ' + (s.zusage ? '<span class="warn">Offene Zusage: ' + s.zusage.need + ' Modul(e) bis Tag ' + s.zusage.until + ' (geschafft: ' + (s.modules.filter(m => m.done).length - s.zusage.base) + ')</span>' : '<span class="dim">Keine offene Zusage. Zusagen bringen Prämie und Image, gebrochene kosten.</span>') + '</p>';
     if (room === 'schicht') h += '<div class="say">' + schichtSays(s) + '</div>';
     if (room === 'halle') h += stationTable(s);
@@ -114,6 +115,7 @@
     if (room === 'server') h += '<p>Status: ' + (s.server.up ? '<span class="good">MES-Server läuft</span>' : '<span class="bad">MES-Server DOWN</span>') + (s.server.careUntil >= s.day ? ' · <span class="good">frisch gewartet</span>' : '') + '</p>';
     let info = h; h = '<h3>Was tun?</h3><div class="acts">';
     for (const a of acts) {
+      if (SC.EA && SC.EA.gesperrt.includes(a.id)) continue; // Early Access: gesperrte Aktionen erscheinen nicht
       const why = a.check(s); let cost = sim().actCost(s, room, a.id); const label = typeof a.label === 'function' ? a.label(s) : a.label;
       const wait = sim().handoverWait(s, room), fertig = s.minute + wait + cost, spaet = fertig > SC.DAY_END + (s.partyMin || 0);
       // v0.11: Sandras Stärken und Schwächen sichtbar auf dem Knopf (nur Anzeige)
@@ -198,6 +200,7 @@
     if (!s.excel) return 'Die Werkleitung: »Ich sehe da nichts Neues in der Excel-Liste.«';
     if (s.budget < 0) return 'Die Werkleitung: »Das Controlling ruft mich jeden Tag an. Wegen Ihnen.«';
     if (s.chef > 75) return 'Die Werkleitung: »Weiter so. Der Vorstand schaut auf ' + SC.PLANT + '. Und auf die OEE.«';
+    if (SC.EA) return SC.EA.chef;
     return 'Die Werkleitung: »Go-Live ist Tag ' + s.deadline + '. Das steht. Und die KPIs will ich grün sehen.«';
   }
   function schichtSays(s) {
@@ -266,16 +269,23 @@
       werte = '<p>Werkleitung ' + bar(s.chef) + ' · Familie ' + bar(s.family, 'heartbar') + ' · Schichtleiter ' + bar(s.schicht) + ' · Energie morgen ' + bar(s.energy) + ' · Budget <b>' + Math.round(s.budget) + ' k€</b></p>',
       proto = '<details><summary>Tagesprotokoll</summary><ul class="log">' + R.log.map(l => '<li>' + esc(l) + '</li>').join('') + '</ul></details>';
     let h = kopf;
-    if (s.phase === 'ende') { h += '<div class="abend mit-ende"><div class="abend-a">' + fort + bilanz + kpis + werte + proto + '</div><div class="abend-b">' + endHtml(s) + '</div></div>'; aud('jingle', s.result.win ? 'win' : 'lose'); h += '<p><button data-o="title">Zum Titel</button></p>'; }
+    if (s.phase === 'ende') { h += '<div class="abend mit-ende"><div class="abend-a">' + fort + bilanz + kpis + werte + proto + '</div><div class="abend-b">' + endHtml(s) + '</div></div>'; aud('jingle', s.result.win ? 'win' : 'lose'); h += '<p>' + (SC.EA ? '<button data-o="new">Nochmal spielen</button> ' : '') + '<button data-o="title">Zum Titel</button></p>'; }
     else if (s.phase === 'wochenende') h += '<div class="abend"><div class="abend-a">' + fort + bilanz + '</div><div class="abend-b">' + kpis + werte + proto + '<h3>Wochenende! Der Schichtleiter sucht Leute für die Wochenendschicht.</h3>' + (s.sap.cutover ? '<p class="warn">SAP-Cutover steht an! Ohne Wochenendschicht gibt es drei Tage Chaos.</p>' : '') + '<p class="small">Jeder Tag Wochenendschicht bringt bis zu 4 Arbeitspakete (beim SAP-Cutover gehen sie zuerst in die Stammdaten), kostet aber Familie (−' + SC.TUNE.weekendFam + '), Energie (−12, bei kaputtem Kaffeeautomaten −16) und ' + SC.TUNE.cost.weekend + ' k€ Zuschläge.</p><p class="small dim">' + esc(sim().wochenendGag(s)) + '</p></div></div><p><button data-o="we0">Frei nehmen</button> <button data-o="we1">Samstag arbeiten</button> <button data-o="we2">Samstag und Sonntag</button></p>';
     else h += '<div class="abend"><div class="abend-a">' + fort + bilanz + '</div><div class="abend-b">' + kpis + werte + proto + '</div></div><p><button data-o="next">Nächster Tag</button></p>';
     sim().save(s);
     overlay(h);
   }
   function endHtml(s) {
+    if (SC.EA) return eaEndHtml(s); // Early Access: jedes Spielende (auch vorzeitig) zeigt den Ende-Bildschirm des Levels
     return '<div class="end ' + (s.result.win ? 'good' : 'bad') + '"><h2>' + (s.result.win ? (s.result.pfad ? 'VORZEIGEWERK!' : s.result.titel ? 'GO-LIVE! WERK DES JAHRES!' : 'GO-LIVE!') : 'PROJEKT GESCHEITERT') + '</h2><p>' + esc(s.result.why) + '</p><p>Punkte: <b>' + s.result.score + '</b></p>' +
       '<p class="small">KPI-Index: ' + sim().kpiIndex(s) + ' % · Budget: ' + Math.round(s.budget) + ' k€ · Besuche: ' + s.stats.visits + ' · Pyramiden-Fragen richtig: ' + s.stats.pyrRight + '/' + (s.stats.pyrRight + s.stats.pyrWrong) + ' · Störungen: ' + s.stats.faults + '</p>' + highHtml(s) +
       '<p class="small">Meetings besucht: ' + s.stats.meetings + ' (davon nutzlos: ' + s.stats.useless + ') · verpasst: ' + s.stats.missed + ' · Wochenendschichten: ' + s.stats.weekend + ' · Bugs: ' + s.stats.bugs + ' · Kaffee: ' + s.stats.coffee + ' · Überstunden: ' + Math.round(s.stats.overtime) + ' Min.</p>' + werkInZahlen(s) + '<p class="say">' + esc(sim().abschluss(s)) + '</p></div>';
+  }
+  // Early Access: Ende-Bildschirm des Levels (Ergebnis der Woche, dann der Hinweis auf die Vollversion, ohne Termin)
+  function eaEndHtml(s) { const E = SC.EA, n = s.result.module || 0;
+    return '<div class="end ' + (s.result.win ? 'good' : 'bad') + '"><h2>' + (s.result.win ? 'WOCHE 1 GESCHAFFT!' : s.result.ea ? 'WOCHE 1 IST UM' : 'WOCHE 1 VORZEITIG VORBEI') + '</h2><p>' + esc(s.result.why) + '</p><p>Abgenommene Module: <b>' + n + '</b> · Punkte: <b>' + s.result.score + '</b></p>' +
+      '<p class="small">KPI-Index: ' + sim().kpiIndex(s) + ' % · Budget: ' + Math.round(s.budget) + ' k€ · Besuche: ' + s.stats.visits + ' · Meetings: ' + s.stats.meetings + ' · Kaffee: ' + s.stats.coffee + ' · Überstunden: ' + Math.round(s.stats.overtime) + ' Min.</p>' + highHtml(s) + werkInZahlen(s) +
+      '<div class="ea-ende"><h3>Ende der Early-Access-Version</h3><p>' + esc(E.ende) + '</p><p class="small">' + esc(E.endeKlein) + '</p></div></div>';
   }
   // v0.7 »Dein Werk in Zahlen« (nur vorhandene Statistik)
   function werkInZahlen(s) {
@@ -287,7 +297,7 @@
   function highHtml(s) {
     if (!s._hs) { s._hs = true; s._hl = sim().addScore(s); }
     const L = s._hl || sim().highscores();
-    return L.length ? '<p class="small">Bestenliste: ' + L.map((x, i) => (i + 1) + '. ' + x.score + figTag(x, true) + (x.win ? ' (Go-Live Tag ' + x.day + ')' : '')).join(' · ') + '</p>' : '';
+    return L.length ? '<p class="small">Bestenliste: ' + L.map((x, i) => (i + 1) + '. ' + x.score + figTag(x, true) + (x.win ? (SC.EA ? ' (Woche 1 geschafft)' : ' (Go-Live Tag ' + x.day + ')') : '')).join(' · ') + '</p>' : '';
   }
   function next() { const s = S(); sim().startDay(s); s._warned = false; shown = 0; closeOverlay(); SC.building.reset(); aud('play', 'tower'); morning(); sim().save(s); }
   function morning() {
@@ -297,7 +307,7 @@
   }
 
   const unpause = () => { UI.paused = false; $('btn-pause').textContent = 'Pause'; };
-  UI.seenHint = () => { try { return !!localStorage.getItem('mesmarathon-hinweis'); } catch (e) { return true; } };
+  UI.seenHint = () => { try { return !!localStorage.getItem('mesmarathon-ea-hinweis'); } catch (e) { return true; } };
   // v0.9 Porträts: Christian hat die PNG-Datei, Sandra wird mit Rechtecken gezeichnet (kein getImageData, klappt auch unter file://)
   const PIMG = {};
   UI.portrait = function (fig) {
@@ -346,27 +356,30 @@
     overlay('<h2>Wer bist du?</h2><p>Such dir aus, wer das MES diesmal wirklich einführt. Die andere Figur ist im Werk als Kollege oder Kollegin dabei.</p><div class="figuren">' + card('christian') + card('sandra') + card('ivo') + '</div><p><button data-o="titel">Zurück</button></p>', true);
   };
   UI.newGame = function (seed, figur) {
-    figur = SC.FIGUREN[figur] ? figur : (store('mesmarathon-figur') || 'christian');
-    try { localStorage.setItem('mesmarathon-hinweis', '1'); } catch (e) { /* */ }
+    figur = SC.FIGUREN[figur] ? figur : (store('mesmarathon-ea-figur') || 'christian');
+    try { localStorage.setItem('mesmarathon-ea-hinweis', '1'); } catch (e) { /* */ }
     if (UI.room) UI.closeRoom();
-    unpause(); store('mesmarathon-figur', figur); SC.S = sim().newGame(seed || (Date.now() & 0x7fffffff), figur); shown = 0; UI._siren = 0;
+    unpause(); store('mesmarathon-ea-figur', figur); SC.S = sim().newGame(seed || (Date.now() & 0x7fffffff), figur); shown = 0; UI._siren = 0;
     SC.building.reset(); closeOverlay(); aud('unlock'); aud('play', 'tower'); morning(); sim().save(SC.S);
-    if (SC.S.figur === 'ivo' && SC.S.introIvo === false) UI.ivoIntro();
+    if (SC.EA) UI.eaStart(); else if (SC.S.figur === 'ivo' && SC.S.introIvo === false) UI.ivoIntro();
   };
+  // Early Access: Level-Start (Ziel der Woche, was gesperrt ist). Bei Ivo folgt danach sein Einstieg. Die Uhr steht.
+  UI.eaStart = function () { const s = S(); if (!s) return; const E = SC.EA;
+    overlay('<h2>' + esc(E.titel) + '</h2><p class="small ea-badge">' + esc(E.kurz) + ' · Version ' + SC.VERSION + '</p><p>' + esc(E.start) + '</p><p><b>Ziel:</b> bis Freitag 17:00 mindestens ' + (E.ziel === 1 ? 'ein Modul' : E.ziel + ' Module') + ' abgenommen. Danach endet das Level.</p><p class="small">' + esc(E.ablauf) + '</p><p class="small dim">' + esc(E.gesperrtText) + '</p><p><button data-o="weiter">Los geht’s</button></p>'); UI._nachEa = true; };
   // v0.14 Ivo: eigener Einstieg mit kurzem Glossar (Uhr steht, solange der Dialog offen ist)
   UI.ivoIntro = function () { const s = S(); if (!s) return; s.introIvo = true; sim().save(s); const I = SC.IVO_INTRO;
     overlay('<h2>' + esc(I.titel) + '</h2><div class="chefin">' + pimg('ivo', 'pt', 'Ivo') + '<div><p>' + esc(I.text) + '</p></div></div><ul class="small glossar">' + I.glossar.map(g => '<li><b>' + esc(g[0]) + ':</b> ' + esc(g[1]) + '</li>').join('') + '</ul><p>' + esc(I.schluss) + '</p><p><button data-o="weiter">Los geht’s</button></p>'); };
   UI.showTitle = function () {
     const fv = document.getElementById('foot-v'); if (fv) fv.textContent = 'v' + SC.VERSION;
     const sv = sim().load();
-    overlay('<div class="title"><h1 class="logo">MES-MARATHON</h1><p class="dim">Ein Werk. Sieben Stationen. Fünf Module. Zwanzig Tage. Unendlich viele Meetings.</p>' +
+    overlay('<div class="title"><h1 class="logo">MES-MARATHON</h1><p class="dim">Ein Werk. Sieben Stationen. Fünf Module. Zwanzig Tage. Unendlich viele Meetings.</p>' + (SC.EA ? '<p class="ea-badge">Early Access · ' + esc(SC.EA.titel) + '</p><p class="small">Diese Version enthält ein Level, die erste Woche. Ziel: bis Freitag das erste Modul abnehmen lassen.</p>' : '') +
       '<p class="figuren-mini">' + pimg('christian', 'pt', 'Christian') + ' ' + pimg('sandra', 'pt', 'Sandra') + ' ' + pimg('ivo', 'pt', 'Ivo') + '</p><p>Du bist <b>Christian</b>, der erfahrene MES-Projektleiter, oder <b>Sandra</b>, die Kollegin aus der MES-Entwicklung. Seit Jahren wird in ' + SC.PLANT + ' das MES eingeführt. Diesmal wirklich.</p><p class="small">Neu: <b>Ivo</b> aus der Werkslogistik. Er kennt die Halle, das MES noch nicht.</p>' +
       (sim().oldSave && sim().oldSave() ? '<p class="small warn">Dein Spielstand stammt aus Version ' + esc(sim().oldSave()) + ' und passt nicht zu ' + SC.VERSION + '. Bitte neu starten.</p>' : '') +
       (!sv && !sim().highscores().length && !UI.seenHint() ? '<p class="small">Erstes Mal hier? Die Anleitung erklärt alles. Kurz: Module durch die Pipeline bringen, Meetings klug wählen, ab 17:00 wird es teuer. <span class="nur-tasten">Tasten: Leertaste (Pause), + und − (Tempo), M (Ton), K (Kopfhörer). </span>In Räumen steht die Uhr.</p>' : '') + '<p><button data-o="new">Neues Spiel</button> ' + (sv && sv.phase !== 'ende' ? '<button data-o="cont">Weiterspielen (Tag ' + sv.day + ', ' + esc(sv.name || 'Christian') + ')</button> ' : '') + '<button data-o="help">Anleitung</button> <button data-o="schrift" id="btn-schrift">' + (document.body.classList.contains('gross') ? 'Schrift: Groß' : 'Schrift: Normal') + '</button></p>' +
       '<p class="small dim">Inspiriert von Mad TV (1991). Eigenes Fanprojekt, alle Figuren frei erfunden. Version ' + SC.VERSION + '</p>' + (sim().highscores().length ? '<p class="small">Bestenliste: ' + sim().highscores().map((x, i) => (i + 1) + '. ' + x.score + figTag(x, false)).join(' · ') + '</p>' : '') + '</div>', true);
   };
   function help() {
-    overlay('<h2>Anleitung</h2><div class="hilfe"><p>Du bist {C} (erfahrener Projektleiter fürs MES) oder Sandra (Spezialistin aus der MES-Entwicklung) in ' + SC.PLANT + '. Die Wahl kommt bei »Neues Spiel«. Bis Tag ' + SC.DEADLINE + ' müssen alle Module des neuen Manufacturing Execution Systems abgenommen sein. Werk Nord und Werk Süd machen dasselbe, und die Werkleitung vergleicht.</p><p>Neu ab 0.14: Du kannst auch Ivo sein, den Quereinsteiger aus der Werkslogistik. Er kennt Halle und Lager, das MES lernt er gerade. Für ihn hängt bis Tag 10 in jedem Raum ein Merkzettel mit den wichtigsten Begriffen.</p>' +
+    overlay('<h2>Anleitung</h2><div class="hilfe">' + (SC.EA ? '<p class="ea-hilfe"><b>Early Access, ' + esc(SC.EA.titel) + ':</b> Ziel ist ein abgenommenes Modul bis Freitag 17:00. ' + esc(SC.EA.gesperrtText) + ' Die Anleitung beschreibt das ganze Spiel.</p>' : '') + '<p>Du bist {C} (erfahrener Projektleiter fürs MES) oder Sandra (Spezialistin aus der MES-Entwicklung) in ' + SC.PLANT + '. Die Wahl kommt bei »Neues Spiel«. Bis Tag ' + SC.DEADLINE + ' müssen alle Module des neuen Manufacturing Execution Systems abgenommen sein. Werk Nord und Werk Süd machen dasselbe, und die Werkleitung vergleicht.</p><p>Neu ab 0.14: Du kannst auch Ivo sein, den Quereinsteiger aus der Werkslogistik. Er kennt Halle und Lager, das MES lernt er gerade. Für ihn hängt bis Tag 10 in jedem Raum ein Merkzettel mit den wichtigsten Begriffen.</p>' +
       '<ul><li><b>Das Werk ist die Automatisierungspyramide:</b> EG Feld (Pforte, Schichtleiter, Hallen), 1 Steuerung (Werkstatt, Drucker, Kantine), 2 Leitebene (Büro, Leitstand, Meeting), 3 MES (Server, IT), 4 ERP (Werkleitung, Controlling). Die IT-Chefin fragt gern danach.</li>' +
       '<li><b>Klick auf eine Tür</b> (oder die Knöpfe unten): Deine Figur läuft hin, Aufzug inklusive. Beim Laufen läuft die Uhr. In einem Raum, bei Besuchen, Hinweisen und in der Pause steht sie: Lies in Ruhe. Zeit kosten nur das Laufen und die Aktionen: Eine Aktion springt die Uhr um ihre Dauer vor. Auch während du in ein Textfeld tippst, steht die Uhr.</li><li><b>Tempo:</b> Knopf oben oder Tasten + und −. Langsam (Standard): eine Spielstunde dauert 60 Sekunden, Normal 40, Schnell 30. <b>Schrift:</b> im Menü auf Groß stellen.</li>' +
       '<li><b>Ablauf je Modul:</b> Requirements (Hallen, an der Station des Moduls) → Spezifikation → Implementierung (Büro) → Deployment (Serverraum) → Testlauf (Hallen, Teststation) → Ausdruck (Drucker) → Abnahme (Werkleitung).</li>' +
@@ -432,7 +445,7 @@
       else if (o === 'titel') UI.showTitle();
       else if (o === 'cont') { if (UI.room) UI.closeRoom(); unpause(); SC.S = sim().load(); shown = SC.S.msgs.length; closeOverlay(); SC.building.reset(); UI._siren = SC.S.sirene; if (SC.S.phase === 'tag') { aud('play', 'tower'); morning(); if (SC.S.figur === 'ivo' && SC.S.introIvo === false) UI.ivoIntro(); } else showEvening(SC.S, SC.S.lastReport); }
       else if (o === 'logzu') { UI._log = false; closeOverlay(); }
-      else if (o === 'weiter') closeOverlay();
+      else if (o === 'weiter') { closeOverlay(); if (UI._nachEa) { UI._nachEa = false; if (S() && S().figur === 'ivo' && S().introIvo === false) UI.ivoIntro(); } }
       else if (o === 'schrift') { UI.setGross(!document.body.classList.contains('gross')); }
       else if (o === 'help') help();
       else if (o === 'hs-1' || o === 'hs+1') zeigeSeite(UI._hseiten ? UI._hseiten.i + (o === 'hs+1' ? 1 : -1) : 0);
@@ -456,7 +469,7 @@
       const f = SC.building.floorAt(y); if (f !== null && x > 70 && x < 410) SC.building.goTo(f, Math.round(x), null);
     });
     $('btn-pause').onclick = () => { UI.paused = !UI.paused; $('btn-pause').textContent = UI.paused ? 'Weiter' : 'Pause'; };
-    $('btn-speed').onclick = () => UI.setTempo((UI.tempo + 1) % SC.TEMPO.length); UI.setTempo(UI.tempo); UI.setGross(store('mesmarathon-schrift') === 'gross');
+    $('btn-speed').onclick = () => UI.setTempo((UI.tempo + 1) % SC.TEMPO.length); UI.setTempo(UI.tempo); UI.setGross(store('mesmarathon-ea-schrift') === 'gross');
     $('btn-kopf').onclick = () => { const s = S(); if (!s) return; const r = sim().kopfhoerer(s); if (!r.ok) UI.toast(r.why, true); UI.hud(); if (UI.room) renderRoom(); };
     $('btn-figur').onclick = () => UI.figurKarte();
     $('btn-menu').onclick = () => { UI.paused = true; $('btn-pause').textContent = 'Weiter'; UI.showTitle(); };
@@ -465,7 +478,7 @@
     const syncSnd = () => { const A = SC.audio, st = A && A.state ? A.state() : {}; $('btn-sound').textContent = A && A.isMuted() ? '🔇 Ton aus' : st.ctx === 'running' ? '🔊 Ton an' : '🔈 Ton: tippen'; };
     UI.syncSnd = syncSnd; setInterval(syncSnd, 1000); if (SC.audio) SC.audio.onState = syncSnd;
     // iOS-Hinweis einmal je Gerät (nicht bei jedem Seitenaufruf)
-    if (SC.audio) SC.audio.onFirstUnlock = () => { let seen = false; try { seen = !!localStorage.getItem('mesmarathon-sndhint'); localStorage.setItem('mesmarathon-sndhint', '1'); } catch (e) { /* */ } if (!seen && SC.audio.isIOS && SC.audio.isIOS()) { UI._sndHint = true; UI.toast(SND_HINT); } };
+    if (SC.audio) SC.audio.onFirstUnlock = () => { let seen = false; try { seen = !!localStorage.getItem('mesmarathon-ea-sndhint'); localStorage.setItem('mesmarathon-ea-sndhint', '1'); } catch (e) { /* */ } if (!seen && SC.audio.isIOS && SC.audio.isIOS()) { UI._sndHint = true; UI.toast(SND_HINT); } };
     // Erster Tipp auf »Ton: tippen« entsperrt nur, er schaltet den Ton nicht ab: hat dieselbe Geste gerade erst entsperrt (< 1,5 s), nicht umschalten
     // v0.5: »frisch« nur, wenn die entsperrende Geste auf dem Ton-Knopf selbst lag (oder Taste M war); ein Tipp irgendwo anders davor zählt nicht
     $('btn-sound').onclick = () => { const A = SC.audio, btn = $('btn-sound'), g = A && A._gestureEl, fresh = !!(A && A._gestureUnlockAt && Date.now() - A._gestureUnlockAt < 1500 && g && (g === 'key-m' || (g.nodeType === 1 && btn.contains(g)))); if (A) { A._gestureUnlockAt = 0; A._gestureEl = null; } aud('unlock'); if (A && !A.isMuted() && fresh) { syncSnd(); aud('play', S() && S().phase === 'tag' ? 'tower' : 'title'); return; } aud('setMuted', !(A && A.isMuted())); syncSnd(); if (SC.audio && !SC.audio.isMuted()) aud('play', S() && S().phase === 'tag' ? 'tower' : 'title'); };

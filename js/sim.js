@@ -557,6 +557,7 @@
     if (S.pending) return { ok: false, why: 'Erst die Unterbrechung klären.' };
     const a = (A[room] || []).find(x => x.id === id);
     if (!a) return { ok: false, why: 'Unbekannt.' };
+    if (SC.EA && SC.EA.gesperrt.includes(id)) return { ok: false, why: 'In der Early-Access-Version gesperrt.' };
     const why = a.check(S);
     if (why) {
       // Easter Egg: dreimal vor 15:00 ausstempeln wollen
@@ -858,11 +859,13 @@
     const rest = 55 - Math.round(over / T().ueber.rest);
     S.energy = clamp(S.energy + rest, 15, 100);
     let fri = weekday(S) === 4;
-    if (S.burnout) { S.burnout = false; S.chef -= 8; S.family -= 4; S.energy = 70; R.lines.push(['bad', 'Am Schreibtisch eingeschlafen, Kopf auf der Tastatur. Energie auf null, ein Tag fällt aus: Werkleitung −8, Familie −4.' + (weekday(S) === 3 ? ' Der Freitag fällt aus, das Wochenende kommt danach trotzdem.' : weekday(S) === 4 ? ' Das Wochenende kommt trotzdem, aber der Montag fällt aus.' : '')]); if (S.ev.kaffee === S.day && weekday(S) === 4) S.ev.kaffeeKrank = S.day + 1; S.day++; if (T().cost.daily) spend(S, T().cost.daily); if (weekday(S) === 4 && S.kredit > 0) { const z = Math.max(1, Math.round(S.kredit * T().kredit.zins)); spend(S, z); R.lines.push(['bad', 'Kreditzinsen (Saldo ' + S.kredit + ' k€): −' + z + ' k€']); } if (S.auktion && !S.auktion.res && S.day >= S.auktion.closeDay) closeAuktion(S, R); if (weekday(S) === 4) { fri = true; wochenRueckblick(S, R); S.chef = clamp(S.chef, 0, 100); S.image = clamp(S.image, 0, 100); auditFreitag(S, R); } }
+    if (S.burnout) { S.burnout = false; S.chef -= 8; S.family -= 4; S.energy = 70; R.lines.push(['bad', 'Am Schreibtisch eingeschlafen, Kopf auf der Tastatur. Energie auf null, ein Tag fällt aus: Werkleitung −8, Familie −4.' + (SC.EA && weekday(S) === 3 ? ' Der Freitag fällt aus. Damit ist die Woche vorbei.' : SC.EA && weekday(S) === 4 ? ' Damit ist die Woche vorbei.' : weekday(S) === 3 ? ' Der Freitag fällt aus, das Wochenende kommt danach trotzdem.' : weekday(S) === 4 ? ' Das Wochenende kommt trotzdem, aber der Montag fällt aus.' : '')]); if (S.ev.kaffee === S.day && weekday(S) === 4) S.ev.kaffeeKrank = S.day + 1; S.day++; if (T().cost.daily) spend(S, T().cost.daily); if (weekday(S) === 4 && S.kredit > 0) { const z = Math.max(1, Math.round(S.kredit * T().kredit.zins)); spend(S, z); R.lines.push(['bad', 'Kreditzinsen (Saldo ' + S.kredit + ' k€): −' + z + ' k€']); } if (S.auktion && !S.auktion.res && S.day >= S.auktion.closeDay) closeAuktion(S, R); if (weekday(S) === 4) { fri = true; wochenRueckblick(S, R); S.chef = clamp(S.chef, 0, 100); S.image = clamp(S.image, 0, 100); auditFreitag(S, R); } }
     S.chef = clamp(S.chef, 0, 100); S.family = clamp(S.family, 0, 100); S.schicht = clamp(S.schicht, 0, 100);
     R.progress = me; R.rivals = S.rivals.map(r => ({ name: r.name, prog: r.prog })); R.budget = S.budget; R.kpiIndex = kpiIndex(S);
     R.friday = fri;
     if (R.friday && S.day >= 10 && S.sap.state === 'migration') { S.sap.cutover = true; R.lines.push(['bad', 'SAP-Cutover steht an, aber die Stammdaten sind erst ' + S.sap.pk + '/' + S.sap.need + '. Wochenendschicht oder Chaos?']); }
+    // Early Access: nach dem Freitag (oder einem ausgefallenen Freitag) endet das Level, statt des Wochenendes kommt der Ende-Bildschirm
+    if (SC.EA && (fri || S.day >= SC.EA.tage)) S.eaEnde = true;
     checkEnd(S);
     if (!S.result) S.phase = R.friday ? 'wochenende' : 'abend';
     S.lastReport = R;
@@ -875,13 +878,14 @@
     else if (S.chef <= 0) S.result = { win: false, why: 'Die Werkleitung zieht dich vom Projekt ab. Werk Nord übernimmt.' };
     else if (S.family <= 0) S.result = { win: false, why: 'Zuhause hängt der Haussegen schief. Du kündigst und wirst Imker.' };
     // v0.5 zweiter Siegpfad: nach den Niederlagen durch Werkleitung, Familie und Budget, aber vor dem verpassten Termin
+    else if (SC.EA && S.eaEnde) { const n = S.modules.filter(m => m.done).length; S.result = { win: n >= SC.EA.ziel, ea: true, module: n, why: n > SC.EA.ziel ? SC.EA.gewonnen2 : n >= SC.EA.ziel ? SC.EA.gewonnen : SC.EA.verloren }; }
     else if (S.pfad === 'vorzeig') S.result = { win: true, pfad: 'vorzeig', why: SC.VORZEIG };
     else if (S.day >= S.deadline) S.result = { win: false, why: 'Go-Live-Termin verpasst. Das Projekt wird »neu aufgesetzt«, mit einem neuen Kick-off zum Kick-off.' };
-    if (S.result && S.result.win && !S.result.pfad) { if (kpiIndex(S) >= T().titel.kpi && S.image >= T().titel.image) { S.titel = 'Werk des Jahres'; S.result.titel = S.titel; S.result.why += ' Und mehr: KPI-Index ' + kpiIndex(S) + ' %, Image ' + Math.round(S.image) + '. Der Konzern kürt ' + SC.PLANT + ' zum »Werk des Jahres«. Der Pokal steht jetzt neben der Pyramide aus Pappe.'; } }
+    if (S.result && S.result.win && !S.result.pfad && !S.result.ea) { if (kpiIndex(S) >= T().titel.kpi && S.image >= T().titel.image) { S.titel = 'Werk des Jahres'; S.result.titel = S.titel; S.result.why += ' Und mehr: KPI-Index ' + kpiIndex(S) + ' %, Image ' + Math.round(S.image) + '. Der Konzern kürt ' + SC.PLANT + ' zum »Werk des Jahres«. Der Pokal steht jetzt neben der Pyramide aus Pappe.'; } }
     if (S.result) { S.result.score = score(S); S.phase = 'ende'; }
   }
   function score(S) {
-    return Math.max(0, Math.round(progress(S) * 10 + (S.result && S.result.win ? (S.result.pfad ? T().audit.score : (S.deadline - S.day) * 150 + 1000) : 0) + S.family * 5 + S.chef * 5 + kpiIndex(S) * 5 + Math.max(0, S.budget) / 2 + (S.stats.bingo ? T().bingoScore : 0) + S.stats.eggs * 25 + S.image * 3 - S.kredit / 2 + (S.titel ? T().titel.score : 0)));
+    return Math.max(0, Math.round(progress(S) * 10 + (S.result && S.result.win ? (S.result.pfad ? T().audit.score : S.result.ea ? 1000 : (S.deadline - S.day) * 150 + 1000) : 0) + S.family * 5 + S.chef * 5 + kpiIndex(S) * 5 + Math.max(0, S.budget) / 2 + (S.stats.bingo ? T().bingoScore : 0) + S.stats.eggs * 25 + S.image * 3 - S.kredit / 2 + (S.titel ? T().titel.score : 0)));
   }
   // Wochenendschicht: shifts = 0, 1 oder 2 Tage
   // v0.7: der Kaffeeautomat bleibt auch dann am Wochenende kaputt, wenn der Freitag wegen Energie null ausfiel
@@ -918,16 +922,16 @@
     for (const st of S.stations) if (st.fault) { const pack = st.id === 'inpack' || st.id === 'auspack'; if (rng(S) < (pack ? 0.35 : 0.75)) { st.fault = null; S.msgs.push({ t: 'Die Nachtschicht hat ' + stName(st.id) + ' wieder zum Laufen gebracht. Mit einem beherzten Tritt.', bad: false }); } else st.fault.at = SC.DAY_START; }
     planDay(S);
   }
-  const SAVE = 'mesmarathon-save';
+  const SAVE = 'mesmarathon-ea-save';
   function save(S) { try { localStorage.setItem(SAVE, JSON.stringify(S)); } catch (e) { /* */ } }
   // v0.4: alter Spielstand einer anderen Version (für einen Hinweis im Titel)
   function oldSave() { try { const s = JSON.parse(localStorage.getItem(SAVE)); return s && s.v !== SC.VERSION && !(SC.SAVE_OK || []).includes(s.v) ? s.v : null; } catch (e) { return null; } }
   function load() { try { const s = JSON.parse(localStorage.getItem(SAVE)); if (!s || (s.v !== SC.VERSION && !(SC.SAVE_OK || []).includes(s.v))) return null; s.v = SC.VERSION; const d = newGame(s.seed || 1); for (const k of Object.keys(d)) if (s[k] === undefined) s[k] = d[k]; for (const k of Object.keys(d.stats)) if (s.stats[k] === undefined) s.stats[k] = 0; if (!SC.FIGUREN[s.figur]) s.figur = 'christian'; s.name = SC.FIGUREN[s.figur].name; return s; } catch (e) { return null; } }
   // Highscore (lokal, Top 5) wie bei Mad TV
   function addScore(S) {
-    try { const k = 'mesmarathon-highscore'; const L = JSON.parse(localStorage.getItem(k) || '[]'); L.push({ score: S.result.score, win: S.result.win, day: S.day, figur: S.figur || 'christian' }); L.sort((a, b) => b.score - a.score); localStorage.setItem(k, JSON.stringify(L.slice(0, 5))); return L.slice(0, 5); } catch (e) { return []; }
+    try { const k = 'mesmarathon-ea-highscore'; const L = JSON.parse(localStorage.getItem(k) || '[]'); L.push({ score: S.result.score, win: S.result.win, day: S.day, figur: S.figur || 'christian' }); L.sort((a, b) => b.score - a.score); localStorage.setItem(k, JSON.stringify(L.slice(0, 5))); return L.slice(0, 5); } catch (e) { return []; }
   }
-  function highscores() { try { return JSON.parse(localStorage.getItem('mesmarathon-highscore') || '[]'); } catch (e) { return []; } }
+  function highscores() { try { return JSON.parse(localStorage.getItem('mesmarathon-ea-highscore') || '[]'); } catch (e) { return []; } }
 
   SC.sim = { newGame, figF, lernF: (S, id) => lernF(S, FG(S), id), act, actCost, elonHeute, aufzug, handoverWait, kalender, abschluss, saison, aushang, diagramm, wochenendGag, advance, events, endDay, weekend, startDay, progress, nextMeeting, activeMeeting, actions: A, targets, hm, weekday, week, save, load, slow,
     choose, visitOptions, visitText, oldSave, archiv, kopfhoerer, kopfWhy, nordRatio, rngA, closeAuktion, auktionOpen, bidPrice, auditOk, rngF, rngM, prognoseBand, rahmen, kpiScore, kpiIndex, kpiPath, kpiTarget, autoWork, addScore, highscores, stationOf, stName, rng };

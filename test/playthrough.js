@@ -47,7 +47,7 @@ const click = (page, sel) => page.evaluate(s => { const b = document.querySelect
         visit: q('#overlay button[data-v]'), next: q('#overlay button[data-o="next"]'), we: q('#overlay button[data-o="we1"]'), title: q('#overlay button[data-o="title"]'), weiter: q('#overlay button[data-o="weiter"]'),
         want, ended: S.phase === 'ende' };
     });
-    if (st.title || st.ended && !st.next && !st.we) { log.push('Spielende an Tag ' + st.day); break; }
+    if (st.title || st.ended && !st.next && !st.we) { log.push('Spielende an Tag ' + st.day); { const f = out + '-ende.png'; await page.screenshot({ path: f }); shots.push(f); } break; }
     if (st.day !== lastDay && st.phase === 'tag' && !st.ov) { lastDay = st.day; log.push('Tag ' + st.day + ' beginnt ' + st.min); }
     if (st.weiter) { hinweise++; await click(page, '#overlay button[data-o="weiter"]'); await wait(80); continue; }
     if (st.visit) { visits++; if (visits <= 3) { const f = out + '-besuch-' + visits + '.png'; await page.screenshot({ path: f }); shots.push(f); } await click(page, '#overlay button[data-v]'); await wait(80); continue; }
@@ -75,8 +75,10 @@ const click = (page, sel) => page.evaluate(s => { const b = document.querySelect
     if (!st.walking && st.want && !st.want[1] && !shotDay['f' + st.day]) { shotDay['f' + st.day] = 1; const f = out + '-fabrik-tag' + st.day + '.png'; await page.screenshot({ path: f }); shots.push(f); }
     await wait(150);
   }
-  const fin = await page.evaluate(() => { const S = window.SC.S; return { day: S.day, phase: S.phase, prog: window.SC.sim.progress(S), chef: S.chef, family: S.family, budget: S.budget, kpi: window.SC.sim.kpiIndex(S), sap: S.sap.state, stats: S.stats }; });
+  const fin = await page.evaluate(() => { const S = window.SC.S; return { ea: !!window.SC.EA, eaEnde: !!(S.result && S.result.ea), eaText: /Ende der Early-Access-Version/.test(document.getElementById('overlay').innerText), win: !!(S.result && S.result.win), day: S.day, phase: S.phase, prog: window.SC.sim.progress(S), chef: S.chef, family: S.family, budget: S.budget, kpi: window.SC.sim.kpiIndex(S), sap: S.sap.state, stats: S.stats }; });
   console.log(JSON.stringify({ secs: Math.round((Date.now() - t0) / 1000), actions, visits, hinweise, meetings, log, contChecks, fin, shots, errs }, null, 1));
   if (errs.length || contChecks.some(c => !c.ok) || fin.day < Math.min(DAYS, 2)) process.exitCode = 1;
+  // Early Access: das Level muss bis zum Ende-Bildschirm durchspielbar sein
+  if (fin.ea && !(fin.phase === 'ende' && fin.eaEnde && fin.eaText)) { console.log('Early Access: Level-Ende nicht erreicht'); process.exitCode = 1; }
   await browser.close();
 })();

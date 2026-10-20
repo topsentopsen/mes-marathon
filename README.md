@@ -4,6 +4,10 @@ Retro-Managerspiel im Browser, inspiriert von **Mad TV** (1991) und abgeleitet a
 
 **Spielen:** https://topsentopsen.github.io/mes-marathon/
 
+## Early Access 0.14.0-ea.1 »Woche 1« (Branch early-access)
+
+Eine Teaser-Version mit genau einem Level: die erste Woche, Montag bis Freitag. Ziel: bis Freitag 17:00 mindestens ein Modul abgenommen. Danach kommt statt des Wochenendes der Ende-Bildschirm »Ende der Early-Access-Version«. Alle drei Figuren sind wählbar. Gesperrt sind Wochenenden, SAP-Migration, Firmenübernahme, Konzernaudit, Zusagen an die Werkleitung und alles ab Tag 6. Die Version hat eigene Spielstände (localStorage-Schlüssel `mesmarathon-ea-…`), Stände des Hauptspiels werden nicht geladen. Umgesetzt als Schalter `SC.EA` in `js/data.js` (`SC.EA = null` ist das volle Spiel, so laufen die Logiktests). Level-Bot: `node tools/bot.js 300 --ea --check`. Details: `docs/RELEASE-v0.14.0-ea.1.md`.
+
 ## Neu in v0.14.0 »Quereinsteiger«
 
 Dritte spielbare Figur: **Ivo** kommt aus der Werkslogistik und ist neu im MES-Projekt. Er kennt Halle, Lager und Leute, aber nicht die Begriffe. Hallen-Anforderungen, Linie und Gespräche mit der Schicht gehen bei ihm schneller, das Vertrauen des Schichtleiters wächst schneller (Start: Werkleitung 50, Schichtleiter 58). Büro- und Serveraufgaben dauern am Anfang länger und werden jeden Tag ein Stück schneller, ab Tag 10 sind sie normal (Lernkurve, auf den Knöpfen steht »Ivo: lernt noch«). Ivo hat einen eigenen Einstieg mit kurzem Glossar, bis Tag 10 hängt in jedem Raum ein Merkzettel, und es gibt eigene Szenen, in denen er Begriffe verwechselt und lernt. Christian kommt als Kollege vorbei. Christian und Sandra bleiben unverändert, Spielstände aus 0.7 bis 0.13 laden weiter. Test und Bot: `FIGUR=ivo node test/playthrough.js`, `node tools/bot.js 300 --check --figur=ivo`. Details: `docs/RELEASE-v0.14.md`.
