@@ -1,5 +1,5 @@
 // MES-Marathon: Spieldaten. Alle Figuren, Firmen und Texte sind frei erfunden.
-// Namensregel: Nur Christian hat einen Namen. Alle anderen Figuren heißen nur nach ihrer Rolle.
+// Namensregel: Nur Christian und Sandra haben Namen. Alle anderen Figuren heißen nur nach ihrer Rolle.
 'use strict';
 window.SC = window.SC || {};
 (function (SC) {
@@ -15,6 +15,51 @@ window.SC = window.SC || {};
   SC.DEADLINE = 20;             // Go-Live am Abend von Arbeitstag 20 (nach der Übernahme 22)
   SC.WEEKDAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag'];
   SC.PLAYER = { name: 'Christian', col: '#8cb8e8' };
+  // v0.9 Figurenwahl: Christian (der Erfahrene) oder Sandra (die jüngere Kollegin aus der MES-Entwicklung).
+  // Namensregel: Nur Christian und Sandra haben Namen. Alle anderen Figuren heißen nach ihrer Rolle.
+  SC.FIGUREN = {
+    christian: { id: 'christian', name: 'Christian', col: '#8cb8e8', titel: 'MES-Projektleiter', kurz: 'der Erfahrene',
+      plus: ['Kennt jede Station und jeden Schichtleiter persönlich', 'Gute Beziehungen: Werkleitung 60, Schichtleiter 50'],
+      minus: ['Neue Werkzeuge sind nicht seins', 'Spezifikation, Umsetzung und Berichte dauern normal lang'] },
+    sandra: { id: 'sandra', name: 'Sandra', col: '#58b8a8', titel: 'MES-Spezialistin', kurz: 'die jüngere Kollegin aus der MES-Entwicklung',
+      plus: ['Schnell am Rechner: Spezifikation, Umsetzung, Deploy, Berichte und Migration gehen flotter', 'Weniger Fehler im Testlauf, Mapping beim Altwerk in 18 statt 30 Min.'],
+      minus: ['Neu im Werk: Werkleitung 55, Schichtleiter 42, Beziehungen wachsen langsamer', 'Hallen-Anforderungen und Reparaturen dauern länger'] }
+  };
+  // Christian als Kollege bei Sandra (Besuch, 12 Min.): erprobte Tipps aus der Halle
+  SC.CHRISTIAN_TIPPS = [
+    '»Der Schichtleiter sagt nie Nein. Er sagt »Wir schauen mal«. Das heißt Nein.«',
+    '»Frag nicht nach dem Ticket. Frag die Werkstatt, ob sie einen Kaffee will.«',
+    '»Die Excel-Liste ist nicht schön. Aber sie stimmt. Meistens.«',
+    '»Wenn die Presse steht, steht sie nicht wegen des MES. Sag das trotzdem nicht laut.«',
+    '»Bring zur Frühschicht Brezeln mit. Das ist kein Trick, das ist Projektmanagement.«'
+  ];
+  // Sandra als Kollegin bei Christian: nur eine Zeile im Protokoll, keine Zeitkosten
+  SC.SANDRA_NPC = [
+    'Sandra, die Kollegin aus der MES-Entwicklung, schaut kurz rein: »Dein SVERWEIS ist beeindruckend. Ich hab ihn nachgebaut. Hat drei Tage gedauert.«',
+    'Sandra aus der MES-Entwicklung fragt nach dem BDE-Feed. Du erklärst ihn mit drei Kaffeetassen und einem Bleistift. Sie macht ein Foto.',
+    'Sandra hat über Nacht ein Dashboard gebaut. Der Schichtleiter fragt, ob man das ausdrucken kann.',
+    'Sandra schickt dir ein Mapping. Es hat Spaltenüberschriften. Du bist kurz gerührt.'
+  ];
+  // Sandras eigene Szenen: erscheinen manchmal nach passenden Aktionen
+  SC.SANDRA_SZENEN = {
+    req: 'Sandra fragt die Schicht: »Warum machen wir das so?« Antwort: »Schon immer.« Es folgt die längste Pause des Tages.',
+    spec: 'Excel-Liste mit 47 Spalten. Sandra markiert sechs fürs MES. Die Spalte »Bemerkung« enthält alle Geschäftsregeln.',
+    impl: 'Sandra zeichnet die Schnittstelle auf das Whiteboard. Der Drucker meldet sich als Teilnehmer an.',
+    deploy: 'Sieben Tools für die Auftragsübergabe: vier tun dasselbe, eines tut nichts, das siebte ist der Schichtleiter.',
+    migrate: 'Stammdaten: 11.000-mal »Schraube«. Sandra fragt: »Welche?« Die Werkstatt: »Die große.«',
+    bericht: 'Drei Leute, drei Formeln für die OEE. Sandra nimmt die vierte: die dokumentierte.',
+    test: 'Der Bediener: »Die Stückzahl tippen wir abends nach.« Sandra schreibt »Echtzeit« aufs Whiteboard und streicht es nicht durch.',
+    linie: 'Die Schicht zeigt Sandra die Stempeluhr von 1994. Sie ist ehrlich beeindruckt. Die Schicht auch.'
+  };
+  SC.SANDRA_TAG1 = 'Der Pförtner gibt dir einen Ausweis: »Gast«. Nach Rückfrage: »MES, Ebene drei.« Er schreibt »Ebene drei« drauf.';
+  // Anrede im Text: alle Spielertexte sind für Christian geschrieben, für Sandra werden sie angepasst
+  SC.FILL = { sandra: [[/Christian/g, 'Sandra'], [/»der vom MES«/g, '»die vom MES«'], [/»den vom MES«/g, '»die vom MES«'], [/Hemd wie immer/g, 'Blazer wie immer'], [/MES-Projektleiter\b/g, 'MES-Spezialistin']] };
+  // {C} steht in Texten, in denen Christian als Kollege vorkommt (wird nach der Anpassung eingesetzt)
+  SC.fill = (S, t) => { if (t == null) return t; t = String(t); const L = S && SC.FILL[S.figur]; if (L) for (const [a, b] of L) t = t.replace(a, b); return t.replace(/\{C\}/g, 'Christian'); };
+  SC.KOLLEGE_BUBBLES = {
+    christian: ['Erst Kaffee, dann Frage.', 'Dein Mapping ist besser als mein SVERWEIS.', 'Kennst du schon den Schichtleiter?', 'Wir schauen mal. Das heißt Nein.'],
+    sandra: ['Mapping? Gib mir 10 Min.', 'Frag mich zum BDE-Feed.', 'Ich hab ein Dashboard gebaut!', 'Echtzeit heißt jetzt, nicht abends.']
+  };
   SC.PLANT = 'Werk Mitte';
   SC.RIVALS = [
     { name: 'Werk Nord', col: '#ff6040', min: 3, max: 7 },
@@ -63,6 +108,9 @@ window.SC = window.SC || {};
   };
   // Zahlen-Hebel für die Balance (docs/PHASEN.md 10.3)
   SC.TUNE = {
+    // v0.9 Figuren: Christian ist die Basis (alles 1, keine Boni), nur Sandra hat Abweichungen
+    figur: { sandra: { start: { chef: 55, schicht: 42 }, dauer: { spec: 0.95, impl: 0.9, deploy: 0.85, restart: 0.85, migrate: 0.9, bericht: 0.85, review: 0.8, req: 1.25, repair: 1.4, notbehelf: 1.4 },
+      schichtF: 0.6, abnahmeChef: -2, testRisk: 0.04, mapping: 18, erklaeren: 0.65, pyrFalsch: 25, kollege: { p: 0.45, min: 12, schicht: 4, ab: 2 } } },
     budgetStart: 110, tranche: 30, trancheLow: 15, berater: 25,
     kredit: { rahmen: 60, rahmenHoch: 80, schritt: 20, zins: 0.08 },
     rival: { p: 0.2, lead: 0.1, from: 4, cost: 5, cut: 15 },

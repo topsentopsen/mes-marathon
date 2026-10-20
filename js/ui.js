@@ -20,9 +20,11 @@
   const SND_HINT = 'Ton an. Kein Ton? Stummschalter am iPhone prüfen und Lautstärke hoch.';
 
   UI.overlayOpen = () => UI._ov;
-  function overlay(html) { UI._ovAt = performance.now(); if (!/data-o="logzu"/.test(html)) UI._log = false; $('overlay').innerHTML = '<div class="box">' + html + '</div>'; $('overlay').classList.remove('hidden'); UI._ov = true; }
+  // v0.9: Texte sind für Christian geschrieben, SC.fill passt sie für Sandra an (raw: Figurenwahl, dort stehen beide Namen)
+  const F = h => SC.fill ? SC.fill(SC.S, h) : h;
+  function overlay(html, raw) { if (!raw) html = F(html); UI._ovAt = performance.now(); if (!/data-o="logzu"/.test(html)) UI._log = false; $('overlay').innerHTML = '<div class="box">' + html + '</div>'; $('overlay').classList.remove('hidden'); UI._ov = true; }
   function closeOverlay() { $('overlay').classList.add('hidden'); UI._ov = false; UI._ovAt = 0; }
-  UI.toast = function (t, bad) { const el = $('ticker'); el.innerHTML = '<span class="' + (bad ? 'bad' : '') + '">' + esc(t) + '</span>'; };
+  UI.toast = function (t, bad) { const el = $('ticker'); el.innerHTML = F('<span class="' + (bad ? 'bad' : '') + '">' + esc(t) + '</span>'); };
 
   // v0.8: Tipp auf den Ticker zeigt das Tagesprotokoll (das Overlay hält die Uhr an)
   UI.showLog = function () { const s = S(); if (!s || s.phase !== 'tag' || UI._ov) return; UI._log = true; overlay('<h2>Tagesprotokoll · Tag ' + s.day + '</h2>' + (s.dayLog.length ? '<ul class="log">' + s.dayLog.map(l => '<li>' + esc(l) + '</li>').join('') + '</ul>' : '<p class="dim">Noch nichts passiert. Verdächtig.</p>') + '<p><button data-o="logzu">Weiter</button></p>'); };
@@ -108,7 +110,7 @@
     }
     h += '</div>';
     if (room === 'halle' || room === 'buero') h += '<p class="small dim">Ablauf je Modul: Requirements (Hallen, Station) → Spezifikation → Implementierung (Büro) → Deployment (Serverraum) → Testlauf (Hallen, Teststation) → Ausdruck (Drucker) → Abnahme (Werkleitung).</p>';
-    $('room').innerHTML = h;
+    $('room').innerHTML = F(h);
   }
   // v0.4 Markt und Prognose
   function marktHtml(s) {
@@ -212,7 +214,7 @@
     if (!R) { s.phase = 'tag'; morning(); return; }
     aud('play', 'balance');
     let h = '<h2>Feierabend · ' + R.weekday + ', Tag ' + R.day + '</h2>' +
-      '<div class="chefin"><img src="img/portrait.png" alt="" class="pt"><div><p>Projektfortschritt: <b>' + R.progress + ' %</b></p>' + rivals(s) + '</div></div>' +
+      '<div class="chefin">' + pimg(s.figur, 'pt') + '<div><p>Projektfortschritt: <b>' + R.progress + ' %</b></p>' + rivals(s) + '</div></div>' +
       '<h3>Bilanz</h3><ul>' + R.lines.map(l => '<li class="' + l[0] + '">' + esc(l[1]) + '</li>').join('') + '</ul>' +
       '<h3>KPIs heute</h3><p class="kpis">' + R.kpi.map(x => { const ok = x.k === 'ausschuss' ? x.ist <= x.ziel : x.ist >= x.ziel; const better = x.k === 'ausschuss' ? x.d < 0 : x.d > 0; return '<span class="' + (ok ? 'good' : '') + '">' + SC.KPI.names[x.k] + ' ' + x.ist.toFixed(1) + ' <span class="' + (better ? 'good' : x.d === 0 ? 'dim' : 'bad') + '">' + (x.d > 0 ? '▲' : x.d < 0 ? '▼' : '•') + '</span> <span class="dim">(Ziel ' + x.ziel + ')</span></span>'; }).join(' · ') + '</p>' +
       '<p>Werkleitung ' + bar(s.chef) + ' · Familie ' + bar(s.family, 'heartbar') + ' · Schichtleiter ' + bar(s.schicht) + ' · Energie morgen ' + bar(s.energy) + ' · Budget <b>' + Math.round(s.budget) + ' k€</b></p>' +
@@ -247,20 +249,46 @@
 
   const unpause = () => { UI.paused = false; $('btn-pause').textContent = 'Pause'; };
   UI.seenHint = () => { try { return !!localStorage.getItem('mesmarathon-hinweis'); } catch (e) { return true; } };
-  UI.newGame = function (seed) {
+  // v0.9 Porträts: Christian hat die PNG-Datei, Sandra wird mit Rechtecken gezeichnet (kein getImageData, klappt auch unter file://)
+  const PIMG = {};
+  UI.portrait = function (fig) {
+    if (fig !== 'sandra') return 'img/portrait.png';
+    if (PIMG.sandra) return PIMG.sandra;
+    try {
+      const c = document.createElement('canvas'); c.width = 32; c.height = 32; const g = c.getContext('2d');
+      const r = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+      r(0, 0, 32, 32, '#1c2a3a'); r(0, 26, 32, 6, '#24384c');
+      r(8, 5, 16, 6, '#6a3a1c'); r(7, 8, 3, 14, '#6a3a1c'); r(22, 8, 3, 10, '#6a3a1c'); r(24, 10, 4, 3, '#6a3a1c'); r(26, 12, 3, 8, '#5a3014'); // Haare mit Pferdeschwanz
+      r(10, 9, 12, 13, '#f0c090'); r(12, 13, 2, 2, '#202020'); r(18, 13, 2, 2, '#202020'); r(14, 18, 4, 1, '#b05040'); // Gesicht
+      r(11, 11, 4, 1, '#4a2a10'); r(17, 11, 4, 1, '#4a2a10');
+      r(6, 23, 20, 9, '#58b8a8'); r(13, 23, 6, 4, '#f4f8ff'); r(15, 23, 2, 9, '#2c6a60'); // Blazer mit Bluse
+      r(20, 27, 4, 3, '#f0f0f0'); r(21, 28, 2, 1, '#40a0e0'); // Ausweis
+      PIMG.sandra = c.toDataURL();
+    } catch (e) { PIMG.sandra = 'img/portrait.png'; }
+    return PIMG.sandra;
+  };
+  const pimg = (fig, cls, alt) => '<img src="' + UI.portrait(fig) + '" alt="' + (alt || '') + '" class="' + cls + '">';
+  // v0.9 Figurenwahl: der erste Schritt bei »Neues Spiel«
+  UI.pickFigur = function () {
+    const card = f => { const X = SC.FIGUREN[f]; return '<div class="figur" data-fig="' + f + '">' + pimg(f, 'pt big', X.name) + '<h3>' + X.name + '</h3><p class="small">' + X.titel + ', ' + X.kurz + '</p>' +
+      '<ul class="small">' + X.plus.map(t => '<li class="good">+ ' + t + '</li>').join('') + X.minus.map(t => '<li class="warn">− ' + t + '</li>').join('') + '</ul><p><button data-f="' + f + '">Als ' + X.name + ' spielen</button></p></div>'; };
+    overlay('<h2>Wer bist du?</h2><p>Such dir aus, wer das MES diesmal wirklich einführt. Die andere Figur ist im Werk als Kollege oder Kollegin dabei.</p><div class="figuren">' + card('christian') + card('sandra') + '</div><p><button data-o="titel">Zurück</button></p>', true);
+  };
+  UI.newGame = function (seed, figur) {
+    figur = SC.FIGUREN[figur] ? figur : (store('mesmarathon-figur') || 'christian');
     try { localStorage.setItem('mesmarathon-hinweis', '1'); } catch (e) { /* */ }
     if (UI.room) UI.closeRoom();
-    unpause(); SC.S = sim().newGame(seed || (Date.now() & 0x7fffffff)); shown = 0; UI._siren = 0;
+    unpause(); store('mesmarathon-figur', figur); SC.S = sim().newGame(seed || (Date.now() & 0x7fffffff), figur); shown = 0; UI._siren = 0;
     SC.building.reset(); closeOverlay(); aud('unlock'); aud('play', 'tower'); morning(); sim().save(SC.S);
   };
   UI.showTitle = function () {
     const fv = document.getElementById('foot-v'); if (fv) fv.textContent = 'v' + SC.VERSION;
     const sv = sim().load();
     overlay('<div class="title"><h1 class="logo">MES-MARATHON</h1><p class="dim">Ein Werk. Sieben Stationen. Fünf Module. Zwanzig Tage. Unendlich viele Meetings.</p>' +
-      '<img src="img/portrait.png" alt="Christian" class="pt big"><p>Du bist <b>Christian</b>, ca. 40, MES-Projektleiter in ' + SC.PLANT + '. Seit Jahren führst du das MES ein. Diesmal wirklich.</p>' +
+      '<p class="figuren-mini">' + pimg('christian', 'pt', 'Christian') + ' ' + pimg('sandra', 'pt', 'Sandra') + '</p><p>Du bist <b>Christian</b>, der erfahrene MES-Projektleiter, oder <b>Sandra</b>, die jüngere Kollegin aus der MES-Entwicklung. Seit Jahren wird in ' + SC.PLANT + ' das MES eingeführt. Diesmal wirklich.</p>' +
       (sim().oldSave && sim().oldSave() ? '<p class="small warn">Dein Spielstand stammt aus Version ' + esc(sim().oldSave()) + ' und passt nicht zu ' + SC.VERSION + '. Bitte neu starten.</p>' : '') +
-      (!sv && !sim().highscores().length && !UI.seenHint() ? '<p class="small">Erstes Mal hier? Die Anleitung erklärt alles. Kurz: Module durch die Pipeline bringen, Meetings klug wählen, ab 17:00 wird es teuer. Tasten: Leertaste (Pause), + und − (Tempo), M (Ton), K. In Räumen steht die Uhr.</p>' : '') + '<p><button data-o="new">Neues Spiel</button> ' + (sv && sv.phase !== 'ende' ? '<button data-o="cont">Weiterspielen (Tag ' + sv.day + ')</button> ' : '') + '<button data-o="help">Anleitung</button> <button data-o="schrift" id="btn-schrift">' + (document.body.classList.contains('gross') ? 'Schrift: Groß' : 'Schrift: Normal') + '</button></p>' +
-      '<p class="small dim">Inspiriert von Mad TV (1991). Eigenes Fanprojekt, alle Figuren frei erfunden. Version ' + SC.VERSION + '</p>' + (sim().highscores().length ? '<p class="small">Bestenliste: ' + sim().highscores().map((x, i) => (i + 1) + '. ' + x.score).join(' · ') + '</p>' : '') + '</div>');
+      (!sv && !sim().highscores().length && !UI.seenHint() ? '<p class="small">Erstes Mal hier? Die Anleitung erklärt alles. Kurz: Module durch die Pipeline bringen, Meetings klug wählen, ab 17:00 wird es teuer. Tasten: Leertaste (Pause), + und − (Tempo), M (Ton), K. In Räumen steht die Uhr.</p>' : '') + '<p><button data-o="new">Neues Spiel</button> ' + (sv && sv.phase !== 'ende' ? '<button data-o="cont">Weiterspielen (Tag ' + sv.day + ', ' + esc(sv.name || 'Christian') + ')</button> ' : '') + '<button data-o="help">Anleitung</button> <button data-o="schrift" id="btn-schrift">' + (document.body.classList.contains('gross') ? 'Schrift: Groß' : 'Schrift: Normal') + '</button></p>' +
+      '<p class="small dim">Inspiriert von Mad TV (1991). Eigenes Fanprojekt, alle Figuren frei erfunden. Version ' + SC.VERSION + '</p>' + (sim().highscores().length ? '<p class="small">Bestenliste: ' + sim().highscores().map((x, i) => (i + 1) + '. ' + x.score).join(' · ') + '</p>' : '') + '</div>', true);
   };
   function help() {
     overlay('<h2>Anleitung</h2><p>Du bist Christian, MES-Projektleiter in ' + SC.PLANT + '. Bis Tag ' + SC.DEADLINE + ' müssen alle Module des neuen Manufacturing Execution Systems abgenommen sein. Werk Nord und Werk Süd machen dasselbe, und die Werkleitung vergleicht.</p>' +
@@ -278,7 +306,7 @@
       '<li><b>Neu in 0.5:</b> Dienstags hängt im Controlling eine Ausschreibung aus (Ersatzteile, Beraterkontingent oder Wartungspaket). Gebote bis Mittwoch 15:00, im Controlling oder per Mail aus dem Büro. Werk Nord bietet verdeckt, gezahlt wird nur beim Zuschlag. Zweiter Weg zum Sieg: das Konzernaudit »Vorzeigewerk« (Freitag ab Tag 15, sehr hohes Image und KPI-Index, mindestens 3 Module). Der Knopf 🎧 setzt Kopfhörer auf: Tesla-Kollege, Ahnungslose und Altwerk halten sich dann kurz. Im Serverraum wohnt jetzt ein digitaler Zwilling, und das Archiv hat Fundstücke. Christian bringt immer Süßigkeiten mit: Die Box im Büro füllst du einmal pro Woche am Kiosk der Kantine auf (Schoko-Mix, Gummibärchen oder Lakritz). Jeden Tag schaut ein Stammgast vorbei. Passt die Sorte, hilft er dir (zum Beispiel eine Reparatur oder ein Testlauf 10 Min. kürzer), sonst wird gemeckert. Das letzte Stück nimmt niemand. Und der Tesla-Kollege erzählt dir jetzt dauernd, was »Elon« angeblich alles anders machen würde (Elon-Zähler oben). Thema wechseln geht meistens.</li>' +
       '<li><b>Neu in 0.6:</b> Die Aktionsknöpfe zeigen, wann du fertig bist (⚠: nach Feierabend), in den Hallen auch die Wartezeit der Schichtübergabe. Wer nach 17:00 noch etwas anfängt, ist müde und braucht länger. Tasten: Leertaste Pause, + Tempo, M Ton, K Kopfhörer. Im Büro wartet ein Pappkamerad, im Druckerraum ein Fax-Gerät, und der Aufzug (Klick auf die Kabine) hat ein Geheimnis. Fällt der Dienstag aus, hängt die Ausschreibung am Mittwoch aus.</li>' +
       '<li><b>Neu in 0.7:</b> Im Schichtleiter-Büro hängt ein Abreißkalender, am Ende zeigt »Dein Werk in Zahlen«, was du so getrieben hast. Im Herbst gibt es am Kiosk Lebkuchen. Beim ersten Start gibt das Titelbild eine Kurzanleitung. Fällt der Freitag wegen eines Burnouts aus, kommt das Wochenende danach trotzdem.</li>' +
-      '<li><b>Neu in 0.9:</b> Mehr Ruhe zum Lesen: In Räumen steht die Uhr, der 17:00-Hinweis wartet auf »Weiter«, Tempo Langsam/Normal/Schnell (Standard Langsam), größere Schrift und Schalter »Schrift: Groß«. Leertaste bestätigt Hinweise mit nur einem Knopf, statt die Pause umzuschalten.</li>' +
+      '<li><b>Neu in 0.9:</b> Mehr Ruhe zum Lesen: In Räumen steht die Uhr, der 17:00-Hinweis wartet auf »Weiter«, Tempo Langsam/Normal/Schnell (Standard Langsam), größere Schrift und Schalter »Schrift: Groß«. Leertaste bestätigt Hinweise mit nur einem Knopf, statt die Pause umzuschalten. Zwei Figuren zur Wahl: {C} (erfahren, gute Beziehungen) oder Sandra (jüngere Kollegin aus der MES-Entwicklung, schneller am Rechner, neu im Werk). Die andere Figur ist als Kollege oder Kollegin im MES-Stock unterwegs. Alle Texte im Werk sind schärfer gezeichnet.</li>' +
       '<li><b>Neu in 0.8:</b> Ein Tipp auf den Ticker unten zeigt das Tagesprotokoll (die Uhr steht so lange). Kommen mehrere Meldungen auf einmal, stehen die letzten zwei zusammen im Ticker. Am Werkstor hängt ein Aushang, im Leitstand das Diagramm des Tages. Ein Burnout am Freitag kostet den Montag. Spielstände aus 0.7 laden weiter.</li>' +
       '<li><b>Flurfunk (neu in 0.3):</b> Brandschutzübungen, Beamer-Kabel, Überraschungsgerichte und mehr. Die Werkleitung streut Buzzwords: fünf verschiedene sind ein Bingo (Punkte). Werksdurchsagen, die Werkszeitung am Abend und ein paar Easter Eggs.</li>' +
       '<li><b>Excel-Liste</b> jeden Tag pflegen. Server und Drucker zicken. Kaffee und Mittagessen in der Kantine geben Energie. Bei Energie 0 schläfst du am Schreibtisch ein: Der nächste Tag fällt aus (krank, Werkleitung −8, Familie −4; am Freitag trifft es den Montag). Fällt so der Tag vor dem Go-Live-Termin aus, ist am Abend danach Schluss.</li>' +
@@ -291,8 +319,10 @@
     $('overlay').addEventListener('click', e => {
       const v = e.target.closest('button[data-v]');
       if (v && S() && S().pending) { sim().choose(S(), v.dataset.v); closeOverlay(); SC.building.dismiss && SC.building.dismiss(); if (UI.room) renderRoom(); UI.hud(); sim().save(S()); if (S().minute >= SC.LATEST) UI.tick(); return; }
+      const fb = e.target.closest('button[data-f]'); if (fb) { aud('unlock'); UI.newGame(0, fb.dataset.f); return; }
       const b = e.target.closest('button[data-o]'); if (!b) return; const o = b.dataset.o; aud('unlock');
-      if (o === 'new') UI.newGame();
+      if (o === 'new') UI.pickFigur();
+      else if (o === 'titel') UI.showTitle();
       else if (o === 'cont') { if (UI.room) UI.closeRoom(); unpause(); SC.S = sim().load(); shown = SC.S.msgs.length; closeOverlay(); SC.building.reset(); UI._siren = SC.S.sirene; if (SC.S.phase === 'tag') { aud('play', 'tower'); morning(); } else showEvening(SC.S, SC.S.lastReport); }
       else if (o === 'logzu') { UI._log = false; closeOverlay(); }
       else if (o === 'weiter') closeOverlay();

@@ -15,15 +15,19 @@
   const pick = (S, arr) => arr[Math.floor(rng(S) * arr.length)];
   const hm = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(Math.floor(m % 60)).padStart(2, '0');
   const T = () => SC.TUNE;
+  // v0.9 Figuren: FG(S) liefert Sandras Abweichungen, für Christian null (Christian bleibt exakt wie v0.8)
+  const FG = S => (S && S.figur === 'sandra' ? SC.TUNE.figur.sandra : null);
+  const figF = (S, id) => { const F = FG(S); return F && F.dauer[id] || 1; };
   const SIREN = 14 * 60, HANDOVER = 14 * 60 + 20;
 
   function newModule(def, need) {
     return { id: def.id, name: def.name, station: def.station, need: Object.assign({}, need), req: 0, spec: 0, impl: 0, deployed: false, test: 0, printed: false, done: false };
   }
-  function newGame(seed) {
+  function newGame(seed, figur) {
+    figur = SC.FIGUREN && SC.FIGUREN[figur] ? figur : 'christian';
     const S = {
       v: SC.VERSION, seed: seed >>> 0 || 1, rs: (seed >>> 0 || 1), rf: (((seed >>> 0) ^ 0x5bd1e995) & 0x7fffffff) || 7, rm: (((seed >>> 0) ^ 0x2545f491) & 0x7fffffff) || 11, day: 1, minute: SC.DAY_START, phase: 'tag',
-      name: SC.PLAYER.name, deadline: SC.DEADLINE,
+      figur, name: SC.FIGUREN ? SC.FIGUREN[figur].name : SC.PLAYER.name, deadline: SC.DEADLINE,
       energy: 100, chef: 60, family: 70, schicht: 50,
       budget: T().budgetStart, kredit: 0, trancheCut: 0, image: 50, nordUntil: 0, lastRival: -1, zusage: null, trancheWeek: -1, partsUntil: 0,
       kpi: Object.assign({}, SC.KPI.start), kpiHist: [], downMin: 0, reportDay: 0, reportWeek: -1,
@@ -39,7 +43,9 @@
       auktion: null, nordLast: null, nordLastR: null, box: { n: 0, sorte: null, week: -1, day: 0, gast: null, stand: null, used: false }, audit: { streak: 0, day: 0 }, elon: { day: 0, n: 0, meet: 0 }, kopf: 0, vDay: 0, vN: 0, pfad: null,
       stats: { pappe: 0, aufzug: 0, fax: 0, elon: 0, elonThema: 0, meetings: 0, useless: 0, missed: 0, weekend: 0, overtime: 0, bugs: 0, coffee: 0, visits: 0, pyrRight: 0, pyrWrong: 0, faults: 0, repairs: 0, budgetSpent: 0, chaosDays: 0, flur: 0, bingo: 0, eggs: 0, immer: 0, tiramisu: 0, markt: 0, prognose: 0, treffer: 0, melone: 0, hotline: 0, auktion: 0, auktionWin: 0, kopf: 0, zwilling: 0, archiv: 0, suess: 0, suessGut: 0, suessMeck: 0, suessLetztes: 0 }
     };
+    const F = FG(S); if (F) Object.assign(S, F.start);
     planDay(S);
+    if (F) say(S, SC.SANDRA_TAG1);
     return S;
   }
   const weekday = S => (S.day - 1) % 5;
@@ -54,6 +60,8 @@
   function planDay(S) {
     S.excel = false; S.coffee = 0; S.lunch = false; S.dayLog = []; S.immerToday = 0; S.partyMin = 0;
     S.uselessYesterday = S.uselessToday; S.uselessToday = 0; S.uselessMin = 0;
+    // v0.9 Sandra als Kollegin bei Christian: nur eine Zeile, keine Zeitkosten, keine Würfe aus den Spielströmen
+    if (S.figur !== 'sandra' && S.day >= 3 && rngA(S, 33400 + S.day % 100) < 0.3) say(S, SC.SANDRA_NPC[Math.floor(rngA(S, 33500 + S.day % 100) * SC.SANDRA_NPC.length)]);
     const big = [];
     // Großereignisse
     if (S.day >= 6 && S.sap.state === 'none') {
@@ -225,6 +233,7 @@
     if (S.day >= 9 && !S.ev.kreis) V.push({ at: ri2(S, 10 * 60, 14 * 60), id: 'kreis', t: 0 });
     if (S.day >= 12 && !S.ev.raetsel) V.push({ at: ri2(S, 10 * 60, 13 * 60), id: 'raetsel', t: 0 });
     if (!big.length && rngF(S) < T().flur) V.push({ at: ri2(S, 9 * 60, 15 * 60 + 30), id: 'flur', k: Math.floor(rngF(S) * SC.FLUR.length), t: 0 });
+    { const F = FG(S); if (F && S.day >= F.kollege.ab && rngA(S, 33000 + S.day % 100) < F.kollege.p) V.push({ at: 9 * 60 + Math.floor(rngA(S, 33100 + S.day % 100) * 6 * 60), id: 'christian', t: 0 }); }
     for (const x of V) if (x.t === undefined) x.t = Math.floor(rng(S) * 100);
     V.sort((a, b) => a.at - b.at);
     const out = big.slice();
@@ -355,7 +364,7 @@
           const m = targets.test(S);
           if (rng(S) < (S.schicht < 40 ? 0.8 - S.schicht / 100 : S.schicht < 60 ? 0.15 : 0)) { S._cost = 30; say(S, 'Der Schichtleiter: »Die ' + stName(m.station) + ' ist heute nicht frei. Hättest halt zu meinem Meeting kommen sollen.« (30 Minuten verloren)', true); return; }
           spend(S, T().cost.test);
-          const bug = 0.34 - m.spec * 0.03 - (isDone(S, 'qs') ? 0.05 : 0) + (S.chaosUntil >= S.day ? 0.12 : 0) + (S.kaffeeDef === S.day ? 0.08 : 0) - (S.tiramisu === S.day ? T().tiramisu : 0);
+          const bug = 0.34 - m.spec * 0.03 - (isDone(S, 'qs') ? 0.05 : 0) + (S.chaosUntil >= S.day ? 0.12 : 0) + (S.kaffeeDef === S.day ? 0.08 : 0) - (S.tiramisu === S.day ? T().tiramisu : 0) - (FG(S) ? FG(S).testRisk : 0);
           const tira = S.tiramisu === S.day; S.tiramisu = 0; if (tira) { S.stats.tiramisu++; say(S, 'Tiramisu-Effekt: Die Spezifikation sitzt, der Testlauf geht mit weniger Fehlerrisiko an die Station.'); }
           if (rng(S) < Math.max(0, bug)) { m.impl = Math.max(0, m.impl - 1); m.deployed = false; S.stats.bugs++; say(S, 'Testlauf ' + m.name + ' an der ' + stName(m.station) + ': Bug gefunden! Zurück an den Schreibtisch (Implementierung ' + m.impl + '/' + m.need.impl + ').', true); return; }
           m.test++; say(S, 'Testlauf ' + m.name + ' an der ' + stName(m.station) + ' bestanden: ' + m.test + '/' + m.need.test + '.');
@@ -551,16 +560,27 @@
     const { cost: c0, rabatt, late } = costOf(S, room, id, a);
     let cost = c0;
     S.energy -= S.kaffeeDef === S.day ? Math.round(a.energy * 1.3) : a.energy;
+    const sch0 = S.schicht, F = FG(S);
     a.run(S);
+    if (F) figurNach(S, F, room, id, sch0);
     if (S._cost !== undefined) { cost = late ? Math.round(S._cost * T().ueber.spaet) : S._cost; delete S._cost; } else if (rabatt) S.box.used = true;
     advance(S, cost);
     if (S.energy <= 0) S.burnout = true;
     return { ok: true };
   }
+  // v0.9 Sandra: Beziehungen wachsen langsamer, Abnahme bringt etwas weniger, eigene Szenen (Salz 33300)
+  const SZ_IDS = ['req', 'spec', 'impl', 'deploy', 'migrate', 'bericht', 'test', 'linie'];
+  function figurNach(S, F, room, id, sch0) {
+    if (S.schicht > sch0) S.schicht = sch0 + Math.round((S.schicht - sch0) * F.schichtF);
+    if (id === 'abnahme') S.chef += F.abnahmeChef;
+    const k = SZ_IDS.indexOf(id);
+    if (k >= 0 && SC.SANDRA_SZENEN[id] && rngA(S, 33300 + ((S.day * 13 + k * 7) % 100)) < 0.35) say(S, SC.SANDRA_SZENEN[id]);
+  }
   // echte Dauer einer Aktion (Gesamtprüfung v0.5: auch für die Anzeige auf den Knöpfen)
   function costOf(S, room, id, a) {
     a = a || (A[room] || []).find(x => x.id === id);
     let cost = Math.round(a.cost * slow(S));
+    if (FG(S)) { const f = figF(S, id); if (f !== 1) cost = Math.round(cost * f); }
     if (id === 'test') { if (S.testSlot === S.day) cost = Math.round(cost * 0.67); else if (eff(S) >= 70) cost = Math.round(cost * T().meet.testFactor); if (S.budget < 0) cost = Math.round(cost * 1.3); if (S.nordUntil >= S.day) cost = Math.round(cost * 1.5); }
     if (room === 'halle' && id === 'req') { const m = targets.req(S); if (m && faulted(S, m)) cost = Math.round(cost * 1.3); }
     if (room === 'halle' && S.chaosUntil >= S.day) cost = Math.round(cost * 1.4);
@@ -586,7 +606,8 @@
       case 'italien': return [{ id: 'zuhoeren', label: 'Zuhören und mitessen (12 Min.)' }, { id: 'vertagen', label: '»Erzähl es mir beim Essen« (2 Min.)' }];
       case 'itchefin': return p.opts.map((l, i) => ({ id: 'a' + i, label: 'Ebene ' + l + ': ' + SC.PYR[l] })).concat([{ id: 'skip', label: 'Folie überspringen (10 Min.)' }]);
       case 'ahnungslos': return [{ id: 'erklaeren', label: 'Geduldig erklären (15 Min.)' }, { id: 'abkuerzen', label: '»Das MES ist wie Excel, nur anders.« (5 Min.)' }];
-      case 'altwerk': return [{ id: 'mapping', label: 'Mapping zusammen anlegen (30 Min.)' }, { id: 'spaeter', label: 'Später (3 Min.)' }];
+      case 'christian': return [{ id: 'zuhoeren', label: 'Zuhören und Kaffee mitbringen (' + FG(S).kollege.min + ' Min.)' }, { id: 'spaeter', label: '»Später gern!« (2 Min.)' }];
+      case 'altwerk': return [{ id: 'mapping', label: 'Mapping zusammen anlegen (' + (FG(S) ? FG(S).mapping : 30) + ' Min.)' }, { id: 'spaeter', label: 'Später (3 Min.)' }];
       case 'rivale': return [{ id: 'gegen', label: SC.RIVAL_EVT[p.r].gegen.replace('{k}', T().rival.cost) }, { id: 'hin', label: SC.RIVAL_EVT[p.r].hin.replace('{t}', T().rival.cut) }];
       case 'kaffee': return [{ id: 'kantine', label: 'In die Kantine, Filterkaffee (30 Min.)' }, { id: 'durchhalten', label: 'Durchhalten ohne Kaffee (höheres Fehlerrisiko im Testlauf)' }];
       case 'kreis': return [{ id: 'meeting', label: 'Meeting zur Kreis-Pyramide (45 Min.)' }, { id: 'spaeter', label: '»Gern, nach dem SAP-Go-live.« (3 Min.)' }];
@@ -607,6 +628,7 @@
       case 'itchefin': return { who: 'Die IT-Chefin (mit der Automatisierungspyramide)', text: '»' + VT.itchefin[p.open % VT.itchefin.length] + ' ' + SC.PYRAMID_Q[p.q].q + '«', pyr: true };
       case 'ahnungslos': return { who: 'Ein Kollege ohne Ahnung', text: of(VT.ahnungslos) };
       case 'altwerk': return { who: 'Der Kollege vom Altwerk', text: of(VT.altwerk) };
+      case 'christian': return { who: '{C}, der erfahrene Kollege', text: '{C} lehnt sich in die Tür: ' + SC.CHRISTIAN_TIPPS[Math.floor(rngA(S, 33200 + S.day % 100) * SC.CHRISTIAN_TIPPS.length)] };
       case 'rivale': return { who: SC.RIVAL_EVT[p.r].who, text: SC.RIVAL_EVT[p.r].text };
       case 'kaffee': return { who: 'Die Kantinenkraft (Aushang am Kaffeeautomaten)', text: (S.sap.state === 'migration' && weekday(S) === 4 ? 'Pünktlich zum SAP-Cutover-Wochenende ist der Kaffeeautomat defekt.' : 'Der Kaffeeautomat ist defekt. Seit dem SAP-Umstieg findet er seine Materialnummer für Kaffeebohnen nicht.') + ' Display: »Bitte Wartung rufen«. Die Wartung steckt im Cutover. Die Kantine kocht notfalls Filterkaffee, aber die Schlange ist lang.' + (weekday(S) === 4 ? ' Am Wochenende bleibt er kaputt (Wochenendschicht: Energie −4 je Tag).' : '') };
       case 'kreis': return { who: 'Die IT-Chefin (mit einer neuen Folie)', text: '»Christian, die Pyramide ist vorbei. Ab heute: Industrie 5.0. Als Kreis! Alles ist mit allem verbunden, nichts ist oben, und das MES ist überall. Ich hab 45 Minuten im Besprechungsraum geblockt.«' };
@@ -647,14 +669,14 @@
         const q = SC.PYRAMID_Q[p.q];
         if (opt === 'skip') { min = 10; if (rng(S) < 0.35) { min += 20; say(S, 'Die IT-Chefin besteht auf der Folie. Und auf der nächsten. (+20 Min.)', true); } else say(S, 'Folie übersprungen. Sie seufzt, lächelt und kommt bestimmt wieder.'); }
         else { const lvl = p.opts[+opt.slice(1)]; if (lvl === q.a) { min = 15; S.stats.pyrRight++; const m = onePaper(S); say(S, 'Richtig, Ebene ' + q.a + ': ' + SC.PYR[q.a] + '! Die IT-Chefin strahlt und hilft dir kurz' + (m ? ': ' + m.name + ' +1 Paket.' : '.')); }
-          else { min = 40; S.energy -= 4; S.stats.pyrWrong++; say(S, 'Falsch. Richtig wäre Ebene ' + q.a + ': ' + SC.PYR[q.a] + '. Es folgt ein Vortrag über alle fünf Ebenen. (40 Min.)', true); } }
+          else { min = FG(S) ? FG(S).pyrFalsch : 40; S.energy -= 4; S.stats.pyrWrong++; say(S, 'Falsch. Richtig wäre Ebene ' + q.a + ': ' + SC.PYR[q.a] + '. Es folgt ein Vortrag über alle fünf Ebenen. (' + min + ' Min.)', true); } }
         break; }
       case 'ahnungslos':
-        if (opt === 'erklaeren') { min = 15; if (rng(S) < 0.5) { S.chef += 2; say(S, 'Er hat es verstanden. Glaubt er. Er lobt dich bei der Werkleitung (+2).'); } else say(S, 'Er nickt. Dann fragt er, ob das MES auch Excel kann.'); }
+        if (opt === 'erklaeren') { min = 15; if (rng(S) < (FG(S) ? FG(S).erklaeren : 0.5)) { S.chef += 2; say(S, 'Er hat es verstanden. Glaubt er. Er lobt dich bei der Werkleitung (+2).'); } else say(S, 'Er nickt. Dann fragt er, ob das MES auch Excel kann.'); }
         else { min = 5; say(S, '»Ah. Wie Excel. Verstehe.« Er versteht nicht.'); }
         break;
       case 'altwerk':
-        if (opt === 'mapping') { min = 30; const f = modById(S, 'fusion'); if (f && !f.done && f.req >= f.need.req && f.spec < f.need.spec) { f.spec++; say(S, 'Mapping angelegt: Systemfusion Spezifikation +1. »Artikelnummer_neu_2« heißt jetzt »Artikelnummer«.'); } else if (f && !f.done && f.req < f.need.req) { f.req++; say(S, 'Mapping angelegt: Systemfusion Requirements +1.'); } else { S.chef += 1; say(S, 'Gutes Gespräch. Die Werkleitung hört davon (+1).'); } }
+        if (opt === 'mapping') { min = FG(S) ? FG(S).mapping : 30; const f = modById(S, 'fusion'); if (f && !f.done && f.req >= f.need.req && f.spec < f.need.spec) { f.spec++; say(S, 'Mapping angelegt: Systemfusion Spezifikation +1. »Artikelnummer_neu_2« heißt jetzt »Artikelnummer«.'); } else if (f && !f.done && f.req < f.need.req) { f.req++; say(S, 'Mapping angelegt: Systemfusion Requirements +1.'); } else { S.chef += 1; say(S, 'Gutes Gespräch. Die Werkleitung hört davon (+1).'); } }
         else { min = 3; say(S, '»Später« heißt beim Altwerk: morgen wieder.'); }
         break;
       case 'rivale':
@@ -678,6 +700,10 @@
         min = k.min; S.partyMin = Math.max(0, S.minute + k.min - SC.DAY_END) > 0 ? Math.min(k.min, S.minute + k.min - SC.DAY_END) : 0; S.energy += k.energy || 0; S.chef += k.chef || 0; S.schicht += k.schicht || 0; S.family += (k.family || 0) - 1; S.ev.kostuem = k.label.replace(/ \(.*$/, '');
         say(S, 'Party: ' + k.msg); break; }
       case 'flur': { const o = SC.FLUR[p.k].opts[+String(opt).slice(1)] || SC.FLUR[p.k].opts[1]; S.stats.flur++; min = o.min; S.energy += o.energy || 0; S.schicht += o.schicht || 0; say(S, o.msg, (o.energy || 0) < 0 || (o.schicht || 0) < 0); break; }
+      case 'christian':
+        if (opt === 'zuhoeren') { const K = FG(S).kollege; min = K.min; S.schicht += K.schicht; say(S, '{C} erzählt, wie die Halle wirklich tickt. Du bringst ihm einen Kaffee mit. Schichtleiter +' + K.schicht + '.'); }
+        else { min = 2; say(S, '{C} nickt: »Später ist gut. Später ist hier immer.«'); }
+        break;
       case 'lieferant': S.partsUntil = Math.max(S.partsUntil, S.day + 2); say(S, 'Ersatzteile im Lager: Reparaturen kosten drei Tage lang nur 2 k€.'); break;
       case 'azubi': { const m = onePaper(S); say(S, 'Danke, Azubi!' + (m ? ' ' + m.name + ' +1 Paket.' : '')); break; }
       case 'audit': S.chef += 3; say(S, 'Lob vom Audit: Werkleitung +3.'); break;
@@ -875,13 +901,13 @@
   function save(S) { try { localStorage.setItem(SAVE, JSON.stringify(S)); } catch (e) { /* */ } }
   // v0.4: alter Spielstand einer anderen Version (für einen Hinweis im Titel)
   function oldSave() { try { const s = JSON.parse(localStorage.getItem(SAVE)); return s && s.v !== SC.VERSION && !(SC.SAVE_OK || []).includes(s.v) ? s.v : null; } catch (e) { return null; } }
-  function load() { try { const s = JSON.parse(localStorage.getItem(SAVE)); if (!s || (s.v !== SC.VERSION && !(SC.SAVE_OK || []).includes(s.v))) return null; s.v = SC.VERSION; const d = newGame(s.seed || 1); for (const k of Object.keys(d)) if (s[k] === undefined) s[k] = d[k]; for (const k of Object.keys(d.stats)) if (s.stats[k] === undefined) s.stats[k] = 0; return s; } catch (e) { return null; } }
+  function load() { try { const s = JSON.parse(localStorage.getItem(SAVE)); if (!s || (s.v !== SC.VERSION && !(SC.SAVE_OK || []).includes(s.v))) return null; s.v = SC.VERSION; const d = newGame(s.seed || 1); for (const k of Object.keys(d)) if (s[k] === undefined) s[k] = d[k]; for (const k of Object.keys(d.stats)) if (s.stats[k] === undefined) s.stats[k] = 0; if (!SC.FIGUREN[s.figur]) s.figur = 'christian'; s.name = SC.FIGUREN[s.figur].name; return s; } catch (e) { return null; } }
   // Highscore (lokal, Top 5) wie bei Mad TV
   function addScore(S) {
     try { const k = 'mesmarathon-highscore'; const L = JSON.parse(localStorage.getItem(k) || '[]'); L.push({ score: S.result.score, win: S.result.win, day: S.day }); L.sort((a, b) => b.score - a.score); localStorage.setItem(k, JSON.stringify(L.slice(0, 5))); return L.slice(0, 5); } catch (e) { return []; }
   }
   function highscores() { try { return JSON.parse(localStorage.getItem('mesmarathon-highscore') || '[]'); } catch (e) { return []; } }
 
-  SC.sim = { newGame, act, actCost, elonHeute, aufzug, handoverWait, kalender, abschluss, saison, aushang, diagramm, wochenendGag, advance, events, endDay, weekend, startDay, progress, nextMeeting, activeMeeting, actions: A, targets, hm, weekday, week, save, load, slow,
+  SC.sim = { newGame, figF, act, actCost, elonHeute, aufzug, handoverWait, kalender, abschluss, saison, aushang, diagramm, wochenendGag, advance, events, endDay, weekend, startDay, progress, nextMeeting, activeMeeting, actions: A, targets, hm, weekday, week, save, load, slow,
     choose, visitOptions, visitText, oldSave, archiv, kopfhoerer, kopfWhy, nordRatio, rngA, closeAuktion, auktionOpen, bidPrice, auditOk, rngF, rngM, prognoseBand, rahmen, kpiScore, kpiIndex, kpiPath, kpiTarget, autoWork, addScore, highscores, stationOf, stName, rng };
 })(window.SC);

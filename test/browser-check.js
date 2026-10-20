@@ -20,6 +20,11 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   const title = await page.evaluate(() => ({ text: document.querySelector('#overlay').innerText, name: !!document.querySelector('#pname') }));
   await page.screenshot({ path: out + '-1-titel.png' });
   await page.click('button[data-o="new"]'); await wait(300);
+  // v0.9 Figurenwahl ist der erste Schritt nach »Neues Spiel«
+  const fig = await page.evaluate(() => ({ noGame: !window.SC.S || window.SC.S.day === undefined || !document.querySelector('button[data-v]'), btns: [...document.querySelectorAll('#overlay button[data-f]')].map(b => b.dataset.f), imgs: [...document.querySelectorAll('#overlay .figur img')].map(i => i.complete && i.naturalWidth > 0), text: document.querySelector('#overlay').innerText }));
+  await page.screenshot({ path: out + '-0-figurenwahl.png' });
+  await page.click('button[data-f="christian"]'); await wait(300);
+  fig.christian = await page.evaluate(() => [window.SC.S.figur, window.SC.S.name, localStorage.getItem('mesmarathon-figur')]);
   // Besuch erzwingen: IT-Chefin mit der Pyramide
   await page.evaluate(() => { const S = window.SC.S; const v = S.visits.find(x => x.id === 'itchefin'); S.visits = S.visits.filter(x => x !== v); S.pending = v; });
   await wait(400);
@@ -86,7 +91,28 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   await page.evaluate(() => window.SC.ui.setTempo(1)); await page.reload(); await wait(500); v09.tempoAfterReload = await page.evaluate(() => [window.SC.ui.tempo, document.getElementById('btn-speed').textContent]); await page.evaluate(() => { window.SC.ui.setTempo(0); });
   const okR = (r, want) => Math.abs(r - want) / want < 0.25;
   if (v09.tempoText !== 'Tempo: Langsam' || v09.speed !== 0.5 || v09.roomFont < 18 || !v09.stoppedIcon || !v09.roomStill || !okR(v09.rate.langsam, 1) || !okR(v09.rate.normal, 1.5) || !okR(v09.rate.schnell, 2) || !v09.overlayStill || !v09.spaceNoPause || !v09.spaceClosesSingle || !v09.pauseKey || !v09.pauseStill || v09.plus[0] !== 1 || v09.plus[1] !== 'normal' || v09.minus !== 0 || !v09.hinweis || !v09.hinweisZu || !v09.sprung.jumpOk || !v09.sprung.still || !v09.textStill || !v09.textTyped || !v09.textBlurRuns || v09.tempoAfterReload[0] !== 1) errs.push('v0.9-Zeitmechanik: ' + JSON.stringify(v09));
-  console.log(JSON.stringify({ title: title.text.slice(0, 160), nameField: title.name, visitShown, st, d2, v07, v09, errs }, null, 1));
+  // v0.9 Sandra: Wahl, Anrede, Kollege Christian, Spielstand mit Figur
+  await page.evaluate(() => { localStorage.removeItem('mesmarathon-save'); window.SC.ui.showTitle(); }); await wait(300);
+  await page.click('button[data-o="new"]'); await wait(300); await page.click('button[data-f="sandra"]'); await wait(500);
+  fig.sandra = await page.evaluate(() => [window.SC.S.figur, window.SC.S.name, window.SC.S.chef, window.SC.S.schicht]);
+  await page.evaluate(() => { const S = window.SC.S; S.visits = []; S.pending = null; S.minute = 9 * 60; }); await wait(300);
+  await page.screenshot({ path: out + '-9-sandra-haus.png' });
+  await page.evaluate(() => window.SC.ui.walkTo('halle')); await page.waitForFunction(() => window.SC.ui.room === 'halle', { timeout: 30000 });
+  await page.evaluate(() => document.querySelector('#room button[data-a="linie"]').click()); await wait(400);
+  await page.evaluate(() => document.querySelector('#room button[data-a="leave"]').click()); await wait(800);
+  await page.evaluate(() => window.SC.ui.showLog()); await wait(300); fig.anrede = await page.evaluate(() => document.querySelector('#overlay').innerText);
+  await page.screenshot({ path: out + '-9-sandra-protokoll.png' }); await page.evaluate(() => document.querySelector('button[data-o="logzu"]').click()); await wait(300);
+  await page.evaluate(() => { const S = window.SC.S; S.pending = { id: 'christian', at: S.minute, t: 0 }; }); await wait(1200);
+  fig.besuch = await page.evaluate(() => document.querySelector('#overlay').innerText);
+  await page.screenshot({ path: out + '-9-sandra-besuch-christian.png' });
+  await page.evaluate(() => document.querySelector('button[data-v="zuhoeren"]').click()); await wait(300);
+  await page.reload({ waitUntil: 'load' }); await wait(600);
+  fig.cont = await page.evaluate(() => (document.querySelector('button[data-o="cont"]') || {}).textContent);
+  await page.click('button[data-o="cont"]'); await wait(400); fig.loaded = await page.evaluate(() => [window.SC.S.figur, window.SC.S.name]);
+  fig.ok = fig.btns.join() === 'christian,sandra' && fig.imgs.length === 2 && fig.imgs.every(Boolean) && fig.christian.join() === 'christian,Christian,christian' && fig.sandra.join() === 'sandra,Sandra,55,42' &&
+    /»die vom MES«/.test(fig.anrede) && !/Christian/.test(fig.anrede) && /Christian, der erfahrene Kollege/.test(fig.besuch) && !/\{C\}/.test(fig.besuch) && /Sandra/.test(fig.cont || '') && fig.loaded.join() === 'sandra,Sandra';
+  if (!fig.ok) errs.push('v0.9-Figuren fehlerhaft: ' + JSON.stringify(fig).slice(0, 600));
+  console.log(JSON.stringify({ title: title.text.slice(0, 160), nameField: title.name, visitShown, st, d2, v07, v09, fig, errs }, null, 1));
   if (errs.length || d2 !== 2 || !visitShown || title.name) process.exitCode = 1;
   await browser.close();
 })();

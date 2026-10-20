@@ -12,7 +12,7 @@ const DEV = [
   { name: 'iphone', ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1', w: 390, h: 844 },
   { name: 'android', ua: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Mobile Safari/537.36', w: 412, h: 915 }
 ];
-async function tapSel(page, sel) { const r = await page.evaluate(s => { const e = document.querySelector(s); if (!e) return null; const b = e.getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; }, sel); if (!r) throw new Error('fehlt: ' + sel); await page.touchscreen.tap(r.x, r.y); }
+async function tapSel(page, sel) { const r = await page.evaluate(s => { const e = document.querySelector(s); if (!e) return null; e.scrollIntoView({ block: 'center' }); const b = e.getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; }, sel); if (!r) throw new Error('fehlt: ' + sel); await page.touchscreen.tap(r.x, r.y); }
 // langsamer Tipp wie ein echter Finger: 150 ms zwischen Berühren und Loslassen (Review-Befund: Race beim ersten Tipp)
 async function slowTap(page, sel) { const r = await page.evaluate(s => { const b = document.querySelector(s).getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; }, sel); await page.touchscreen.touchStart(r.x, r.y); await wait(150); await page.touchscreen.touchEnd(); }
 (async () => {
@@ -28,6 +28,7 @@ async function slowTap(page, sel) { const r = await page.evaluate(s => { const b
     const st = () => page.evaluate(() => Object.assign(window.SC.audio.state(), { btn: document.getElementById('btn-sound').textContent, ticker: document.getElementById('ticker').innerText }));
     const before = await st();
     await tapSel(page, 'button[data-o="new"]'); await wait(500);
+    await tapSel(page, 'button[data-f="christian"]'); await wait(500);
     const after = await st();
     await page.screenshot({ path: out + '-' + d.name + '.png' });
     // Unterbruch wie beim Tab-Wechsel oder Anruf: Kontext angehalten, die nächste Berührung (auf das Spielfeld) entsperrt wieder
@@ -52,7 +53,7 @@ async function slowTap(page, sel) { const r = await page.evaluate(s => { const b
     const keyM = await p4.evaluate(() => Object.assign(window.SC.audio.state(), { btn: document.getElementById('btn-sound').textContent })); await p4.close();
     // v0.9: Knöpfe mindestens 44 px hoch, ein langer Ticker-Text verschiebt das Spielfeld nicht
     const p5 = await browser.newPage(); await p5.setUserAgent(d.ua); await p5.setViewport({ width: d.w, height: d.h, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
-    await p5.goto(url, { waitUntil: 'load' }); await wait(600); await p5.evaluate(() => document.querySelector('button[data-o="new"]').click()); await wait(400);
+    await p5.goto(url, { waitUntil: 'load' }); await wait(600); await p5.evaluate(() => document.querySelector('button[data-o="new"]').click()); await wait(400); await p5.evaluate(() => document.querySelector('button[data-f="christian"]').click()); await wait(400);
     const lay = await p5.evaluate(async () => { const top = () => document.getElementById('rooms').getBoundingClientRect().top; const t0 = top(); window.SC.ui.toast('Sehr lange Meldung: '.repeat(30)); await new Promise(r => setTimeout(r, 100)); const inp = document.createElement('input'); inp.type = 'text'; inp.id = 'mfeld'; document.getElementById('app').appendChild(inp); return { tickerH: Math.round(document.getElementById('ticker').getBoundingClientRect().height), speedH: document.getElementById('btn-speed').getBoundingClientRect().height, shift: Math.round(top() - t0), tempo: document.getElementById('btn-speed').textContent }; }); const mf0 = await p5.evaluate(() => { window.SC.S.visits = []; window.SC.S.pending = null; return window.SC.S.minute; }); await p5.tap('#mfeld'); await wait(150); const mfA = await p5.evaluate(() => window.SC.S.minute); await wait(1200); lay.textDbg = await p5.evaluate(m => [document.activeElement && document.activeElement.id, window.SC.S.minute - m, window.SC.ui.overlayOpen(), window.SC.ui.room], mf0); lay.textStill = lay.textDbg[0] === 'mfeld' && lay.textDbg[1] === mfA - mf0; await p5.evaluate(() => document.activeElement.blur()); await wait(1200); lay.blurRuns = await p5.evaluate(m => window.SC.S.minute > m, mf0); await p5.close();
     await wait(1600); await slowTap(page, '#btn-sound'); await wait(200); const muted = await st();
     await tapSel(page, '#btn-sound'); await wait(300); const unmuted = await st();

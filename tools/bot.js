@@ -1,5 +1,5 @@
 // Balance-Bot: spielt viele Partien mit einfachen Strategien.
-// Aufruf: node tools/bot.js [anzahl] [--check]
+// Aufruf: node tools/bot.js [anzahl] [--check] [--figur=sandra]
 'use strict';
 const SC = require('../test/helper.js'); const sim = SC.sim;
 const WALK = 8; // Minuten je Raumwechsel (Laufen + Aufzug)
@@ -7,7 +7,7 @@ let FREE = Infinity; // Minuten bis zum nächsten gewünschten Meeting
 function tryAct(S, room, id) {
   if (S.pending) return false;
   const a = sim.actions[room].find(x => x.id === id); if (a.check(S)) return false;
-  if (room !== 'meeting' && a.cost * sim.slow(S) + (S.at !== room ? WALK : 0) > FREE) return false;
+  if (room !== 'meeting' && a.cost * sim.slow(S) * sim.figF(S, id) + (S.at !== room ? WALK : 0) > FREE) return false;
   if (S.at !== room) { sim.advance(S, WALK); S.at = room; if (S.pending || a.check(S)) return false; }
   return sim.act(S, room, id).ok;
 }
@@ -25,6 +25,7 @@ function resolveVisit(S, P) {
   else if (p.id === 'raetsel') c = P.visit === 'skip' ? 'ticket' : S.budget >= 15 ? 'service' : 'aus';
   else if (p.id === 'party') c = opts[S.seed % opts.length];
   else if (p.id === 'tesla' && P.elon && opts.includes('thema')) c = 'thema';
+  else if (p.id === 'christian') c = P.visit === 'skip' ? 'spaeter' : 'zuhoeren';
   else if (P.visit === 'listen') c = opts[0];
   else if (P.visit === 'smart') c = (p.id === 'italien' && (S.energy < 60 || S.itStreak > 0)) || p.id === 'altwerk' ? opts[0] : opts[1];
   else c = opts[1];
@@ -144,12 +145,12 @@ const POL = {
   waghalsig: P({ care: true, zusage: 'kurz' }),
   sapChaos: P({ care: true, migrate: false, we: S => (S.sap.cutover ? 0 : S.family > 55 ? 1 : 0) })
 };
-function run(n) {
+function run(n, figur) {
   const rows = {};
   for (const [k, pol] of Object.entries(POL)) {
     const r = { pfad: 0, win: 0, chef: 0, fam: 0, dead: 0, budget: 0, days: [], prog: [], bud: [], kpi: [], meet: [], useless: [], chaos: 0, titel: 0 };
     for (let i = 0; i < n; i++) {
-      const S = sim.newGame(1000 + i * 7919);
+      const S = sim.newGame(1000 + i * 7919, figur);
       let g = 0; while (S.phase !== 'ende' && g++ < 40) playDay(S, pol);
       const w = S.result.why;
       if (S.result.win) { r.win++; r.days.push(S.day); } else if (/Werkleitung zieht/.test(w)) r.chef++; else if (/Imker/.test(w)) r.fam++; else if (/Controlling/.test(w)) r.budget++; else r.dead++;
@@ -162,7 +163,9 @@ function run(n) {
 }
 if (require.main === module) {
   const n = +process.argv[2] || 200;
-  const rows = run(n);
+  const fa = process.argv.find(a => a.startsWith('--figur=')), figur = fa ? fa.slice(8) : 'christian';
+  const rows = run(n, figur);
+  if (figur !== 'christian') console.log('Figur: ' + figur);
   console.log('Strategie        Sieg%  Siegtag | Werkl. Familie Termin Budget | Fortschr. Budget KPI Meet(nutzlos) Chaos% Titel% Vorzeig%');
   for (const [k, x] of Object.entries(rows)) console.log(k.padEnd(16), String(x.win).padStart(5), String(x.winDay).padStart(8), '|', String(x.chef).padStart(6), String(x.fam).padStart(7), String(x.termin).padStart(6), String(x.budget).padStart(6), '|', String(x.prog).padStart(9), String(x.bud).padStart(6), String(x.kpi).padStart(3), (x.meet + '(' + x.useless + ')').padStart(13), String(x.chaos).padStart(6), String(x.titel).padStart(6), String(x.pfad).padStart(8));
   if (process.argv.includes('--check')) {
@@ -206,6 +209,17 @@ if (require.main === module) {
     if (R.ohneSchichtplan.win > R.gut.win - 3) warn.push('ohneSchichtplan nicht >= 3 PP unter gut');
     if (R.gut1730.win > 75) warn.push('gut1730 ' + R.gut1730.win + ' % (über 75, offene Abweichung)');
     if (R.fleissig.win > R.gut.win + 3) warn.push('fleissig ' + R.fleissig.win + ' % (mehr als gut + 3)');
+    // v0.9 Figuren: Sandra liegt bei gut höchstens 5 PP neben Christian, keine vernünftige Strategie mehr als 8 PP darüber
+    if (figur !== 'christian') {
+      const C = run(n, 'christian');
+      console.log('Vergleich Christian gut ' + C.gut.win + ' %, ' + figur + ' gut ' + R.gut.win + ' %');
+      if (Math.abs(R.gut.win - C.gut.win) > 5) errs.push(figur + ' gut weicht mehr als 5 PP von Christian ab');
+      // fleissig ist die Ausnahme (docs/BALANCE-v0.9.md): Wer am Rechner schneller ist, macht weniger Überstunden und verliert seltener über die Familie.
+      // Für fleissig gilt deshalb: höchstens 15 PP über Christian und klar unter gut derselben Figur.
+      for (const k of SANE) if (k !== 'fleissig' && R[k].win > C[k].win + 8) errs.push(figur + ' ' + k + ' mehr als 8 PP über Christian');
+      if (R.fleissig.win > C.fleissig.win + 15) errs.push(figur + ' fleissig mehr als 15 PP über Christian');
+      if (R.fleissig.win > R.gut.win - 5) errs.push(figur + ' fleissig nicht >= 5 PP unter gut');
+    }
     if (warn.length) console.log('WARNUNG Zielbereiche: ' + warn.join('; '));
     console.log(errs.length ? 'CHECK FEHLER: ' + errs.join('; ') : 'CHECK OK (harte Invarianten)');
     process.exitCode = errs.length ? 1 : 0;

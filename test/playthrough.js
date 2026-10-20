@@ -7,6 +7,7 @@ const path = require('path');
 const DAYS = +process.argv[2] || 6, SEED = +process.argv[3] || 4242;
 const url = 'file://' + path.resolve(__dirname, '..', 'index.html');
 const out = process.env.SHOTS || '/workspace/mes-marathon-play';
+const FIGUR = process.env.FIGUR || 'christian';
 const wait = ms => new Promise(r => setTimeout(r, ms));
 // Klick im Seitenkontext (der Raum wird alle 5 Spielminuten neu gezeichnet, Element-Handles veralten sonst)
 const click = (page, sel) => page.evaluate(s => { const b = document.querySelector(s); if (b && !b.disabled) { b.click(); return true; } return false; }, sel);
@@ -21,7 +22,8 @@ const click = (page, sel) => page.evaluate(s => { const b = document.querySelect
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'load' }); await wait(400);
   await page.click('button[data-o="new"]'); await wait(200);
-  await page.evaluate(seed => { window.SC.ui.newGame(seed); window.SC.ui.speed = 4; }, SEED);
+  await page.click('button[data-f="' + FIGUR + '"]'); await wait(200);
+  await page.evaluate((seed, f) => { window.SC.ui.newGame(seed, f); window.SC.ui.speed = 4; }, SEED, FIGUR);
   const log = [], shots = [], contChecks = [];
   let hinweise = 0, lastDay = 0, actions = 0, visits = 0, meetings = 0, guard = 0, shotDay = {};
   const t0 = Date.now();

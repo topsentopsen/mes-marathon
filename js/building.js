@@ -12,7 +12,9 @@
     { role: 'tesla', f: 1, x: 300, dir: -1, col: '#d03030' },
     { role: 'nix', f: 1, x: 288, dir: 1, col: '#7a7a70', idle: true },
     { role: 'italien', f: 2, x: 290, dir: -1, col: '#f0f0f0' },
-    { role: 'itchefin', f: 3, x: 300, dir: 1, col: '#9050d0' }
+    { role: 'itchefin', f: 3, x: 300, dir: 1, col: '#9050d0' },
+    // v0.9: die jeweils andere Figur ist als Kollege oder Kollegin im MES-Stock unterwegs
+    { role: 'kollege', f: 3, x: 140, dir: 1, col: '#8cb8e8' }
   ];
   let npcs = NPC0.map(n => Object.assign({ wait: 0, home: n.f, hx: n.x }, n));
   const smoke = [];
@@ -109,21 +111,27 @@
     else if (role === 'italien') { rect(x - 5, y - 16, 10, 8, '#f0c060'); rect(x - 4, y - 15, 8, 6, '#e03020'); rect(x - 2, y - 14, 2, 2, '#ffffff'); rect(x + 1, y - 12, 2, 2, '#ffffff'); rect(x - 1, y - 11, 1, 1, '#20a040'); }
     else if (role === 'itchefin') { rect(x - 6, y - 32, 13, 1, '#40e0ff'); rect(x - 6, y - 32, 1, 6, '#40e0ff'); rect(x + 6, y - 32, 1, 6, '#40e0ff'); rect(x - 6, y - 27, 13, 1, '#40e0ff'); }
   }
+  const figNow = () => (SC.S && SC.S.figur === 'sandra' ? 'sandra' : 'christian');
+  const figOther = () => (figNow() === 'sandra' ? 'christian' : 'sandra');
   function drawMan(x, y, col, anim, moving, dir, me, role) {
     x = Math.round(x); y = Math.round(y);
+    const lk = me ? figNow() : role === 'kollege' ? figOther() : null;
+    if (lk) { col = SC.FIGUREN[lk].col; me = true; }
     const s = moving ? Math.round(Math.sin(anim) * 2) : 0;
     rect(x - 3, y - 8, 2, 8 - Math.max(0, s), '#202048');
     rect(x + 1, y - 8, 2, 8 - Math.max(0, -s), '#202048');
     rect(x - 4, y - 17, 8, 9, col);
     rect(x - 5, y - 16, 1, 6, col); rect(x + 4, y - 16, 1, 6, col);
-    if (me) { rect(x - 2, y - 17, 4, 2, '#f4f8ff'); rect(x, y - 15, 1, 6, '#6a94c4'); } // Hemd mit hellem Kragen und Knopfleiste
+    if (me && lk === 'sandra') { rect(x - 1, y - 17, 2, 3, '#f4f8ff'); rect(x - 4, y - 17, 1, 9, '#2c6a60'); rect(x + 3, y - 17, 1, 9, '#2c6a60'); } // Blazer mit heller Bluse
+    else if (me) { rect(x - 2, y - 17, 4, 2, '#f4f8ff'); rect(x, y - 15, 1, 6, '#6a94c4'); } // Hemd mit hellem Kragen und Knopfleiste
     else if (role === 'schicht') { rect(x - 4, y - 13, 8, 1, '#c0c0c0'); rect(x - 4, y - 11, 8, 1, '#c0c0c0'); }
     else if (role === 'tesla') { rect(x - 2, y - 15, 5, 1, '#fff'); rect(x, y - 14, 1, 4, '#fff'); }
     else if (role === 'italien') { rect(x - 4, y - 12, 3, 2, '#20a040'); rect(x - 1, y - 12, 2, 2, '#fff'); rect(x + 1, y - 12, 3, 2, '#e02020'); }
     else if (role === 'itchefin') { rect(x - 1, y - 16, 3, 3, '#ffcc00'); rect(x, y - 17, 1, 1, '#ffcc00'); }
     else { rect(x - 1, y - 17, 2, 5, '#ffffff'); rect(x, y - 16, 1, 4, '#c02020'); }
     rect(x - 2, y - 22, 5, 5, '#f0c090');
-    if (me) { rect(x - 3, y - 24, 7, 3, '#c4c4c8'); rect(x - 3, y - 22, 1, 3, '#a4a4aa'); rect(x + 3, y - 22, 1, 2, '#a4a4aa'); rect(x - 1, y - 24, 1, 1, '#e8e8ec'); rect(x + 1, y - 24, 1, 1, '#909096'); }
+    if (me && lk === 'sandra') { rect(x - 3, y - 24, 7, 2, '#6a3a1c'); rect(x - 3, y - 22, 1, 4, '#6a3a1c'); rect(x + (dir < 0 ? 3 : -4), y - 22, 2, 1, '#6a3a1c'); rect(x + (dir < 0 ? 4 : -5), y - 21, 1, 4, '#5a3014'); } // braune Haare mit Pferdeschwanz
+    else if (me) { rect(x - 3, y - 24, 7, 3, '#c4c4c8'); rect(x - 3, y - 22, 1, 3, '#a4a4aa'); rect(x + 3, y - 22, 1, 2, '#a4a4aa'); rect(x - 1, y - 24, 1, 1, '#e8e8ec'); rect(x + 1, y - 24, 1, 1, '#909096'); }
     else if (role === 'schicht') { rect(x - 3, y - 24, 7, 2, '#ffffff'); rect(x - 4, y - 22, 9, 1, '#ffffff'); }
     else if (role === 'itchefin') { rect(x - 3, y - 23, 7, 2, '#603020'); rect(x - 3, y - 21, 1, 5, '#603020'); rect(x + 3, y - 21, 1, 5, '#603020'); }
     else rect(x - 2, y - 23, 5, 2, role === 'italien' ? '#201008' : '#402010');
@@ -305,11 +313,12 @@
     if (bub.ttl > 0) { bub.ttl -= dt; if (bub.ttl <= 0) bub.n = null; return; }
     bub.next -= dt; if (bub.next > 0) return;
     bub.next = 6 + Math.random() * 8;
-    const here = npcs.filter(n => n.f === P.f && SC.BUBBLES && SC.BUBBLES[n.role]);
-    const pool = here.length && Math.random() < 0.7 ? here : npcs.filter(n => SC.BUBBLES && SC.BUBBLES[n.role]);
+    const BL = r => (r === 'kollege' ? SC.KOLLEGE_BUBBLES && SC.KOLLEGE_BUBBLES[figOther()] : SC.BUBBLES && SC.BUBBLES[r]);
+    const here = npcs.filter(n => n.f === P.f && BL(n.role));
+    const pool = here.length && Math.random() < 0.7 ? here : npcs.filter(n => BL(n.role));
     if (!pool.length) return;
-    const n = pool[Math.floor(Math.random() * pool.length)], L = partyDay() && SC.PARTY_BUBBLES && SC.PARTY_BUBBLES[n.role] && Math.random() < 0.6 ? SC.PARTY_BUBBLES[n.role] : SC.BUBBLES[n.role];
-    bub.n = n; bub.t = L[Math.floor(Math.random() * L.length)]; bub.ttl = 6;
+    const n = pool[Math.floor(Math.random() * pool.length)], L = partyDay() && SC.PARTY_BUBBLES && SC.PARTY_BUBBLES[n.role] && Math.random() < 0.6 ? SC.PARTY_BUBBLES[n.role] : BL(n.role);
+    bub.n = n; bub.t = SC.fill(SC.S, L[Math.floor(Math.random() * L.length)]); bub.ttl = 6;
   }
   function drawBubble() {
     const n = bub.n; if (!n || !bub.t) return;
@@ -345,7 +354,7 @@
     // Besuch: die Figur kommt zu Christian auf die Etage (Dialog läuft in ui.js)
     summon(id) {
       const p = SC.S && SC.S.pending;
-      const roles = id === 'tesla' ? (p && p.duo ? ['tesla', 'nix'] : ['tesla']) : id === 'italien' ? ['italien'] : id === 'itchefin' ? ['itchefin'] : [];
+      const roles = id === 'tesla' ? (p && p.duo ? ['tesla', 'nix'] : ['tesla']) : id === 'italien' ? ['italien'] : id === 'itchefin' ? ['itchefin'] : id === 'christian' ? ['kollege'] : [];
       if (id === 'flur' && p && SC.FLUR[p.k] && SC.FLUR[p.k].role) roles.push(SC.FLUR[p.k].role);
       roles.forEach((r, i) => { const n = npcs.find(q => q.role === r); if (!n) return; n.f = P.f; n.idle = false; const side = P.x > 300 ? -1 : 1; n.x = P.x + side * 60; n.target = P.x + side * (14 + i * 10); });
     },
@@ -389,7 +398,7 @@
       drawBubble();
       if (P.visible) {
         const y = P.inLift ? floorY(lift.pos) : floorY(P.f);
-        drawMan(P.x, y, SC.PLAYER.col, P.anim, P.moving, P.dir, true);
+        drawMan(P.x, y, SC.FIGUREN[figNow()].col, P.anim, P.moving, P.dir, true);
         if (!P.inLift) { rect(P.x - 1, y - 30, 3, 3, '#ffcc00'); }
       }
       present();
