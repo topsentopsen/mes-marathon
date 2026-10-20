@@ -1,8 +1,12 @@
 # MES-Marathon
 
-Retro-Managerspiel im Browser, inspiriert von **Mad TV** (1991) und abgeleitet aus [Sender-Chef](https://github.com/topsentopsen/sender-chef). Statt eines Fernsehsenders führst du als **Christian** (ca. 40, sehr viel graue Haare, kein Bart, Hemd) oder seit v0.9 als **Sandra** (jüngere Kollegin aus der MES-Entwicklung, braune Haare, Blazer) seit Jahren ein MES (Manufacturing Execution System) in *Werk Mitte* ein. Diesmal wirklich. Comedy, kein Drama.
+Retro-Managerspiel im Browser, inspiriert von **Mad TV** (1991) und abgeleitet aus [Sender-Chef](https://github.com/topsentopsen/sender-chef). Statt eines Fernsehsenders führst du als **Christian** (ca. 40, sehr viel graue Haare, kein Bart, Hemd) oder seit v0.9 als **Sandra** (Kollegin aus der MES-Entwicklung, braune Haare, Blazer) seit Jahren ein MES (Manufacturing Execution System) in *Werk Mitte* ein. Diesmal wirklich. Comedy, kein Drama.
 
 **Spielen:** https://topsentopsen.github.io/mes-marathon/
+
+## Neu in v0.11.0 »Sandra im Detail«
+
+Sandra nachgeschärft: Figurenkarte über den Namensknopf, Knopfvermerke zu ihren Stärken und Schwächen, fachlich genauere MES-Szenen und drei neue (Stillstandsgründe, Fehlerwarteschlange, Ausschuss). Ihr Vorsprung am Rechner gilt nur bis Feierabend (docs/BALANCE-v0.11.md). Der Kollege aus dem Nachbarbüro hat seinen neuen Namen. Der 17:00-Hinweis stört keinen offenen Besuch mehr. Christians Wertung ist unverändert.
 
 ## Neu in v0.10.0 »Feinschliff mit Sandra«
 - Neun neue Szenen für Sandra aus dem MES-Alltag, neue Tipps von Christian und neue Zeilen, wenn Sandra bei Christian vorbeischaut. Die Bestenliste zeigt die Figur.
@@ -51,7 +55,7 @@ Retro-Managerspiel im Browser, inspiriert von **Mad TV** (1991) und abgeleitet a
 - **Fabrik als Automatisierungspyramide:** Jede Etage ist eine Ebene. EG Feld (Werkstor, Schichtleiter, Produktionshallen), 1 Steuerung (Werkstatt, Drucker, Werkskantine), 2 Leitebene (Büro, Leitstand, Besprechungsraum), 3 MES (Serverraum, IT-Büro), 4 ERP (Werkleitung, Controlling). Sheddach, Schornstein, Hallenflügel, Förderbänder, Schichtwechsel-Sirene um 14:00, Fabriklärm im prozeduralen Sound.
 - **Sieben Stationen:** DEA, DEC, EEA, Extrusion, Innenverpackung, Außenverpackung, Sterilisation. Jedes Modul hat eine Teststation. Der **Verpackungsautomat** macht ständig Probleme.
 - **Alltag:** Requirements → Spezifikation → Implementierung → Deployment → Testlauf → Ausdruck → Abnahme. Dazu Meetings, Wochenendschichten, Überstunden, Excel-Liste, Drucker mit Papierstau, Serverraum.
-- **Figuren (nur Rollen, nur Christian hat einen Namen):** der Schichtleiter mit seinen unnötigen Meetings, die IT-Chefin, die immer mit der Automatisierungspyramide kommt (Pyramiden-Quiz), der Tesla-Kollege, der Kollege, der nichts arbeitet und nur mit dem Tesla-Kollegen redet, der italienische Kollege mit stündlichen Geschichten aus Italien und vom Essen, Kollegen ohne Ahnung, die Werkleitung, die Controlling-Abteilung, die Instandhaltung, der Pförtner, die Kantinenkraft.
+- **Figuren (nur Rollen, nur Christian hat einen Namen):** der Schichtleiter mit seinen unnötigen Meetings, die IT-Chefin, die immer mit der Automatisierungspyramide kommt (Pyramiden-Quiz), der Tesla-Kollege, der Kollege aus dem Nachbarbüro, der nur mit dem Tesla-Kollegen redet, der italienische Kollege mit stündlichen Geschichten aus Italien und vom Essen, Kollegen ohne Ahnung, die Werkleitung, die Controlling-Abteilung, die Instandhaltung, der Pförtner, die Kantinenkraft.
 - **Großereignisse:** Tag 6 neues SAP-System mit Stammdatenmigration und Cutover am Freitag (sonst drei Tage Chaos). Tag 13 Firmenübernahme mit Systemfusion als sechstem Modul, Go-Live rückt auf Tag 22.
 - **KPIs:** OEE, Ausschuss, Durchsatz, Liefertreue mit Zielwerten, Verlauf im Leitstand, täglicher KPI-Bericht und Wochenrückblick am Freitag.
 - **Budget als Dauerbrenner:** wöchentliche Tranche, Kredit (seit v0.3, vorher Vorschuss), externe Berater; Testläufe, Reparaturen, Toner und Wochenendschichten kosten.
@@ -67,5 +71,5 @@ Vanilla JavaScript ohne Build, Canvas-Pixelgrafik, Musik und Fabriklärm per Web
 
 Eigenes Fanprojekt, keine Original-Inhalte von Mad TV. Alle Figuren, Werke und Firmen sind frei erfunden.
 
-## Balance (v0.10.0 unverändert zu v0.9.0, `node tools/bot.js 1000 --check`, für Sandra mit `--figur=sandra`)
+## Balance (v0.11.0: Christian unverändert, Sandra siehe docs/BALANCE-v0.11.md; `node tools/bot.js 1000 --check`, für Sandra mit `--figur=sandra`)
 Siehe `docs/BALANCE-v0.9.md` (Christian unverändert, Sandra gut 56 gegen 58 %), `docs/BALANCE-v0.8.md` und `docs/BALANCE-v0.7.md` (ältere: `-v0.6` bis `-v0.2`). Seit v0.6 unverändert, in v0.8 ist die Bot-Tabelle identisch. Meeting-Marathon bleibt deutlich schwächer als planvolles Arbeiten (15 gegen 60 %). Überstunden lohnen sich weniger: fleissig 35 %, bis 17:30 bleiben 74,5 % (3000 Partien). Offen: Das ist weiter etwa 15 PP besser als pünktlich gehen.

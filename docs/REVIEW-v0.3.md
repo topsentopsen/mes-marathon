@@ -12,10 +12,10 @@ Ich habe nichts geändert und den Plan nur aus dem Code abgeleitet. Der Bot-Lauf
 ## 1. Features
 
 **A. Sprechblasen im Gebäude (S–M)**
-- **Was:** Die Figuren sagen gelegentlich kurze Sätze in einer Pixel-Blase: der Schichtleiter »Hast du kurz?«, der Tesla-Kollege »0 auf 100 …«, der Kollege, der nichts arbeitet, »Bin gleich bei dir.«, die IT-Chefin »Ebene 3!«, der italienische Kollege »Mamma mia, die Pasta!«. Pro Figur gibt es alle 20–40 s eine Blase für etwa 3 s.
+- **Was:** Die Figuren sagen gelegentlich kurze Sätze in einer Pixel-Blase: der Schichtleiter »Hast du kurz?«, der Tesla-Kollege »0 auf 100 …«, der Kollege aus dem Nachbarbüro »Bin gleich bei dir.«, die IT-Chefin »Ebene 3!«, der italienische Kollege »Mamma mia, die Pasta!«. Pro Figur gibt es alle 20–40 s eine Blase für etwa 3 s.
 - **Code:** Neue Liste `SC.BUBBLES = {rolle: [...]}` in `js/data.js`. In `js/building.js` kommen `n.say` und `n.sayT` hinzu. `updateNpcs` zählt den Timer herunter, ein Zeichenblock nach `drawMan` malt die Blase. Er läuft nur bei `!SC.S.pending` und nur für Figuren auf der Etage, auf der Christian ist (`P.f`).
 - **Balance:** keine, rein kosmetisch. `Math.random` ist hier erlaubt, weil `building.js` die Sim nicht berührt.
-- **Test:** In `sim.test.js` prüfen, dass `SC.BUBBLES` für jede Rolle aus der Figurenliste (schicht, tesla, nix, italien, itchefin) mindestens 5 Sätze mit höchstens 40 Zeichen enthält. `names.test.js` deckt die Namensregel ab.
+- **Test:** In `sim.test.js` prüfen, dass `SC.BUBBLES` für jede Rolle aus der Figurenliste (schicht, tesla, nachbar, italien, itchefin) mindestens 5 Sätze mit höchstens 40 Zeichen enthält. `names.test.js` deckt die Namensregel ab.
 
 **B. Flurfunk: Zufallsereignisse (M)**
 - **Was:** An etwa 35 % der Tage gibt es einen Flurfunk-Moment als Besuchs-Popup mit genau 2 Optionen. Beispiele:

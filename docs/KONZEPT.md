@@ -36,7 +36,7 @@ Spielname: **MES-Marathon**. Spielrahmen: 20 Arbeitstage (Go-Live Tag 20), Echtz
 | **die Werkleitung** | Werkleitung (ERP-Etage) | Liest täglich die Excel-Liste, nimmt ab, vergleicht die Werke, verteilt Ziele. | trocken, streng-fair |
 | **die IT-Chefin** | IT-Büro (MES-Etage), taucht überall auf | Kommt **immer** mit der Automatisierungspyramide. Fragt „Auf welcher Ebene…?“. Richtige Antwort hilft, falsche gibt Vortrag. | begeistert, pedantisch, sympathisch |
 | **der Tesla-Kollege** | Flure, Kaffeeküche | Redet den ganzen Tag Quatsch über Tesla (Reichweite, Software-Updates, Lackfarben). | harmlos, nervig-komisch |
-| **der Kollege, der nichts arbeitet** | Flure, neben dem Tesla-Kollegen | Arbeitet nicht, redet nur mit dem Tesla-Kollegen, nickt und kommentiert. Erscheint **als Duo** mit dem Tesla-Kollegen. | Running Gag |
+| **der Kollege aus dem Nachbarbüro** | Flure, neben dem Tesla-Kollegen | Sagt, er arbeite zu viel; redet nur mit dem Tesla-Kollegen, nickt und kommentiert. Erscheint **als Duo** mit dem Tesla-Kollegen. | Running Gag |
 | **der italienische Kollege** | überall, ca. stündlich | Lenkt mit Geschichten aus Italien und vom Essen ab (liebevoll, kein Klischee-Spott; er ist fachlich gut und großzügig). | warm, appetitanregend |
 | **ein Kollege ohne Ahnung** (mehrere: Vertrieb, Einkauf, Marketing) | Büro, Flure | Fragt ahnungslos („Ist das MES das mit Excel?“). | freundlich-naiv |
 | **der Verpackungsautomat** | Innenverpackung / Außenverpackung | Macht ständig Probleme (Etikettenstau, Folienriss, „Fehler 17“). Eine Figur ohne Gesicht, aber mit Charakter. | Dauerbrenner |
@@ -111,7 +111,7 @@ Zu Tagesbeginn wird eine Liste „Besuche“ ausgewürfelt. Beim Eintreten pausi
 
 | Figur | Wahrscheinlichkeit | Optionen (Zeit, Wirkung) |
 |---|---|---|
-| Tesla-Kollege (als Duo mit dem Kollegen, der nichts arbeitet, in 60 %) | 55 % pro Tag, 8:00–15:00 | Zuhören: 25 Min (Duo 35), Energie +2. Abwimmeln: 5 Min, Energie −2; in 25 % der Fälle sperrt das Duo die Kaffeeküche (Kaffee dauert den Tag 25 statt 10 Min). |
+| Tesla-Kollege (als Duo mit dem Kollegen aus dem Nachbarbüro in 60 %) | 55 % pro Tag, 8:00–15:00 | Zuhören: 25 Min (Duo 35), Energie +2. Abwimmeln: 5 Min, Energie −2; in 25 % der Fälle sperrt das Duo die Kaffeeküche (Kaffee dauert den Tag 25 statt 10 Min). |
 | italienischer Kollege | je Stunde 9–16 Uhr 30 %, max. 3 pro Tag | Zuhören: 12 Min, Energie +4, in 30 % „Rezept“: nächstes Mittagessen +10 Energie. Vertagen: 2 Min („Erzähl es mir beim Essen“). |
 | IT-Chefin (Automatisierungspyramide) | Tag 1 sicher; gerade Tage 85 %, ungerade 25 % | Pyramiden-Frage mit drei Antworten (Kap. 7.2). Folie überspringen: 10 Min, in 35 % besteht sie darauf (+20 Min). |
 | Kollege ohne Ahnung | 50 % pro Tag | Erklären: 20 Min, in 35 % lobt er dich bei der Werkleitung (+2). Abkürzen: 5 Min. |
@@ -190,8 +190,8 @@ Ziel: meetingfan ≥ 15 Prozentpunkte hinter der besten Strategie (Details in PH
 ## 11. Ton und Humorregeln
 
 - Freundlich-satirisch, nie bösartig. Gelacht wird über **Situationen** (Meeting über das Meeting, 90 Folien, Papierstau), nicht über Personengruppen.
-- Der italienische Kollege ist warm, fachlich kompetent und großzügig; sein Thema ist Essen/Familie/Heimat. Keine Akzent-Schreibweise, keine Mafia-/Pizza-Witze, keine Faulheitsklischees. Er lenkt ab, weil er gern erzählt.
-- Der Kollege, der nichts arbeitet, und der Tesla-Kollege sind Running Gags, keine Beleidigung. Tesla-Quatsch bleibt absurd, nicht politisch (Reichweite im Winter, Hupe mit Furzgeräusch, „Autopilot im Flur“). Kein Bezug auf reale Personen.
+- Der italienische Kollege ist warm, fachlich kompetent und großzügig; sein Thema ist Essen/Familie/Heimat. Keine Akzent-Schreibweise, keine Mafia-/Pizza-Witze, keine Klischees über Arbeitsmoral. Er lenkt ab, weil er gern erzählt.
+- Der Kollege aus dem Nachbarbüro und der Tesla-Kollege sind Running Gags, keine Beleidigung. Tesla-Quatsch bleibt absurd, nicht politisch (Reichweite im Winter, Hupe mit Furzgeräusch, „Autopilot im Flur“). Kein Bezug auf reale Personen.
 - Die IT-Chefin ist klug und im Recht – sie nervt nur durch Wiederholung. Pyramiden-Satz wird jedes Mal anders eröffnet („Und jetzt kurz zur Pyramide“, „Wo waren wir? Genau: Ebene drei“).
 - Kein Drama: Niederlagen sind absurd-freundlich („du wirst Imker“). Die Familie ist ein Wert, kein Schuldgefühl.
 - Alle Firmen, Werke und Produkte erfunden; Marken nur als harmlose Anspielung („ein Elektroauto“ statt Tesla im Fließtext der Figurenbeschreibung ist erlaubt, im Spieltext darf „Tesla“ als Gesprächsthema stehen).
@@ -255,7 +255,7 @@ Status: ✔ = in v0.1.1 vorhanden, ✘ = fehlt/falsch, ➜ = in v0.2.0 geplant (
 | 5 | Produktionsbereiche DEA, DEC, EEA, Extrusion, Innenverpackung, Außenverpackung, Sterilisation | ✘ (nur „Linie 3“) | ➜ 7 Stationen (Kap. 4; Phase 2, 3) |
 | 6 | Kollegen ohne Ahnung | ✘ | ➜ Besucher (Kap. 7.1; Phase 4) |
 | 7 | Tesla-Kollege (Quatsch über Tesla) | ✘ | ➜ Besucher (Kap. 7.1) |
-| 8 | Kollege, der nichts arbeitet, redet nur mit Tesla-Kollege | ✘ | ➜ Duo-Variante (Kap. 7.1) |
+| 8 | Kollege aus dem Nachbarbüro, redet nur mit Tesla-Kollege | ✘ | ➜ Duo-Variante (Kap. 7.1) |
 | 9 | Italienischer Kollege stündlich mit Geschichten und Essen | ✘ | ➜ Besucher stündlich, max. 3/Tag (Kap. 7.1, 11) |
 | 10 | IT-Chefin kommt IMMER mit Pyramide, taucht immer wieder auf | ✘ | ➜ Besucher + Quiz + IT-Büro (Kap. 7.1, 7.2) |
 | 11 | Verpackungsautomat macht ständig Probleme | ✘ (nur Server, Drucker) | ➜ Stationsstörungen, Wiederholungsstörung (Kap. 7.3) |
