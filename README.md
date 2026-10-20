@@ -4,6 +4,10 @@ Retro-Managerspiel im Browser, inspiriert von **Mad TV** (1991) und abgeleitet a
 
 **Spielen:** https://topsentopsen.github.io/mes-marathon/
 
+## Neu in v0.12.0 »Dialogrunde«
+
+Alle Dialoge geprüft und 27 Texte verbessert (docs/DIALOGE-v0.12.md). Auf dem Handy passen Dialoge und Räume besser auf den Bildschirm. Das Spiel macht keine Netzwerkaufrufe; ein Vorschlag für eine Zugriffsstatistik der Seite steht in docs/STATISTIK-VORSCHLAG.md. Wertung unverändert.
+
 ## Neu in v0.11.0 »Sandra im Detail«
 
 Sandra nachgeschärft: Figurenkarte über den Namensknopf, Knopfvermerke zu ihren Stärken und Schwächen, fachlich genauere MES-Szenen und drei neue (Stillstandsgründe, Fehlerwarteschlange, Ausschuss). Ihr Vorsprung am Rechner gilt nur bis Feierabend (docs/BALANCE-v0.11.md). Der Kollege aus dem Nachbarbüro hat seinen neuen Namen. Der 17:00-Hinweis stört keinen offenen Besuch mehr. Christians Wertung ist unverändert.
