@@ -3,7 +3,9 @@
 'use strict';
 window.SC = window.SC || {};
 (function (SC) {
-  SC.VERSION = '0.7.0';
+  SC.VERSION = '0.8.0';
+  // v0.8: Spielstände dieser Versionen laden weiter (kein neues Feld in S)
+  SC.SAVE_OK = ['0.7.0'];
   SC.DAY_START = 7 * 60 + 30;   // 07:30 Frühschicht-Beginn im Büro
   SC.DAY_END = 17 * 60;         // 17:00 regulärer Feierabend
   SC.LATEST = 20 * 60;          // 20:00 der Pförtner schließt ab
@@ -355,6 +357,23 @@ window.SC = window.SC || {};
     win: ['Der Pappkamerad lässt ausrichten: Er hat das alles schon gewusst.', 'Der Pförtner stempelt dich aus und sagt: »Viertes MES. Das erste, das bleibt.«', 'Der Schichtleiter lädt zum Abschluss-Meeting. Diesmal gehst du gern hin. Es gibt Kuchen.'],
     lose: ['Der Pappkamerad übernimmt dein Büro. Keiner merkt den Unterschied, sagt die Werkleitung.', 'Der Pförtner: »Das MES hab ich schon zweimal gehen sehen. Jetzt dreimal.«', 'Der Tesla-Kollege meint, Elon hätte das bestimmt anders gemacht. Er weiß nur nicht, wie.']
   };
+  // v0.8 Gags ohne Spielwirkung (Salze 32000+, 32100+, 32200+)
+  SC.AUSHANG = [
+    'Gefunden: ein Schlüssel zu Raum 4.17. Raum 4.17 gibt es nicht.',
+    'Ladesäule 1 ist belegt. Vom selben Auto seit Dienstag.',
+    'Die Stempeluhr geht 4 Minuten vor. Der Schichtleiter sagt: Absicht.',
+    'Wegen Umbau ist der Umbau bis auf Weiteres geschlossen.',
+    'Fahrgemeinschaft zu Parkplatz B gesucht. Es ist derselbe Weg.'
+  ];
+  SC.DIAGRAMM = [
+    'Das Diagramm zeigt heute eine Linie. Sie geht nach oben, wenn man die Achse dreht.',
+    'Die Ampel ist grün. Sie war nie anders. Auch nachts nicht.',
+    'Neue Kennzahl: Kennzahlen pro Kennzahl.'
+  ];
+  SC.WOCHENEND_GAG = [
+    'Der Pappkamerad hat am Wochenende Schicht. Ohne Zuschlag, aber mit Haltung.',
+    'Im Büro brennt noch Licht. Es ist der Beamer.'
+  ];
   SC.SAISON = 'Am Kiosk gibt es schon Lebkuchen. Seit September. Niemand weiß, ob das zu früh oder zu spät ist.';
   SC.ELON_AKKU = 'Ich lade inzwischen dauernd Elon-Posts. Den Akku leider nicht.';
   SC.ELON_THEMA = [

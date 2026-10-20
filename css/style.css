@@ -17,7 +17,7 @@ button:disabled { background: #777; color: #333; cursor: default; }
 #rooms { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 #rooms button { background: #0055aa; color: #fff; }
 #rooms button:hover { background: #2277cc; }
-#ticker { margin-top: 4px; background: #002a66; border: 1px solid #0055aa; padding: 4px 8px; min-height: 1.8em; color: #9cf; font-size: 14px; }
+#ticker { cursor: pointer; margin-top: 4px; background: #002a66; border: 1px solid #0055aa; padding: 4px 8px; min-height: 1.8em; color: #9cf; font-size: 14px; }
 .foot { color: #555; font-size: 11px; text-align: center; }
 h3 { color: #ffcc00; margin: 14px 0 6px; font-size: 15px; }
 table { border-collapse: collapse; width: 100%; font-size: 13px; }

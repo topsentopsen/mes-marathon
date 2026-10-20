@@ -15,9 +15,13 @@
   function closeOverlay() { $('overlay').classList.add('hidden'); UI._ov = false; }
   UI.toast = function (t, bad) { const el = $('ticker'); el.innerHTML = '<span class="' + (bad ? 'bad' : '') + '">' + esc(t) + '</span>'; };
 
+  // v0.8: Tipp auf den Ticker zeigt das Tagesprotokoll (das Overlay hält die Uhr an)
+  UI.showLog = function () { const s = S(); if (!s || s.phase !== 'tag' || UI._ov) return; overlay('<h2>Tagesprotokoll · Tag ' + s.day + '</h2>' + (s.dayLog.length ? '<ul class="log">' + s.dayLog.map(l => '<li>' + esc(l) + '</li>').join('') + '</ul>' : '<p class="dim">Noch nichts passiert. Verdächtig.</p>') + '<p><button data-o="logzu">Weiter</button></p>'); };
   function flushMsgs() {
     const s = S(); if (!s) return;
-    while (shown < s.msgs.length) { const m = s.msgs[shown++]; UI.toast(m.t, m.bad); if (m.bad) aud('jingle', 'spotFail'); }
+    // v0.8: mehrere Meldungen in einem Takt überschreiben sich nicht mehr, die letzten zwei stehen zusammen im Ticker
+    const neu = s.msgs.slice(shown); shown = s.msgs.length; if (!neu.length) return;
+    const last = neu.slice(-2); UI.toast(last.map(m => m.t).join(' · '), last.some(m => m.bad)); if (neu.some(m => m.bad)) aud('jingle', 'spotFail');
   }
 
   UI.hud = function () {
@@ -80,6 +84,8 @@
     if (room === 'halle') h += stationTable(s);
     if (room === 'schicht') h += '<div class="say">Abreißkalender an der Wand: ' + esc(sim().kalender(s)) + '</div>';
     if (room === 'werkstatt') h += '<div class="say">' + (s.stations.some(x => x.fault) ? 'Die Instandhaltung: »' + s.stations.filter(x => x.fault).map(x => sim().stName(x.id)).join(', ') + ' steht. Wie immer zuerst der Verpackungsautomat?«' : 'Die Instandhaltung: »Alles läuft. Das macht mich nervös.«') + (s.partsUntil >= s.day ? ' <span class="good">Ersatzteile im Lager (Reparatur 2 k€).</span>' : '') + '</div>';
+    if (room === 'leitstand') h += '<div class="say">Diagramm des Tages: ' + esc(sim().diagramm(s)) + '</div>';
+    if (room === 'pforte') h += '<div class="say">Aushang am Werkstor: ' + esc(sim().aushang(s)) + '</div>';
     if (room === 'leitstand') h += kpiTable(s) + progHtml(s) + auditHtml(s);
     if (room === 'controlling') h += '<p>Budget: <b class="' + (s.budget < 0 ? 'bad' : '') + '">' + Math.round(s.budget) + ' k€</b> · ausgegeben: ' + Math.round(s.stats.budgetSpent) + ' k€ · Tranche diese Woche: ' + (s.trancheWeek === sim().week(s) ? '<span class="good">beantragt</span>' : '<span class="warn">offen</span>') + ' · Kredit: ' + (s.kredit ? '<span class="warn">' + s.kredit + ' k€</span>' : '0 k€') + ' von ' + sim().rahmen(s) + ' k€ Rahmen (8 % Zins freitags) · Image: <b>' + Math.round(s.image) + '</b>' + '</p><p class="small dim">Unter 0 k€: Budgetsperre. Unter −40 k€ stoppt das Controlling das Projekt.</p>' + marktHtml(s) + auktionHtml(s);
     if (room === 'it') h += pyramidHtml(null) + '<div class="say">Die IT-Chefin: »' + esc(SC.VISIT_TEXT.itchefin[s.day % SC.VISIT_TEXT.itchefin.length]) + ' Hast du gesehen? Jede Etage hier ist eine Ebene. Das hab ich durchgesetzt.«</div>';
@@ -200,7 +206,7 @@
       '<p>Werkleitung ' + bar(s.chef) + ' · Familie ' + bar(s.family, 'heartbar') + ' · Schichtleiter ' + bar(s.schicht) + ' · Energie morgen ' + bar(s.energy) + ' · Budget <b>' + Math.round(s.budget) + ' k€</b></p>' +
       '<details><summary>Tagesprotokoll</summary><ul class="log">' + R.log.map(l => '<li>' + esc(l) + '</li>').join('') + '</ul></details>';
     if (s.phase === 'ende') { h += endHtml(s); aud('jingle', s.result.win ? 'win' : 'lose'); h += '<p><button data-o="title">Zum Titel</button></p>'; }
-    else if (s.phase === 'wochenende') h += '<h3>Wochenende! Der Schichtleiter sucht Leute für die Wochenendschicht.</h3>' + (s.sap.cutover ? '<p class="warn">SAP-Cutover steht an! Ohne Wochenendschicht gibt es drei Tage Chaos.</p>' : '') + '<p class="small">Jeder Tag Wochenendschicht bringt bis zu 4 Arbeitspakete (beim SAP-Cutover gehen sie zuerst in die Stammdaten), kostet aber Familie (−' + SC.TUNE.weekendFam + '), Energie (−12, bei kaputtem Kaffeeautomaten −16) und ' + SC.TUNE.cost.weekend + ' k€ Zuschläge.</p><p><button data-o="we0">Frei nehmen</button> <button data-o="we1">Samstag arbeiten</button> <button data-o="we2">Samstag und Sonntag</button></p>';
+    else if (s.phase === 'wochenende') h += '<h3>Wochenende! Der Schichtleiter sucht Leute für die Wochenendschicht.</h3>' + (s.sap.cutover ? '<p class="warn">SAP-Cutover steht an! Ohne Wochenendschicht gibt es drei Tage Chaos.</p>' : '') + '<p class="small">Jeder Tag Wochenendschicht bringt bis zu 4 Arbeitspakete (beim SAP-Cutover gehen sie zuerst in die Stammdaten), kostet aber Familie (−' + SC.TUNE.weekendFam + '), Energie (−12, bei kaputtem Kaffeeautomaten −16) und ' + SC.TUNE.cost.weekend + ' k€ Zuschläge.</p><p class="small dim">' + esc(sim().wochenendGag(s)) + '</p><p><button data-o="we0">Frei nehmen</button> <button data-o="we1">Samstag arbeiten</button> <button data-o="we2">Samstag und Sonntag</button></p>';
     else h += '<p><button data-o="next">Nächster Tag</button></p>';
     sim().save(s);
     overlay(h);
@@ -259,6 +265,7 @@
       '<li><b>Neu in 0.5:</b> Dienstags hängt im Controlling eine Ausschreibung aus (Ersatzteile, Beraterkontingent oder Wartungspaket). Gebote bis Mittwoch 15:00, im Controlling oder per Mail aus dem Büro. Werk Nord bietet verdeckt, gezahlt wird nur beim Zuschlag. Zweiter Weg zum Sieg: das Konzernaudit »Vorzeigewerk« (Freitag ab Tag 15, sehr hohes Image und KPI-Index, mindestens 3 Module). Der Knopf 🎧 setzt Kopfhörer auf: Tesla-Kollege, Ahnungslose und Altwerk halten sich dann kurz. Im Serverraum wohnt jetzt ein digitaler Zwilling, und das Archiv hat Fundstücke. Christian bringt immer Süßigkeiten mit: Die Box im Büro füllst du einmal pro Woche am Kiosk der Kantine auf (Schoko-Mix, Gummibärchen oder Lakritz). Jeden Tag schaut ein Stammgast vorbei. Passt die Sorte, hilft er dir (zum Beispiel eine Reparatur oder ein Testlauf 10 Min. kürzer), sonst wird gemeckert. Das letzte Stück nimmt niemand. Und der Tesla-Kollege erzählt dir jetzt dauernd, was »Elon« angeblich alles anders machen würde (Elon-Zähler oben). Thema wechseln geht meistens.</li>' +
       '<li><b>Neu in 0.6:</b> Die Aktionsknöpfe zeigen, wann du fertig bist (⚠: nach Feierabend), in den Hallen auch die Wartezeit der Schichtübergabe. Wer nach 17:00 noch etwas anfängt, ist müde und braucht länger. Tasten: Leertaste Pause, + Tempo, M Ton, K Kopfhörer. Im Büro wartet ein Pappkamerad, im Druckerraum ein Fax-Gerät, und der Aufzug (Klick auf die Kabine) hat ein Geheimnis. Fällt der Dienstag aus, hängt die Ausschreibung am Mittwoch aus.</li>' +
       '<li><b>Neu in 0.7:</b> Im Schichtleiter-Büro hängt ein Abreißkalender, am Ende zeigt »Dein Werk in Zahlen«, was du so getrieben hast. Im Herbst gibt es am Kiosk Lebkuchen. Beim ersten Start gibt das Titelbild eine Kurzanleitung. Fällt der Freitag wegen eines Burnouts aus, kommt das Wochenende danach trotzdem.</li>' +
+      '<li><b>Neu in 0.8:</b> Ein Tipp auf den Ticker unten zeigt das Tagesprotokoll (die Uhr steht so lange). Kommen mehrere Meldungen auf einmal, stehen die letzten zwei zusammen im Ticker. Am Werkstor hängt ein Aushang, im Leitstand das Diagramm des Tages. Ein Burnout am Freitag kostet den Montag. Spielstände aus 0.7 laden weiter.</li>' +
       '<li><b>Flurfunk (neu in 0.3):</b> Brandschutzübungen, Beamer-Kabel, Überraschungsgerichte und mehr. Die Werkleitung streut Buzzwords: fünf verschiedene sind ein Bingo (Punkte). Werksdurchsagen, die Werkszeitung am Abend und ein paar Easter Eggs.</li>' +
       '<li><b>Excel-Liste</b> jeden Tag pflegen. Server und Drucker zicken. Kaffee und Mittagessen in der Kantine geben Energie. Bei Energie 0 schläfst du am Schreibtisch ein: Der nächste Tag fällt aus (krank, Werkleitung −8). Fällt so der Tag vor dem Go-Live-Termin aus, ist am Abend danach Schluss.</li>' +
       '<li><b>Feierabend</b> über die Pforte ab 15:00. Überstunden bis 20:00 kosten Familie. Sirene um 14:00: Schichtwechsel.</li>' +
@@ -273,13 +280,15 @@
       const b = e.target.closest('button[data-o]'); if (!b) return; const o = b.dataset.o; aud('unlock');
       if (o === 'new') UI.newGame();
       else if (o === 'cont') { unpause(); SC.S = sim().load(); shown = SC.S.msgs.length; closeOverlay(); SC.building.reset(); UI._siren = SC.S.sirene; if (SC.S.phase === 'tag') { aud('play', 'tower'); morning(); } else showEvening(SC.S, SC.S.lastReport); }
+      else if (o === 'logzu') closeOverlay();
       else if (o === 'help') help();
       else if (o === 'back' || o === 'title') UI.showTitle();
       else if (o === 'next') next();
-      else if (o.startsWith('we')) { const out = sim().weekend(S(), +o[2]); sim().save(S()); if (S().phase === 'ende') { overlay('<h2>Wochenende</h2><p>' + esc(out.join(' ')) + '</p>' + endHtml(S()) + '<p><button data-o="title">Zum Titel</button></p>'); } else { next(); UI.toast(out.join(' ')); } }
+      else if (o.startsWith('we')) { const out = sim().weekend(S(), +o[2]); sim().save(S()); if (S().phase === 'ende') { aud('jingle', S().result.win ? 'win' : 'lose'); overlay('<h2>Wochenende</h2><p>' + esc(out.join(' ')) + '</p>' + endHtml(S()) + '<p><button data-o="title">Zum Titel</button></p>'); } else { next(); UI.toast(out.join(' ')); } }
     });
     const nav = $('rooms');
     nav.innerHTML = SC.FLOORS.map((f, i) => '<span class="floor-grp"><span class="fl">' + (i === 0 ? 'EG' : i) + ' ' + f.name + '</span>' + f.doors.filter(d => d.room).map(d => '<button data-r="' + d.room + '">' + esc(SC.ROOMS[d.room].title.split(' (')[0]) + '</button>').join('') + '</span>').reverse().join('');
+    $('ticker').addEventListener('click', () => UI.showLog());
     nav.addEventListener('click', e => { const b = e.target.closest('button[data-r]'); if (b) UI.walkTo(b.dataset.r); });
     const cv = $('cv');
     cv.addEventListener('mousemove', e => { const [x, y] = SC.building.toLogical(e); const p = SC.building.pick(x, y); SC.building.setHover(p); cv.style.cursor = p ? 'pointer' : 'default'; });

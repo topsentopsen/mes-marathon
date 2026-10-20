@@ -48,7 +48,10 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   const text = await page.evaluate(() => document.body.innerText);
   // v0.7: Kurzanleitung beim ersten Start, Abreißkalender, Dein Werk in Zahlen
   const v07 = await page.evaluate(() => { const S = window.SC.S; S.pending = null; S.visits = []; window.SC.ui.openRoom('schicht'); const kal = /Abreißkalender/.test(document.getElementById('room').innerText); window.SC.ui.closeRoom(); return { kal }; });
-  v07.hint = /Erstes Mal hier/.test(title.text); if (!v07.hint || !v07.kal) errs.push('v0.7-Anzeige fehlt: ' + JSON.stringify(v07));
+  // v0.8: Aushang an der Pforte, Diagramm im Leitstand, Tipp auf den Ticker zeigt das Tagesprotokoll
+  Object.assign(v07, await page.evaluate(() => { const S = window.SC.S; S.pending = null; S.visits = []; const r = {}; window.SC.ui.openRoom('pforte'); r.aushang = /Aushang am Werkstor/.test(document.getElementById('room').innerText); window.SC.ui.closeRoom(); window.SC.ui.openRoom('leitstand'); r.diagramm = /Diagramm des Tages/.test(document.getElementById('room').innerText); window.SC.ui.closeRoom();
+    document.getElementById('ticker').click(); r.log = /Tagesprotokoll/.test(document.getElementById('overlay').innerText) && window.SC.ui.overlayOpen(); const b = document.querySelector('#overlay button[data-o="logzu"]'); if (b) b.click(); r.logZu = !window.SC.ui.overlayOpen(); return r; }));
+  v07.hint = /Erstes Mal hier/.test(title.text); if (!v07.hint || !v07.kal || !v07.aushang || !v07.diagramm || !v07.log || !v07.logZu) errs.push('v0.7-Anzeige fehlt: ' + JSON.stringify(v07));
   console.log(JSON.stringify({ title: title.text.slice(0, 160), nameField: title.name, visitShown, st, d2, v07, errs }, null, 1));
   if (errs.length || d2 !== 2 || !visitShown || title.name) process.exitCode = 1;
   await browser.close();
