@@ -104,7 +104,7 @@ td.spark { font-family: monospace; letter-spacing: 1px; color: #9cf; }
 #room { font-size: 18px; line-height: 1.5; }
 table { font-size: 16px; } table.xl td { font-size: 15px; }
 .small { font-size: 14px; }
-#ticker { font-size: 18px; max-height: 6em; overflow: auto; }
+#ticker { font-size: 18px; min-height: 3.4em; max-height: 6em; overflow: auto; }
 #calendar { font-size: 16px; }
 .visit p { font-size: 20px; line-height: 1.5; }
 .box { font-size: 18px; line-height: 1.5; }
@@ -121,5 +121,6 @@ body.gross #room, body.gross #overlay .box, body.gross #ticker, body.gross #cale
   #room { font-size: 16px; } table { font-size: 14px; } .small { font-size: 13px; }
   #ticker { font-size: 16px; min-height: 4.4em; }
   #calendar { font-size: 15px; } .visit p { font-size: 17px; } .box { font-size: 16px; } button { font-size: 15px; min-height: 44px; }
+  #rooms button { min-height: 40px; }
   #rooms button { font-size: 14px; } ul.log { font-size: 14px; }
 }

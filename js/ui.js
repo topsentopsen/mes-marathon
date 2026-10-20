@@ -12,26 +12,20 @@
   UI.tempo = Math.max(0, SC.TEMPO.findIndex(t => t.id === store('mesmarathon-tempo')));
   UI.speed = SC.TEMPO[UI.tempo].f;
   UI.setTempo = function (i) { UI.tempo = Math.max(0, Math.min(SC.TEMPO.length - 1, i)); UI.speed = SC.TEMPO[UI.tempo].f; store('mesmarathon-tempo', SC.TEMPO[UI.tempo].id); const b = document.getElementById('btn-speed'); if (b) b.textContent = 'Tempo: ' + SC.TEMPO[UI.tempo].name; };
-  UI.clockRuns = () => { const s = SC.S; return !!(s && s.phase === 'tag' && !UI.paused && !UI._ov && !UI.room); };
+  // v0.9: Auch ein offenes Textfeld (Fokus in input oder textarea, z. B. mit Handy-Tastatur) hält die Uhr an
+  UI.typing = () => { const a = document.activeElement; if (!a) return false; if (a.isContentEditable || a.tagName === 'TEXTAREA') return true; return a.tagName === 'INPUT' && !/^(range|checkbox|radio|button|submit|reset|color|file|image|hidden)$/i.test(a.type || 'text'); };
+  UI.clockRuns = () => { const s = SC.S; return !!(s && s.phase === 'tag' && !UI.paused && !UI._ov && !UI.room && !UI.typing()); };
   UI.setGross = function (on) { document.body.classList.toggle('gross', !!on); store('mesmarathon-schrift', on ? 'gross' : 'normal'); const b = document.getElementById('btn-schrift'); if (b) b.textContent = on ? 'Schrift: Groß' : 'Schrift: Normal'; };
   let shown = 0;
   const SND_HINT = 'Ton an. Kein Ton? Stummschalter am iPhone prüfen und Lautstärke hoch.';
 
   UI.overlayOpen = () => UI._ov;
-  function overlay(html) { if (!/data-o="logzu"/.test(html)) UI._log = false; $('overlay').innerHTML = '<div class="box">' + html + '</div>'; $('overlay').classList.remove('hidden'); UI._ov = true; }
-  function closeOverlay() { $('overlay').classList.add('hidden'); UI._ov = false; if (window.speechSynthesis && window.speechSynthesis.speaking) window.speechSynthesis.cancel(); }
+  function overlay(html) { UI._ovAt = performance.now(); if (!/data-o="logzu"/.test(html)) UI._log = false; $('overlay').innerHTML = '<div class="box">' + html + '</div>'; $('overlay').classList.remove('hidden'); UI._ov = true; }
+  function closeOverlay() { $('overlay').classList.add('hidden'); UI._ov = false; UI._ovAt = 0; }
   UI.toast = function (t, bad) { const el = $('ticker'); el.innerHTML = '<span class="' + (bad ? 'bad' : '') + '">' + esc(t) + '</span>'; };
 
   // v0.8: Tipp auf den Ticker zeigt das Tagesprotokoll (das Overlay hält die Uhr an)
   UI.showLog = function () { const s = S(); if (!s || s.phase !== 'tag' || UI._ov) return; UI._log = true; overlay('<h2>Tagesprotokoll · Tag ' + s.day + '</h2>' + (s.dayLog.length ? '<ul class="log">' + s.dayLog.map(l => '<li>' + esc(l) + '</li>').join('') + '</ul>' : '<p class="dim">Noch nichts passiert. Verdächtig.</p>') + '<p><button data-o="logzu">Weiter</button></p>'); };
-  // v0.9 Vorlesen (Sprachausgabe des Browsers, nur auf Knopfdruck): Dialog, sonst Raumtext, sonst Ticker
-  UI.vorlesen = function () {
-    const sp = window.speechSynthesis; if (!sp || !window.SpeechSynthesisUtterance) return false;
-    if (sp.speaking) { sp.cancel(); return false; }
-    const pick = sel => { const el = document.querySelector(sel); return el && !el.closest('.hidden') ? el.innerText.trim() : ''; };
-    const t = (UI._ov ? pick('#overlay .visit') || pick('#overlay .lese') || pick('#overlay .box') : '') || (UI.room ? [...document.querySelectorAll('#room .say')].map(e => e.innerText).join(' ') || pick('#room') : '') || pick('#ticker');
-    if (!t) return false; const u = new SpeechSynthesisUtterance(t.slice(0, 1200)); u.lang = 'de-DE'; u.rate = 0.95; sp.speak(u); return true;
-  };
   function flushMsgs() {
     const s = S(); if (!s) return;
     // v0.8: mehrere Meldungen in einem Takt überschreiben sich nicht mehr, die letzten zwei stehen zusammen im Ticker
@@ -255,6 +249,7 @@
   UI.seenHint = () => { try { return !!localStorage.getItem('mesmarathon-hinweis'); } catch (e) { return true; } };
   UI.newGame = function (seed) {
     try { localStorage.setItem('mesmarathon-hinweis', '1'); } catch (e) { /* */ }
+    if (UI.room) UI.closeRoom();
     unpause(); SC.S = sim().newGame(seed || (Date.now() & 0x7fffffff)); shown = 0; UI._siren = 0;
     SC.building.reset(); closeOverlay(); aud('unlock'); aud('play', 'tower'); morning(); sim().save(SC.S);
   };
@@ -264,13 +259,13 @@
     overlay('<div class="title"><h1 class="logo">MES-MARATHON</h1><p class="dim">Ein Werk. Sieben Stationen. Fünf Module. Zwanzig Tage. Unendlich viele Meetings.</p>' +
       '<img src="img/portrait.png" alt="Christian" class="pt big"><p>Du bist <b>Christian</b>, ca. 40, MES-Projektleiter in ' + SC.PLANT + '. Seit Jahren führst du das MES ein. Diesmal wirklich.</p>' +
       (sim().oldSave && sim().oldSave() ? '<p class="small warn">Dein Spielstand stammt aus Version ' + esc(sim().oldSave()) + ' und passt nicht zu ' + SC.VERSION + '. Bitte neu starten.</p>' : '') +
-      (!sv && !sim().highscores().length && !UI.seenHint() ? '<p class="small">Erstes Mal hier? Die Anleitung erklärt alles. Kurz: Module durch die Pipeline bringen, Meetings klug wählen, ab 17:00 wird es teuer. Tasten: Leertaste (Pause), + und − (Tempo), M (Ton), K, V (Vorlesen). In Räumen steht die Uhr.</p>' : '') + '<p><button data-o="new">Neues Spiel</button> ' + (sv && sv.phase !== 'ende' ? '<button data-o="cont">Weiterspielen (Tag ' + sv.day + ')</button> ' : '') + '<button data-o="help">Anleitung</button> <button data-o="schrift" id="btn-schrift">' + (document.body.classList.contains('gross') ? 'Schrift: Groß' : 'Schrift: Normal') + '</button></p>' +
+      (!sv && !sim().highscores().length && !UI.seenHint() ? '<p class="small">Erstes Mal hier? Die Anleitung erklärt alles. Kurz: Module durch die Pipeline bringen, Meetings klug wählen, ab 17:00 wird es teuer. Tasten: Leertaste (Pause), + und − (Tempo), M (Ton), K. In Räumen steht die Uhr.</p>' : '') + '<p><button data-o="new">Neues Spiel</button> ' + (sv && sv.phase !== 'ende' ? '<button data-o="cont">Weiterspielen (Tag ' + sv.day + ')</button> ' : '') + '<button data-o="help">Anleitung</button> <button data-o="schrift" id="btn-schrift">' + (document.body.classList.contains('gross') ? 'Schrift: Groß' : 'Schrift: Normal') + '</button></p>' +
       '<p class="small dim">Inspiriert von Mad TV (1991). Eigenes Fanprojekt, alle Figuren frei erfunden. Version ' + SC.VERSION + '</p>' + (sim().highscores().length ? '<p class="small">Bestenliste: ' + sim().highscores().map((x, i) => (i + 1) + '. ' + x.score).join(' · ') + '</p>' : '') + '</div>');
   };
   function help() {
     overlay('<h2>Anleitung</h2><p>Du bist Christian, MES-Projektleiter in ' + SC.PLANT + '. Bis Tag ' + SC.DEADLINE + ' müssen alle Module des neuen Manufacturing Execution Systems abgenommen sein. Werk Nord und Werk Süd machen dasselbe, und die Werkleitung vergleicht.</p>' +
       '<ul><li><b>Das Werk ist die Automatisierungspyramide:</b> EG Feld (Pforte, Schichtleiter, Hallen), 1 Steuerung (Werkstatt, Drucker, Kantine), 2 Leitebene (Büro, Leitstand, Meeting), 3 MES (Server, IT), 4 ERP (Werkleitung, Controlling). Die IT-Chefin fragt gern danach.</li>' +
-      '<li><b>Klick auf eine Tür</b> (oder die Knöpfe unten): Christian läuft hin, Aufzug inklusive. Beim Laufen läuft die Uhr. In einem Raum, bei Besuchen, Hinweisen und in der Pause steht sie: Lies in Ruhe. Zeit kosten nur das Laufen und die Aktionen.</li><li><b>Tempo:</b> Knopf oben oder Tasten + und −. Langsam (Standard): eine Spielstunde dauert 60 Sekunden, Normal 40, Schnell 30. <b>Schrift:</b> im Menü auf Groß stellen.</li>' +
+      '<li><b>Klick auf eine Tür</b> (oder die Knöpfe unten): Christian läuft hin, Aufzug inklusive. Beim Laufen läuft die Uhr. In einem Raum, bei Besuchen, Hinweisen und in der Pause steht sie: Lies in Ruhe. Zeit kosten nur das Laufen und die Aktionen: Eine Aktion springt die Uhr um ihre Dauer vor. Auch während du in ein Textfeld tippst, steht die Uhr.</li><li><b>Tempo:</b> Knopf oben oder Tasten + und −. Langsam (Standard): eine Spielstunde dauert 60 Sekunden, Normal 40, Schnell 30. <b>Schrift:</b> im Menü auf Groß stellen.</li>' +
       '<li><b>Ablauf je Modul:</b> Requirements (Hallen, an der Station des Moduls) → Spezifikation → Implementierung (Büro) → Deployment (Serverraum) → Testlauf (Hallen, Teststation) → Ausdruck (Drucker) → Abnahme (Werkleitung).</li>' +
       '<li><b>Stationen:</b> DEA, DEC, EEA, Extrusion, Innenverpackung, Außenverpackung, Sterilisation. Der Verpackungsautomat fällt ständig aus. Steht eine Teststation, hilft die Werkstatt.</li>' +
       '<li><b>Meetings:</b> Die Werkleitung hasst Schwänzer. Der Schichtleiter lädt ständig zu nutzlosen Meetings ein. Eins tut ihm gut, jedes weitere bringt weniger, und ab 90 Minuten am Tag zählt die Werkleitung mit. Besser: im Schichtleiter-Büro den Schichtplan abstimmen.</li>' +
@@ -283,7 +278,7 @@
       '<li><b>Neu in 0.5:</b> Dienstags hängt im Controlling eine Ausschreibung aus (Ersatzteile, Beraterkontingent oder Wartungspaket). Gebote bis Mittwoch 15:00, im Controlling oder per Mail aus dem Büro. Werk Nord bietet verdeckt, gezahlt wird nur beim Zuschlag. Zweiter Weg zum Sieg: das Konzernaudit »Vorzeigewerk« (Freitag ab Tag 15, sehr hohes Image und KPI-Index, mindestens 3 Module). Der Knopf 🎧 setzt Kopfhörer auf: Tesla-Kollege, Ahnungslose und Altwerk halten sich dann kurz. Im Serverraum wohnt jetzt ein digitaler Zwilling, und das Archiv hat Fundstücke. Christian bringt immer Süßigkeiten mit: Die Box im Büro füllst du einmal pro Woche am Kiosk der Kantine auf (Schoko-Mix, Gummibärchen oder Lakritz). Jeden Tag schaut ein Stammgast vorbei. Passt die Sorte, hilft er dir (zum Beispiel eine Reparatur oder ein Testlauf 10 Min. kürzer), sonst wird gemeckert. Das letzte Stück nimmt niemand. Und der Tesla-Kollege erzählt dir jetzt dauernd, was »Elon« angeblich alles anders machen würde (Elon-Zähler oben). Thema wechseln geht meistens.</li>' +
       '<li><b>Neu in 0.6:</b> Die Aktionsknöpfe zeigen, wann du fertig bist (⚠: nach Feierabend), in den Hallen auch die Wartezeit der Schichtübergabe. Wer nach 17:00 noch etwas anfängt, ist müde und braucht länger. Tasten: Leertaste Pause, + Tempo, M Ton, K Kopfhörer. Im Büro wartet ein Pappkamerad, im Druckerraum ein Fax-Gerät, und der Aufzug (Klick auf die Kabine) hat ein Geheimnis. Fällt der Dienstag aus, hängt die Ausschreibung am Mittwoch aus.</li>' +
       '<li><b>Neu in 0.7:</b> Im Schichtleiter-Büro hängt ein Abreißkalender, am Ende zeigt »Dein Werk in Zahlen«, was du so getrieben hast. Im Herbst gibt es am Kiosk Lebkuchen. Beim ersten Start gibt das Titelbild eine Kurzanleitung. Fällt der Freitag wegen eines Burnouts aus, kommt das Wochenende danach trotzdem.</li>' +
-      '<li><b>Neu in 0.9:</b> Mehr Ruhe zum Lesen: In Räumen steht die Uhr, der 17:00-Hinweis wartet auf »Weiter«, Tempo Langsam/Normal/Schnell (Standard Langsam), größere Schrift und Schalter »Schrift: Groß«, Vorlesen (🗣, Taste V). Leertaste bestätigt Hinweise mit nur einem Knopf, statt die Pause umzuschalten.</li>' +
+      '<li><b>Neu in 0.9:</b> Mehr Ruhe zum Lesen: In Räumen steht die Uhr, der 17:00-Hinweis wartet auf »Weiter«, Tempo Langsam/Normal/Schnell (Standard Langsam), größere Schrift und Schalter »Schrift: Groß«. Leertaste bestätigt Hinweise mit nur einem Knopf, statt die Pause umzuschalten.</li>' +
       '<li><b>Neu in 0.8:</b> Ein Tipp auf den Ticker unten zeigt das Tagesprotokoll (die Uhr steht so lange). Kommen mehrere Meldungen auf einmal, stehen die letzten zwei zusammen im Ticker. Am Werkstor hängt ein Aushang, im Leitstand das Diagramm des Tages. Ein Burnout am Freitag kostet den Montag. Spielstände aus 0.7 laden weiter.</li>' +
       '<li><b>Flurfunk (neu in 0.3):</b> Brandschutzübungen, Beamer-Kabel, Überraschungsgerichte und mehr. Die Werkleitung streut Buzzwords: fünf verschiedene sind ein Bingo (Punkte). Werksdurchsagen, die Werkszeitung am Abend und ein paar Easter Eggs.</li>' +
       '<li><b>Excel-Liste</b> jeden Tag pflegen. Server und Drucker zicken. Kaffee und Mittagessen in der Kantine geben Energie. Bei Energie 0 schläfst du am Schreibtisch ein: Der nächste Tag fällt aus (krank, Werkleitung −8, Familie −4; am Freitag trifft es den Montag). Fällt so der Tag vor dem Go-Live-Termin aus, ist am Abend danach Schluss.</li>' +
@@ -298,7 +293,7 @@
       if (v && S() && S().pending) { sim().choose(S(), v.dataset.v); closeOverlay(); SC.building.dismiss && SC.building.dismiss(); if (UI.room) renderRoom(); UI.hud(); sim().save(S()); if (S().minute >= SC.LATEST) UI.tick(); return; }
       const b = e.target.closest('button[data-o]'); if (!b) return; const o = b.dataset.o; aud('unlock');
       if (o === 'new') UI.newGame();
-      else if (o === 'cont') { unpause(); SC.S = sim().load(); shown = SC.S.msgs.length; closeOverlay(); SC.building.reset(); UI._siren = SC.S.sirene; if (SC.S.phase === 'tag') { aud('play', 'tower'); morning(); } else showEvening(SC.S, SC.S.lastReport); }
+      else if (o === 'cont') { if (UI.room) UI.closeRoom(); unpause(); SC.S = sim().load(); shown = SC.S.msgs.length; closeOverlay(); SC.building.reset(); UI._siren = SC.S.sirene; if (SC.S.phase === 'tag') { aud('play', 'tower'); morning(); } else showEvening(SC.S, SC.S.lastReport); }
       else if (o === 'logzu') { UI._log = false; closeOverlay(); }
       else if (o === 'weiter') closeOverlay();
       else if (o === 'schrift') { UI.setGross(!document.body.classList.contains('gross')); }
@@ -323,7 +318,6 @@
     });
     $('btn-pause').onclick = () => { UI.paused = !UI.paused; $('btn-pause').textContent = UI.paused ? 'Weiter' : 'Pause'; };
     $('btn-speed').onclick = () => UI.setTempo((UI.tempo + 1) % SC.TEMPO.length); UI.setTempo(UI.tempo); UI.setGross(store('mesmarathon-schrift') === 'gross');
-    if ($('btn-vorlesen')) { if (!window.speechSynthesis) $('btn-vorlesen').classList.add('hidden'); $('btn-vorlesen').onclick = () => UI.vorlesen(); }
     $('btn-kopf').onclick = () => { const s = S(); if (!s) return; const r = sim().kopfhoerer(s); if (!r.ok) UI.toast(r.why, true); UI.hud(); if (UI.room) renderRoom(); };
     $('btn-menu').onclick = () => { UI.paused = true; $('btn-pause').textContent = 'Weiter'; UI.showTitle(); };
     if (SC.audio) { SC.audio.init(); }
@@ -338,15 +332,15 @@
     $('vol').oninput = e => aud('setVolume', e.target.value / 100);
     syncSnd();
     document.addEventListener('keydown', e => {
-      if (e.target.tagName === 'INPUT') return;
-      if (e.key === 'Escape' && UI._log && UI._ov) { UI._log = false; closeOverlay(); return; }
+      if (UI.typing()) return;
+      if (e.key === 'Escape' && UI._ov) { const one = document.querySelector('#overlay button[data-o="weiter"], #overlay button[data-o="logzu"]'); if (one) { one.click(); return; } }
       if (e.key === 'Escape' && UI.room) UI.closeRoom();
       // v0.9: Bei offenem Dialog schaltet die Leertaste nicht mehr die Pause um; hat der Dialog genau einen Knopf, lösen Leertaste und Enter ihn aus
-      if (UI._ov && (e.key === ' ' || e.key === 'Enter')) { const bs = document.querySelectorAll('#overlay button'); if (bs.length === 1 && !document.querySelector('#overlay button[data-v]')) bs[0].click(); e.preventDefault(); return; }
+      // (gehaltene Taste und die ersten 400 ms nach dem Öffnen zählen nicht, damit niemand einen Hinweis ungelesen wegdrückt)
+      if (UI._ov && (e.key === ' ' || e.key === 'Enter')) { const bs = document.querySelectorAll('#overlay button'); if (bs.length === 1 && !document.querySelector('#overlay button[data-v]')) { e.preventDefault(); if (!e.repeat && performance.now() - (UI._ovAt || 0) > 400) bs[0].click(); } return; }
       if (e.key === ' ') { $('btn-pause').click(); e.preventDefault(); }
       if (e.key === '+') UI.setTempo(UI.tempo + 1);
       if (e.key === '-' || e.key === '−') UI.setTempo(UI.tempo - 1);
-      if ((e.key === 'v' || e.key === 'V') && $('btn-vorlesen') && window.speechSynthesis) UI.vorlesen();
       if (e.key === 'm' || e.key === 'M') $('btn-sound').click();
       if ((e.key === 'k' || e.key === 'K') && S() && !sim().kopfWhy(S())) $('btn-kopf').click();
     });
