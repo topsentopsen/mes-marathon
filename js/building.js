@@ -3,7 +3,7 @@
 (function (SC) {
   const W = 480, H = 300, FH = 50, GROUND = 288, BX0 = 64, BX1 = 416, EX = 240, EW = 30;
   const WALLS = ['#8a8e94', '#a8a89c', '#b8c4cc', '#8c9ca8', '#d0c0a0'];
-  let cv, ctx, hover = null, blink = 0;
+  let cv, ctx, vctx, off, hover = null, blink = 0;
   const P = { x: 190, f: 0, dir: 1, moving: false, anim: 0, visible: true, inLift: false, queue: [] };
   const lift = { pos: 0 };
   // Figuren nur über Rollen: Schichtleiter, Tesla-Kollege, der Kollege, der nichts arbeitet, italienischer Kollege, IT-Chefin
@@ -43,9 +43,36 @@
   }
 
   function rect(x, y, w, h, c) { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); }
-  function text(t, x, y, c, size, align) {
-    ctx.font = 'bold ' + (size || 7) + 'px monospace'; ctx.textAlign = align || 'center'; ctx.textBaseline = 'top';
-    ctx.fillStyle = '#000'; ctx.fillText(t, x + 1, y + 1); ctx.fillStyle = c; ctx.fillText(t, x, y);
+  // v0.9 scharfe Schrift: Die Pixelgrafik entsteht auf einer 480x300-Ebene, Texte werden gesammelt und danach in voller
+  // Bildschirmauflösung (devicePixelRatio) auf ganze Pixel gezeichnet, mit dunkler Kontur und Mindestgröße (9 CSS-Pixel)
+  let Q = [], clipR = null;
+  const TXT_MIN_CSS = 9;
+  function qtext(t, x, y, c, size, align, maxW, outline) {
+    ctx.font = 'bold ' + size + 'px monospace';
+    Q.push({ t: String(t), x, y, c, size, align: align || 'center', mw: maxW || ctx.measureText(String(t)).width, fit: !!maxW, o: outline || 'rgba(0,0,0,0.9)', clip: clipR, m: ctx.getTransform() });
+  }
+  function text(t, x, y, c, size, align) { qtext(t, x, y, c, size || 7, align); }
+  function present() {
+    const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    const bw = Math.max(W, Math.round((r.width || W) * dpr)), bh = Math.round(bw * H / W);
+    if (cv.width !== bw || cv.height !== bh) { cv.width = bw; cv.height = bh; }
+    const v = vctx; v.setTransform(1, 0, 0, 1, 0, 0); v.imageSmoothingEnabled = false; v.drawImage(off, 0, 0, bw, bh);
+    const s = bw / W, minPx = TXT_MIN_CSS * dpr;
+    v.textBaseline = 'top'; v.lineJoin = 'round';
+    for (const q of Q) {
+      const m = q.m, rot = Math.abs(m.b) > 1e-6 || Math.abs(m.c) > 1e-6;
+      const lx = m.a * q.x + m.c * q.y + m.e, ly = m.b * q.x + m.d * q.y + m.f;
+      const base = q.size * s * (rot ? 1 : m.a), px = Math.round(Math.max(base, minPx)), grow = px > base;
+      v.save();
+      if (q.clip) { v.beginPath(); v.rect(Math.round(q.clip[0] * s), Math.round(q.clip[1] * s), Math.round(q.clip[2] * s), Math.round(q.clip[3] * s)); v.clip(); }
+      if (rot) { v.setTransform(s * m.a, s * m.b, s * m.c, s * m.d, Math.round(s * lx), Math.round(s * ly)); v.font = 'bold ' + q.size + 'px monospace'; }
+      else { v.setTransform(1, 0, 0, 1, Math.round(s * lx), Math.round(s * ly - (grow ? (px - base) / 2 : 0))); v.font = 'bold ' + px + 'px monospace'; }
+      v.textAlign = q.align;
+      const maxW = rot ? undefined : (q.fit ? q.mw * s : grow ? q.mw * s * 1.25 : undefined);
+      v.lineWidth = rot ? 1.5 : Math.max(2, px * 0.24); v.strokeStyle = q.o;
+      if (maxW) { v.strokeText(q.t, 0, 0, maxW); v.fillStyle = q.c; v.fillText(q.t, 0, 0, maxW); } else { v.strokeText(q.t, 0, 0); v.fillStyle = q.c; v.fillText(q.t, 0, 0); }
+      v.restore();
+    }
   }
 
   function drawSky(min) {
@@ -150,7 +177,7 @@
   // Blick durchs Fenster in die Produktionshalle: Rückwand, Roboterarm, Förderband mit Kartons, Hallenkran
   function prodWindow(x0, y0, w, h, sx) {
     rect(x0 - 2, y0 - 2, w + 4, h + 4, '#2a2a30'); rect(x0, y0, w, h, '#1c2a3a');
-    ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, w, h); ctx.clip();
+    ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, w, h); ctx.clip(); clipR = [x0, y0, w, h];
     const X = v => x0 + v - sx; // gemeinsame Szene über beide Scheiben
     for (let gx = -sx % 10; gx < w; gx += 10) rect(x0 + gx, y0, 1, h, '#22344a');
     rect(x0, y0 + 4, w, 2, '#3a4a5a'); // Kranbahn
@@ -165,7 +192,7 @@
     rect(Math.round(hx) - 1, Math.round(hy) - 1, 3, 3, '#d0d0d0'); if (Math.sin(tick / 17) > 0.9) rect(Math.round(hx) + 2, Math.round(hy), 1, 1, '#ffff80');
     // Extruder mit Lauflicht in Scheibe 2
     const ex0 = X(120); rect(ex0, by - 12, 26, 12, '#5a6a7a'); rect(ex0 + 2, by - 10, 22, 3, '#2a3038'); rect(ex0 + 2 + (tick >> 2) % 20, by - 10, 3, 3, '#40e0ff'); rect(ex0 + 26, by - 6, 8, 2, '#c0c0c0');
-    ctx.restore();
+    ctx.restore(); clipR = null;
     rect(x0 + Math.floor(w / 2), y0, 1, h, '#2a2a30'); rect(x0, y0 + Math.floor(h / 2), w, 1, 'rgba(42,42,48,0.6)'); // Sprossen
     rect(x0, y0, w, 1, 'rgba(255,255,255,0.25)');
   }
@@ -173,7 +200,7 @@
   function floorWindow(f, x0, y0, w, h, sx, min) {
     const S = SC.S, X = v => x0 + v - sx;
     rect(x0 - 2, y0 - 2, w + 4, h + 4, '#2a2a30');
-    ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, w, h); ctx.clip();
+    ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, w, h); ctx.clip(); clipR = [x0, y0, w, h];
     if (f === 0) {
       rect(x0, y0, w, h, '#2c3440'); const belt = y0 + h - 8; rect(x0, belt, w, 4, '#505860'); for (let k = 0; k < w; k += 6) rect(x0 + k + (tick >> 1) % 6, belt + 1, 2, 1, '#383e46');
       rect(x0 + 18, y0 + 6, 3, belt - y0 - 6, '#e0c020'); rect(x0 + 30, y0 + 6, 3, belt - y0 - 6, '#e0c020'); // Lichtschranke (Sender, Empfänger)
@@ -200,7 +227,7 @@
       rect(X(140), y0 + h - 22, 3, 12, '#30a030'); rect(X(139), y0 + h - 22, 5, 3, (blink >> 4) % 2 ? '#40ff40' : '#208020'); // Ladesäule, nicht eingesteckt
       if (min > 17 * 60) for (let k = 0; k < 3; k++) rect(X(20 + k * 40), y0 + 2, 1, 6, '#ffd860');
     }
-    ctx.restore();
+    ctx.restore(); clipR = null;
     rect(x0 + Math.floor(w / 2), y0, 1, h, '#2a2a30'); rect(x0, y0, w, 1, 'rgba(255,255,255,0.25)');
   }
   // Kulisse: große Produktionshalle mit Sheddach und Hallenkran hinter dem Turm
@@ -291,7 +318,7 @@
     const x = Math.round(Math.max(BX0 + 2, Math.min(BX1 - w - 2, n.x - w / 2))), y = Math.round(floorY(n.f) - 38);
     rect(x - 1, y - 1, w + 2, h + 2, '#000'); rect(x, y, w, h, '#fffbe8');
     rect(Math.round(n.x) - 1, y + h, 3, 2, '#fffbe8'); rect(Math.round(n.x), y + h + 2, 1, 2, '#fffbe8');
-    ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillStyle = '#202020'; ctx.fillText(bub.t, x + 3, y + 2);
+    qtext(bub.t, x + 3, y + 2, '#151515', 8, 'left', w - 6, '#fffbe8');
   }
   function updateNpcs(dt) {
     tick++;
@@ -313,7 +340,7 @@
 
   const B = {
     W, H,
-    init(canvas) { cv = canvas; ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false; },
+    init(canvas) { cv = canvas; vctx = cv.getContext('2d'); off = document.createElement('canvas'); off.width = W; off.height = H; ctx = off.getContext('2d'); ctx.imageSmoothingEnabled = false; },
     reset() { P.x = 190; P.f = 0; P.queue = []; P.visible = true; P.inLift = false; lift.pos = 0; B.dismiss(); },
     // Besuch: die Figur kommt zu Christian auf die Etage (Dialog läuft in ui.js)
     summon(id) {
@@ -354,6 +381,7 @@
       updateNpcs(dt);
     },
     draw(min) {
+      Q = []; clipR = null; ctx.setTransform(1, 0, 0, 1, 0, 0);
       drawSky(min);
       drawHall(min);
       drawBuilding(min);
@@ -364,6 +392,7 @@
         drawMan(P.x, y, SC.PLAYER.col, P.anim, P.moving, P.dir, true);
         if (!P.inLift) { rect(P.x - 1, y - 30, 3, 3, '#ffcc00'); }
       }
+      present();
     },
     // Koordinaten im Canvas (logisch) zu Tür
     pick(lx, ly) {
