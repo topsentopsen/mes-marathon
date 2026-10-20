@@ -3,9 +3,9 @@
 'use strict';
 window.SC = window.SC || {};
 (function (SC) {
-  SC.VERSION = '0.11.0';
+  SC.VERSION = '0.12.0';
   // v0.8: Spielstände dieser Versionen laden weiter (kein neues Feld in S)
-  SC.SAVE_OK = ['0.7.0', '0.8.0', '0.9.0', '0.10.0'];
+  SC.SAVE_OK = ['0.7.0', '0.8.0', '0.9.0', '0.10.0', '0.11.0'];
   SC.DAY_START = 7 * 60 + 30;   // 07:30 Frühschicht-Beginn im Büro
   SC.DAY_END = 17 * 60;         // 17:00 regulärer Feierabend
   SC.LATEST = 20 * 60;          // 20:00 der Pförtner schließt ab
@@ -37,7 +37,7 @@ window.SC = window.SC || {};
   SC.CHRISTIAN_TIPPS2 = [
     '»Wenn der Bediener ›gleich‹ sagt, meint er nach der Pause. Notier dir beides.«',
     '»Beim Rüsten stehen alle gern still daneben. Setz dich dazu. Nach zehn Minuten erzählen sie dir das Wichtigste.«',
-    '»Auf den Chargen läuft in der Halle Papier mit. Das Papier weiß mehr als jedes Konzept. Frag, bevor du ersetzt.«',
+    '»Mit jeder Charge läuft in der Halle ein Zettel mit. Der Zettel weiß mehr als jedes Konzept. Frag, bevor du ihn ersetzt.«',
     '»Etiketten liest im Werk jeder. Mach die Schrift groß.«'
   ];
   // v0.10: weitere Zeilen, wenn Sandra bei Christian vorbeischaut (Salze 34300 und 34400)
@@ -48,8 +48,8 @@ window.SC = window.SC || {};
   ];
   // Sandra als Kollegin bei Christian: nur eine Zeile im Protokoll, keine Zeitkosten
   SC.SANDRA_NPC = [
-    'Sandra, die Kollegin aus der MES-Entwicklung, schaut kurz rein: »Dein SVERWEIS ist das einzige Dokument, das die Schicht wirklich liest. Ich hab ihn dokumentiert.«',
-    'Sandra aus der MES-Entwicklung fragt, wie die Halle den BDE-Feed wirklich befüllt. Du zeigst ihr den Zettel neben der Stempeluhr. Sie macht ein Foto und baut am Nachmittag ein Pflichtfeld weniger ein.',
+    'Sandra, die Kollegin aus der MES-Entwicklung, schaut kurz rein: »Deine Excel-Liste ist das einzige Dokument, das die Schicht wirklich liest. Ich hab sie dokumentiert. Jetzt gibt es zwei.«',
+    'Sandra aus der MES-Entwicklung fragt, wie die Halle den BDE-Feed wirklich befüllt. Du zeigst ihr den Zettel neben der Stempeluhr. Sie macht ein Foto und baut später ein Pflichtfeld weniger ein.',
     'Sandra zeigt dir ein neues Dashboard. Der Schichtleiter fragt, ob man das ausdrucken kann.',
     'Sandra schickt dir ein Mapping mit Versionsnummer und Änderungsprotokoll. Du fragst, ob du das für die Excel-Liste abschreiben darfst. Sie sagt ja.'
   ];
@@ -58,10 +58,10 @@ window.SC = window.SC || {};
     req: 'Du fragst die Schicht: »Warum machen wir das so?« Antwort: »Schon immer.« Es folgt die längste Pause des Tages.',
     spec: 'Excel-Liste mit 47 Spalten. Du markierst sechs fürs MES. Die Spalte »Bemerkung« enthält alle Geschäftsregeln.',
     impl: 'Du zeichnest die Schnittstelle zum Etikettendrucker auf das Whiteboard. Der Drucker kann kein UTF-8: Aus »Größe« wird »Gr??e«. Das steht jetzt auch im Pflichtenheft.',
-    deploy: 'Sieben Tools für die Auftragsübergabe: vier tun dasselbe, eines tut nichts, das siebte ist der Schichtleiter.',
+    deploy: 'Sieben Tools für die Auftragsübergabe: vier tun dasselbe, zwei tun nichts, das siebte ist der Schichtleiter.',
     migrate: 'Stammdaten: 11.000-mal »Schraube«. Du fragst: »Welche?« Die Werkstatt: »Die große.« Einheit Stück oder Karton? »Ja.«',
     bericht: 'Drei Leute, drei Formeln für die OEE. Eine zählt das Rüsten als Ausfall, eine nicht, eine je nach Wetter. Du nimmst die vierte: die dokumentierte.',
-    test: 'Der Bediener: »Die Stückzahl tippen wir abends nach.« Du schreibst »Echtzeit« aufs Whiteboard und streichst es nicht durch.',
+    test: 'Der Bediener: »Die Stückzahl tippen wir abends nach.« Du schreibst »Echtzeit« aufs Whiteboard. Jemand ergänzt in Klammern: »(abends)«.',
     linie: 'Die Schicht zeigt dir die Stempeluhr von 1994. Du bist ehrlich beeindruckt, und die Schicht freut sich darüber.'
   };
   // v0.10: weitere Szenen für Sandra (Salz 34000), nur bei Aktionen ohne bisherige Szene
@@ -78,14 +78,14 @@ window.SC = window.SC || {};
   };
   // v0.11: drei weitere Szenen (Salz 35000), Stillstandsgründe, Fehlerwarteschlange, Ausschuss
   SC.SANDRA_SZENEN3 = {
-    repair: 'Der Katalog der Stillstandsgründe hat 83 Einträge. Die Schicht nutzt drei: »Sonstiges«, »Sonstiges 2« und »Pause«. Du legst einen vierten an: »Siehe Sonstiges«. Er wird sofort beliebt.',
+    repair: 'Der Katalog der Stillstandsgründe hat 83 Einträge. Die Schicht nutzt drei: »Sonstiges«, »Sonstiges 2« und »Pause«. Du streichst 80 und benennst die drei übrigen so, wie die Schicht wirklich spricht. Am nächsten Tag legt sie »Sonstiges 3« an.',
     care: 'Die Fehlerwarteschlange der Schnittstelle enthält 212 Meldungen. 211 sind dieselbe. Du suchst die eine andere. Sie lautet: »Siehe oben.«',
     notbehelf: 'Beim Notbehelf fallen 40 Teile Ausschuss an. Gebucht werden sie auf die Kostenstelle »Muss weg«. Du legst im MES einen echten Ausschussgrund an. Die Kostenstelle bleibt trotzdem.'
   };
   SC.SANDRA_TAG1 = 'Dein Werksausweis ist noch nicht gedruckt. Der Pförtner schreibt dir einen Besucherzettel: »MES, Ebene drei.« Das Formular hat kein Feld für »arbeitet hier«.';
   // Anrede im Text: alle Spielertexte sind für Christian geschrieben, für Sandra werden sie angepasst.
   // Nur einmal je Text anwenden (an den Anzeigestellen), denn aus {C} wird »Christian«, und ein zweiter Lauf machte daraus »Sandra«.
-  SC.FILL = { sandra: [[/Christian/g, 'Sandra'], [/»der vom MES«/g, '»die vom MES«'], [/»den vom MES«/g, '»die vom MES«'], [/Hemd wie immer/g, 'Blazer wie immer'], [/»den Entsorger«/g, '»die Entsorgerin«'], [/wirst Imker\./g, 'wirst Imkerin.'], [/Pappkameraden/g, 'Pappaufsteller'], [/Pappkamerad\b/g, 'Pappaufsteller'], [/MES-Projektleiter\b/g, 'MES-Spezialistin']] };
+  SC.FILL = { sandra: [[/Christian/g, 'Sandra'], [/»der vom MES«/g, '»die vom MES«'], [/»den vom MES«/g, '»die vom MES«'], [/Hemd wie immer/g, 'Blazer wie immer'], [/»den Entsorger«/g, '»die Entsorgerin«'], [/wirst Imker\./g, 'wirst Imkerin.'], [/zum Schornsteinbeauftragten/g, 'zur Schornsteinbeauftragten'], [/Pappkameraden/g, 'Pappaufsteller'], [/Pappkamerad\b/g, 'Pappaufsteller'], [/MES-Projektleiter\b/g, 'MES-Spezialistin']] };
   // {C} steht in Texten, in denen Christian als Kollege vorkommt (wird nach der Anpassung eingesetzt)
   SC.fill = (S, t) => { if (t == null) return t; t = String(t); const L = S && SC.FILL[S.figur]; if (L) for (const [a, b] of L) t = t.replace(a, b); return t.replace(/\{C\}/g, 'Christian'); };
   SC.KOLLEGE_BUBBLES = {
@@ -195,7 +195,7 @@ window.SC = window.SC || {};
     { title: 'Testplanung mit der Linie', eff: 'test' }
   ];
   SC.TIPS = [
-    'Die Kantinenkraft: »Der Schichtleiter mag es, wenn man zu seinen Meetings kommt. Aber er merkt es nicht, wenn man nur zu einem kommt.«',
+    'Die Kantinenkraft: »Der Schichtleiter freut sich über jedes Meeting, zu dem man kommt. Er zählt aber auch die, zu denen man nicht kommt.«',
     'Ein Instandhalter: »Der Server in Rack 4 schmiert ab, wenn keiner nach ihm schaut. Wie ich.«',
     'Eine Kollegin aus dem Einkauf: »Die Werkleitung liest jeden Tag die Excel-Liste. Jeden. Tag.«',
     'Der Azubi: »Ohne ausgedruckte Spezifikation unterschreibt die Werkleitung gar nichts.«',
@@ -220,7 +220,7 @@ window.SC = window.SC || {};
   SC.VISIT_TEXT = {
     tesla: [
       'Wusstest du, dass man beim Tesla die Scheibenwischer per Update verbessern kann? Bei meinem Staubsauger geht das leider nicht.',
-      'Ich hab ausgerechnet: Mit dem Tesla wäre ich heute 4 Minuten früher hier gewesen. Wenn ich einen hätte.',
+      'Ich hab ausgerechnet: Mit dem Tesla wäre ich heute 4 Minuten früher hier gewesen. Wenn Ladesäule 1 frei gewesen wäre.',
       'Der neue Tesla kann angeblich allein einparken. Ich überlege, ob er auch allein in Meetings gehen kann.',
       'Reichweite im Winter, Christian. Darüber muss man reden. Jetzt. Ausführlich.'
     ],
@@ -247,7 +247,7 @@ window.SC = window.SC || {};
       'Ein Kollege aus dem Vertrieb: »Ist das MES das mit Excel? Oder ist Excel das MES?«',
       'Eine Kollegin aus dem Marketing: »Kann das MES auch Instagram?«',
       'Ein Kollege aus dem Einkauf: »Wenn das MES fertig ist, brauchen wir dann noch Strom?«',
-      'Ein Kollege ohne Ahnung: »Ich hab gehört, das MES macht alles automatisch. Auch Meetings?«'
+      'Ein Kollege aus der Buchhaltung: »Ich hab gehört, das MES macht alles automatisch. Auch Meetings?«'
     ],
     altwerk: [
       'Der Kollege vom Altwerk: »Bei uns hieß das Feld aber Artikelnummer_neu_2.«',
@@ -256,7 +256,7 @@ window.SC = window.SC || {};
     ]
   };
   SC.ITALIEN_KURZ = [
-    'Heute Mittag mach ich euch allen Bruschetta. Versprochen!', 'Hab ich dir schon von der Hochzeit meiner Cousine erzählt? 400 Gäste. Drei Tage.',
+    'Bald mach ich euch allen Bruschetta. Versprochen!', 'Hab ich dir schon von der Hochzeit meiner Cousine erzählt? 400 Gäste. Drei Tage.',
     'Christian, der Kaffee hier ist kein Kaffee. Morgen bring ich echten mit.', 'In Italien hätte die Extrusion längst Mittagspause.',
     'Meine Mama sagt, ein MES ist wie ein Ragù: braucht Zeit.', 'Weißt du, wie man Pasta richtig kocht? Ich erklär es dir später. Ausführlich.'
   ];
@@ -281,9 +281,9 @@ window.SC = window.SC || {};
     { id: 'brandschutz', who: 'Der Brandschutzbeauftragte', text: 'Brandschutzübung! Alle raus auf den Parkplatz. Der Pförtner zählt durch und kommt jedes Mal auf eine andere Zahl.',
       opts: [{ label: 'Brav mitgehen (15 Min.)', min: 15, energy: 4, schicht: 2, msg: 'Frische Luft am Sammelplatz. Die Schicht sieht dich dort und findet das solidarisch (+2).' },
         { label: 'Tür zu, weiterarbeiten (2 Min.)', min: 2, energy: -2, msg: 'Der Brandschutzbeauftragte notiert: »Büro, 2. OG: verbrannt.« Nur auf dem Papier.' }] },
-    { id: 'beamer', who: 'Ein Kollege ohne Ahnung', text: 'Der Beamer im Besprechungsraum geht nicht. Hast du ein HDMI-Kabel? Oder VGA? Oder das andere?',
+    { id: 'beamer', who: 'Ein Kollege aus der Buchhaltung', text: 'Der Beamer im Besprechungsraum geht nicht. Hast du ein HDMI-Kabel? Oder VGA? Oder das andere?',
       opts: [{ label: 'Adapter suchen helfen (12 Min.)', min: 12, energy: 0, schicht: 2, msg: 'Im Moderationskoffer liegen 14 Adapter. Keiner passt. Der fünfzehnte schon. Der Schichtleiter ist dir dankbar (+2).' },
-        { label: '»Ich hab nur USB-C.« (2 Min.)', min: 2, energy: -1, msg: 'Er nickt verständnisvoll. Er weiß nicht, was USB-C ist.' }] },
+        { label: '»Ich hab nur USB-C.« (2 Min.)', min: 2, energy: -1, msg: 'Er nickt verständnisvoll und fragt, ob es das auch als VGA gibt.' }] },
     { id: 'ueberraschung', who: 'Die Kantinenkraft', role: null, text: 'Gericht des Tages: »Überraschung«. Die Kantinenkraft zwinkert. Sie zwinkert sonst nie.',
       opts: [{ label: 'Probieren (10 Min.)', min: 10, energy: 5, msg: 'Es ist Currywurst. Die Überraschung ist die Soße: Mango. Energie +5.' },
         { label: 'Lieber nicht (1 Min.)', min: 1, energy: -1, msg: 'Du wirst nie erfahren, was es war. Die Kantinenkraft auch nicht.' }] },
@@ -294,11 +294,11 @@ window.SC = window.SC || {};
       opts: [{ label: 'Ausführlich ausfüllen (10 Min.)', min: 10, energy: 2, msg: 'Du kreuzt »Kanu« an und schreibst eine Begründung. Es wird die Werksführung. Wie jedes Jahr.' },
         { label: '»Egal« ankreuzen (1 Min.)', min: 1, energy: -1, msg: 'Ergebnis der Umfrage: 100 % »egal«. Die Personalabteilung wertet das als Zustimmung.' }] },
     { id: 'stapler', who: 'Der Tesla-Kollege', role: 'tesla', text: 'Der Tesla-Kollege zeigt dir ein Video vom Parkplatz: Ein Gabelstapler parkt rückwärts ein. Ganz allein. Fast.',
-      opts: [{ label: 'Video anschauen (8 Min.)', min: 8, energy: 4, msg: 'Der Stapler parkt ein. Dann die Mülltonne aus. Ihr lacht beide. Energie +4.' },
+      opts: [{ label: 'Video anschauen (8 Min.)', min: 8, energy: 4, msg: 'Der Stapler parkt rückwärts ein. Dann parkt er die Mülltonne aus. Ihr lacht beide. Energie +4.' },
         { label: '»Schick es mir.« (1 Min.)', min: 1, energy: -1, msg: 'Er schickt es dir. Und drei weitere. Und eine Sprachnachricht.' }] },
     { id: 'torte', who: 'Die IT-Chefin', role: 'itchefin', text: 'Die IT-Chefin hat die Automatisierungspyramide als Torte bestellt. Für den Geburtstag der Werkleitung. Sie sucht jemanden zum Probe-Essen von Ebene 2.',
       opts: [{ label: 'Probe-Essen (10 Min.)', min: 10, energy: 6, msg: 'Ebene 2 (Leitebene) ist Marzipan. Ebene 3 (MES) ist noch nicht fertig. Natürlich. Energie +6.' },
-        { label: '»Ich bin auf Diät.« (1 Min.)', min: 1, energy: -1, msg: '»Schade. Dann bekommst du Ebene 0, das ist nur der Teller.«' }] },
+        { label: '»Ich bin schon satt.« (1 Min.)', min: 1, energy: -1, msg: '»Schade. Dann bekommst du Ebene 0, das ist nur der Teller.«' }] },
     { id: 'meetingmeeting', who: 'Der Schichtleiter', role: 'schicht', text: 'Der Schichtleiter sammelt Unterschriften: Er will ein Meeting über die Abschaffung unnötiger Meetings ansetzen.',
       opts: [{ label: 'Unterschreiben (5 Min.)', min: 5, energy: 0, schicht: 3, msg: 'Er strahlt. Das Meeting dazu ist nächste Woche, Dauer 90 Minuten. Schichtleiter +3.' },
         { label: 'Freundlich ablehnen (1 Min.)', min: 1, energy: 0, schicht: -2, msg: '»Verstehe. Dann besprechen wir das im Meeting.« Schichtleiter −2.' }] },
@@ -317,7 +317,7 @@ window.SC = window.SC || {};
     'Der Fahrer des roten Gabelstaplers mit dem Kennzeichen »Bitte nicht berühren« möge sich an der Pforte melden.',
     'Die Kantine ist heute bis auf Weiteres geöffnet. Wir bitten um Verständnis.',
     'Der Notausgang West ist ab sofort wieder ein Notausgang. Bitte die Paletten entfernen.',
-    'Herzlichen Glückwunsch an die Extrusion: drei Tage ohne Etikettenstau! Der Rekord liegt bei vier.',
+    'Glückwunsch an die Extrusion: drei Tage ohne Folienstau! Der Rekord liegt bei vier.',
     'Das Meeting zur Reduzierung von Durchsagen fällt aus. Wegen zu vieler Durchsagen.',
     'Wer hat den Tacker aus der Werkleitung? Er wird vermisst. Bitte keine Fragen stellen, einfach zurückbringen.',
     'Probealarm der Sirene. Bitte nicht in Panik verfallen. Der Schichtwechsel ist wie immer um 14:00.',
@@ -389,7 +389,7 @@ window.SC = window.SC || {};
   // klar als seine Übertreibung, keine Zitate und keine Behauptungen über die reale Person, nichts Politisches.
   SC.ELON = [
     'Elon würde bestimmt sagen, Meetings sind ineffizient. Glaube ich. Oder hab ich das geträumt?',
-    'Elon würde dieses Werk in zwei Wochen hochziehen. Mindestens. Behaupte ich jetzt mal.',
+    'Elon würde dieses Werk in zwei Wochen hochziehen. Höchstens. Behaupte ich jetzt mal.',
     'Wenn es nach mir ginge, fliegt das Werk bald zum Mars. Elon fände das bestimmt super.',
     'Ich stelle mir vor, Elon würde gerade wieder irgendwas Großes posten. Was genau, weiß ich nicht, aber ich bin jetzt schon begeistert.',
     'Ich wette, Elon hätte das MES längst eingeführt. Mit einem einzigen Knopf.',
@@ -432,13 +432,13 @@ window.SC = window.SC || {};
     'Heute vor 7 Jahren: Kick-off des MES. Heute: Kick-off zum Kick-off.',
     'Spruch des Tages: »Die Schicht ist das Ziel.« Darunter, handschriftlich: »Und Kuchen.«',
     'Heute ist Tag der offenen Tür. Gemeint ist die Tür zum Besprechungsraum.',
-    'Spruch des Tages: »Gut geplant ist halb geschwänzt.« Jemand hat »geschwänzt« durchgestrichen.',
+    'Spruch des Tages: »Gut geplant ist halb gewonnen.« Jemand hat »gewonnen« durchgestrichen und »vertagt« darübergeschrieben.',
     'Der Kalender ist von 2019. Der Schichtleiter sagt, die Wochentage stimmen wieder.',
     'Spruch des Tages: »Zuhören ist auch Arbeit.« Gefaltet zu einem Hut.'
   ];
   SC.ABSCHLUSS = {
     win: ['Der Pappkamerad lässt ausrichten: Er hat das alles schon gewusst.', 'Der Pförtner stempelt dich aus und sagt: »Viertes MES. Das erste, das bleibt.«', 'Der Schichtleiter lädt zum Abschluss-Meeting. Diesmal gehst du gern hin. Es gibt Kuchen.'],
-    lose: ['Der Pappkamerad übernimmt dein Büro. Keiner merkt den Unterschied, sagt die Werkleitung.', 'Der Pförtner: »Das MES hab ich schon zweimal gehen sehen. Jetzt dreimal.«', 'Der Tesla-Kollege meint, Elon hätte das bestimmt anders gemacht. Er weiß nur nicht, wie.']
+    lose: ['Der Pappkamerad übernimmt dein Büro. Keiner merkt den Unterschied, sagt die Werkleitung.', 'Der Pförtner: »Das MES hab ich schon dreimal gehen sehen. Jetzt viermal.«', 'Der Tesla-Kollege meint, Elon hätte das bestimmt anders gemacht. Er weiß nur nicht, wie.']
   };
   // v0.8 Gags ohne Spielwirkung (Salze 32000+, 32100+, 32200+)
   SC.AUSHANG = [

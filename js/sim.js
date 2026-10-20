@@ -357,7 +357,7 @@
           if (S.schicht < 40 && rng(S) < 0.5) { say(S, 'Der Schichtleiter hat die Bediener an der ' + st + ' abgezogen. Keine Requirements.', true); return; }
           let g = 1; if (eff(S) >= 65 && rng(S) < T().meet.reqDouble) g = 2;
           m.req = Math.min(m.need.req, m.req + g);
-          const dumb = rng(S) < 0.2 ? ' Ein Kollege ohne Ahnung fragt dazwischen, ob das MES auch Kaffee kochen kann.' : '';
+          const dumb = rng(S) < 0.2 ? ' Ein Kollege aus dem Einkauf fragt dazwischen, ob das MES auch Kaffee kochen kann.' : '';
           say(S, 'Requirements ' + m.name + ' (' + st + '): ' + m.req + '/' + m.need.req + (g > 1 ? ' (der Schichtleiter hat extra Leute geschickt!)' : '') + '.' + dumb);
         } },
       { id: 'test', label: 'Testlauf an der Teststation fahren', cost: 75, energy: 12,
@@ -634,7 +634,7 @@
       case 'tesla': return { who: 'Der Tesla-Kollege' + (p.duo ? ' (mit dem Kollegen aus dem Nachbarbüro)' : ''), text: '»' + of(VT.tesla) + ' ' + elonSatz(S) + '« Reichweite heute laut Display: ' + SC.TESLA_KM(S.day) + ' km. Gestern waren es mehr. Geladen hat er trotzdem nicht.' + (S.day >= T().elon.akkuDay ? ' »' + SC.ELON_AKKU + '«' : '') + (p.duo ? ' ' + of(VT.duo) : '') + ' Elon-Zähler heute: ' + (elonHeute(S) + 1) + '.' };
       case 'italien': return { who: 'Der italienische Kollege', text: '»' + of(VT.italien) + '«' };
       case 'itchefin': return { who: 'Die IT-Chefin (mit der Automatisierungspyramide)', text: '»' + VT.itchefin[p.open % VT.itchefin.length] + ' ' + SC.PYRAMID_Q[p.q].q + '«', pyr: true };
-      case 'ahnungslos': return { who: 'Ein Kollege ohne Ahnung', text: of(VT.ahnungslos) };
+      case 'ahnungslos': return { who: 'Besuch aus einer anderen Abteilung', text: of(VT.ahnungslos) };
       case 'altwerk': return { who: 'Der Kollege vom Altwerk', text: of(VT.altwerk) };
       case 'christian': return { who: '{C}, der erfahrene Kollege', text: '{C} lehnt sich in die Tür: ' + (rngA(S, 34100 + S.day % 100) < 0.4 ? SC.CHRISTIAN_TIPPS2[Math.floor(rngA(S, 34200 + S.day % 100) * SC.CHRISTIAN_TIPPS2.length)] : SC.CHRISTIAN_TIPPS[Math.floor(rngA(S, 33200 + S.day % 100) * SC.CHRISTIAN_TIPPS.length)]) };
       case 'rivale': return { who: SC.RIVAL_EVT[p.r].who, text: SC.RIVAL_EVT[p.r].text };
@@ -664,7 +664,7 @@
         else if (opt === 'thema') { const EL = T().elon; S.stats.elonThema++; min = EL.thema; S.energy += 1;
           if (rngA(S, 20001 + S.day * 16 + (S.stats.visits % 16)) < EL.nein) { min += EL.neinMin; say(S, SC.ELON_THEMA_NEIN + ' (+' + EL.neinMin + ' Min.)', true); }
           else say(S, SC.ELON_THEMA[Math.floor(rngA(S, 20002 + S.day * 16 + (S.stats.visits % 16)) * SC.ELON_THEMA.length)] + ' Energie +1.'); }
-        else { min = 5; S.energy -= 2; if (rng(S) < 0.25) { S.coffeeBlock = S.day; say(S, 'Abgewimmelt. Die beiden ziehen beleidigt in die Kaffeeküche und bleiben dort.', true); } else say(S, 'Abgewimmelt. Sie diskutieren im Flur weiter.'); }
+        else { min = 5; S.energy -= 2; if (rng(S) < 0.25) { S.coffeeBlock = S.day; say(S, 'Abgewimmelt. Der Tesla-Kollege zieht beleidigt in die Kaffeeküche und holt Verstärkung aus dem Nachbarbüro.', true); } else say(S, 'Abgewimmelt. Die Reichweite wird im Flur weiter diskutiert, jetzt vor dem Feuerlöscher.'); }
         break;
       case 'italien':
         if (opt === 'zuhoeren') { S.itStreak = (S.itStreak || 0) + 1; }
@@ -775,7 +775,7 @@
         // v0.4 Prognose-Auswertung
     const PG = T().prognose, names = ['unter Plan', 'im Plan', 'über Plan'];
     if (S.prog.week === week(S) && S.prog.k !== null) { const ist = prognoseBand(S), off = Math.abs(ist - S.prog.k);
-      if (off === 0) { S.chef += PG.hit; S.image += PG.hitImage; S.prog.hits++; S.stats.treffer++; R.lines.push(['good', 'Prognose getroffen (' + names[ist] + '): Werkleitung +' + PG.hit + ', Image +' + PG.hitImage + '. Die Werkleitung nennt dich »unseren Planer«.']); }
+      if (off === 0) { S.chef += PG.hit; S.image += PG.hitImage; S.prog.hits++; S.stats.treffer++; R.lines.push(['good', 'Prognose getroffen (' + names[ist] + '): Werkleitung +' + PG.hit + ', Image +' + PG.hitImage + '. Die Werkleitung nennt dich ab jetzt nur noch »die Planung«.']); }
       else if (off === 1) { S.chef -= PG.miss1; R.lines.push(['info', 'Prognose knapp daneben (gesagt: ' + names[S.prog.k] + ', ist: ' + names[ist] + '). Die Werkleitung zuckt mit den Schultern (−' + PG.miss1 + ').']); }
       else { S.chef -= PG.miss2; R.lines.push(['bad', 'Prognose klar daneben (gesagt: ' + names[S.prog.k] + ', ist: ' + names[ist] + '): Werkleitung −' + PG.miss2]); }
       S.prog.k = null; }

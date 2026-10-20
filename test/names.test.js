@@ -28,5 +28,9 @@ const W1 = 'f' + 'aul', W2 = 'la' + 'zy';
 const SCHMAEH = new RegExp(W1 + '(?!t)|' + W2, 'i'); // auch in Zusammensetzungen; fault, faulty, faulted bleiben erlaubt
 for (const f of files) { const txt = fs.readFileSync(f, 'utf8'); const m = txt.match(SCHMAEH); if (m) { console.log('Abwertendes Wort gefunden in', path.relative(root, f), m[0]); bad++; } if (SCHMAEH.test(path.basename(f))) { console.log('Dateiname:', f); bad++; } }
 for (const t of [].concat(...Object.values(SCx.BUBBLES), ...Object.values(SCx.VISIT_TEXT || {}).flat(), SCx.PARTY_GAESTE || '', Object.values(SCx.SANDRA_SZENEN3 || {}), Object.values(SCx.SANDRA_SZENEN2 || {}))) if (SCHMAEH.test(String(t))) { console.log('Spieltext:', t); bad++; }
+// v0.12: Das Spiel macht keine Netzwerkaufrufe (keine Telemetrie). Gilt für js/ und index.html.
+const NETZ = new RegExp('\\b(' + ['fe' + 'tch\\s*\\(', 'XMLHttp' + 'Request', 'send' + 'Beacon', 'Web' + 'Socket', 'Event' + 'Source'].join('|') + ')');
+for (const f of [path.join(root, 'index.html')].concat(fs.readdirSync(path.join(root, 'js')).map(x => path.join(root, 'js', x)))) { const m = fs.readFileSync(f, 'utf8').match(NETZ); if (m) { console.log('Netzwerkaufruf in', path.relative(root, f), m[0]); bad++; } }
+{ const h = fs.readFileSync(path.join(root, 'index.html'), 'utf8'); const ext = (h.match(/(src|href)=["'](https?:)?\/\/[^"']+/g) || []); if (ext.length) { console.log('Externe Quelle in index.html:', ext.join(', ')); bad++; } }
 if (bad) { console.log(bad + ' Verstöße gegen die Namensregel'); process.exit(1); }
 console.log('ok Namensregel (' + files.length + ' Dateien)');
