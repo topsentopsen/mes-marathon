@@ -3,13 +3,15 @@
 'use strict';
 window.SC = window.SC || {};
 (function (SC) {
-  SC.VERSION = '0.8.0';
+  SC.VERSION = '0.9.0';
   // v0.8: Spielstände dieser Versionen laden weiter (kein neues Feld in S)
-  SC.SAVE_OK = ['0.7.0'];
+  SC.SAVE_OK = ['0.7.0', '0.8.0'];
   SC.DAY_START = 7 * 60 + 30;   // 07:30 Frühschicht-Beginn im Büro
   SC.DAY_END = 17 * 60;         // 17:00 regulärer Feierabend
   SC.LATEST = 20 * 60;          // 20:00 der Pförtner schließt ab
-  SC.MIN_PER_SEC = 2;           // Spielminuten pro Echtsekunde bei Tempo 1
+  SC.MIN_PER_SEC = 2;           // Spielminuten pro Echtsekunde bei Faktor 1 (bis v0.8 »Tempo 1x«)
+  // v0.9 Tempo-Stufen (Faktor auf MIN_PER_SEC): Langsam 60, Normal 40, Schnell 30 Echtsekunden pro Spielstunde; Standard Langsam
+  SC.TEMPO = [{ id: 'langsam', name: 'Langsam', f: 0.5 }, { id: 'normal', name: 'Normal', f: 0.75 }, { id: 'schnell', name: 'Schnell', f: 1 }];
   SC.DEADLINE = 20;             // Go-Live am Abend von Arbeitstag 20 (nach der Übernahme 22)
   SC.WEEKDAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag'];
   SC.PLAYER = { name: 'Christian', col: '#8cb8e8' };

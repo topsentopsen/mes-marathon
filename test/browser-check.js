@@ -52,7 +52,36 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   Object.assign(v07, await page.evaluate(() => { const S = window.SC.S; S.pending = null; S.visits = []; const r = {}; window.SC.ui.openRoom('pforte'); r.aushang = /Aushang am Werkstor/.test(document.getElementById('room').innerText); window.SC.ui.closeRoom(); window.SC.ui.openRoom('leitstand'); r.diagramm = /Diagramm des Tages/.test(document.getElementById('room').innerText); window.SC.ui.closeRoom();
     document.getElementById('ticker').click(); r.log = /Tagesprotokoll/.test(document.getElementById('overlay').innerText) && window.SC.ui.overlayOpen(); const b = document.querySelector('#overlay button[data-o="logzu"]'); if (b) b.click(); r.logZu = !window.SC.ui.overlayOpen(); S.msgs.push({ t: 'Meldung A', bad: true }, { t: 'Meldung B', bad: false }); window.SC.ui.hud(); r.ticker2 = /Meldung A · Meldung B/.test(document.getElementById('ticker').innerText); document.getElementById('ticker').click(); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); r.escZu = !window.SC.ui.overlayOpen(); return r; }));
   v07.hint = /Erstes Mal hier/.test(title.text); if (!v07.hint || !v07.kal || !v07.aushang || !v07.diagramm || !v07.log || !v07.logZu || !v07.ticker2 || !v07.escZu) errs.push('v0.7/v0.8-Anzeige fehlt: ' + JSON.stringify(v07));
-  console.log(JSON.stringify({ title: title.text.slice(0, 160), nameField: title.name, visitShown, st, d2, v07, errs }, null, 1));
+  // v0.9: Uhr steht in Räumen, Dialogen und Pause; Tempo-Stufen; Leertaste im Dialog; 17:00-Hinweis mit Weiter; Schriftgröße; Vorlesen; Laufzeit in Spielminuten
+  const calm = () => page.evaluate(() => { const S = window.SC.S; S.visits = []; S.pending = null; S.meetings = []; S.server.crashAt = null; S.burnout = false; S._warned = false; S.minute = 9 * 60; });
+  await calm();
+  const v09 = await page.evaluate(() => ({ tempoText: document.getElementById('btn-speed').textContent, speed: window.SC.ui.speed, roomFont: (window.SC.ui.openRoom('buero'), parseFloat(getComputedStyle(document.getElementById('room')).fontSize)) }));
+  const m0 = await page.evaluate(() => window.SC.S.minute); await wait(1500); v09.roomStill = (await page.evaluate(() => window.SC.S.minute)) === m0; v09.stoppedIcon = await page.evaluate(() => /⏸/.test(document.getElementById('hud-clock').textContent));
+  await page.evaluate(() => window.SC.ui.closeRoom());
+  const rate = async () => { const a = await page.evaluate(() => [window.SC.S.minute, performance.now()]); await wait(2000); const b = await page.evaluate(() => [window.SC.S.minute, performance.now()]); return Math.round((b[0] - a[0]) / ((b[1] - a[1]) / 1000) * 100) / 100; };
+  v09.rate = {};
+  for (let i = 0; i < 3; i++) { await calm(); await page.evaluate(i => window.SC.ui.setTempo(i), i); v09.rate[['langsam', 'normal', 'schnell'][i]] = Math.min(await rate(), await rate()); }
+  v09.secPerHour = Object.fromEntries(Object.entries(v09.rate).map(([k, r]) => [k, Math.round(60 / r)]));
+  await page.evaluate(() => window.SC.ui.setTempo(0));
+  await page.evaluate(() => document.getElementById('ticker').click()); const m1 = await page.evaluate(() => window.SC.S.minute); await wait(1200); v09.overlayStill = (await page.evaluate(() => window.SC.S.minute)) === m1;
+  const p0 = await page.evaluate(() => window.SC.ui.paused); await page.keyboard.press('Space'); await wait(100); v09.spaceNoPause = (await page.evaluate(() => window.SC.ui.paused)) === p0; v09.spaceClosesSingle = !(await page.evaluate(() => window.SC.ui.overlayOpen()));
+  await page.keyboard.press('Space'); await wait(100); v09.pauseKey = await page.evaluate(() => window.SC.ui.paused); const m2 = await page.evaluate(() => window.SC.S.minute); await wait(1000); v09.pauseStill = (await page.evaluate(() => window.SC.S.minute)) === m2; await page.keyboard.press('Space'); await wait(100);
+  await page.keyboard.press('Equal'); await page.keyboard.type('+'); await wait(100); v09.plus = await page.evaluate(() => [window.SC.ui.tempo, localStorage.getItem('mesmarathon-tempo'), document.getElementById('btn-speed').textContent]);
+  await page.keyboard.type('-'); await wait(100); v09.minus = await page.evaluate(() => window.SC.ui.tempo);
+  await calm(); await page.evaluate(() => { const S = window.SC.S; S.minute = window.SC.DAY_END - 2; window.SC.ui.openRoom('leitstand'); }); await wait(200); await page.evaluate(() => document.querySelector('#room button[data-a="bericht"]').click()); await wait(300);
+  v09.hinweis = await page.evaluate(() => !!document.querySelector('#overlay button[data-o="weiter"]') && /17:00/.test(document.getElementById('overlay').innerText));
+  await page.screenshot({ path: out + '-8-hinweis-1700.png' });
+  await page.keyboard.press('Enter'); await wait(100); v09.hinweisZu = !(await page.evaluate(() => window.SC.ui.overlayOpen()));
+  v09.vorlesen = await page.evaluate(() => { const sp = window.speechSynthesis; if (!sp) return 'keine API'; let said = null; sp.speak = u => { said = u.text; }; window.SC.ui.vorlesen(); return !!said && /Leitstand|Diagramm/.test(said); });
+  await page.evaluate(() => window.SC.ui.closeRoom());
+  // Laufzeit Erdgeschoss (Pforte) bis 2. Etage (Büro) in Spielminuten je Tempo
+  v09.walk = {};
+  for (let i = 0; i < 3; i++) { await calm(); await page.evaluate(i => window.SC.ui.setTempo(i), i); await page.evaluate(() => window.SC.ui.walkTo('pforte')); await page.waitForFunction(() => window.SC.ui.room === 'pforte', { timeout: 30000 }); await page.evaluate(() => window.SC.ui.closeRoom()); await calm();
+    const w0 = await page.evaluate(() => window.SC.S.minute); await page.evaluate(() => window.SC.ui.walkTo('buero')); await page.waitForFunction(() => window.SC.ui.room === 'buero', { timeout: 30000 }); v09.walk[['langsam', 'normal', 'schnell'][i]] = Math.round(((await page.evaluate(() => window.SC.S.minute)) - w0) * 10) / 10; await page.evaluate(() => window.SC.ui.closeRoom()); }
+  await page.evaluate(() => window.SC.ui.setTempo(1)); await page.reload(); await wait(500); v09.tempoAfterReload = await page.evaluate(() => [window.SC.ui.tempo, document.getElementById('btn-speed').textContent]); await page.evaluate(() => { window.SC.ui.setTempo(0); });
+  const okR = (r, want) => Math.abs(r - want) / want < 0.25;
+  if (v09.tempoText !== 'Tempo: Langsam' || v09.speed !== 0.5 || v09.roomFont < 18 || !v09.stoppedIcon || !v09.roomStill || !okR(v09.rate.langsam, 1) || !okR(v09.rate.normal, 1.5) || !okR(v09.rate.schnell, 2) || !v09.overlayStill || !v09.spaceNoPause || !v09.spaceClosesSingle || !v09.pauseKey || !v09.pauseStill || v09.plus[0] !== 1 || v09.plus[1] !== 'normal' || v09.minus !== 0 || !v09.hinweis || !v09.hinweisZu || v09.vorlesen !== true || v09.tempoAfterReload[0] !== 1) errs.push('v0.9-Zeitmechanik: ' + JSON.stringify(v09));
+  console.log(JSON.stringify({ title: title.text.slice(0, 160), nameField: title.name, visitShown, st, d2, v07, v09, errs }, null, 1));
   if (errs.length || d2 !== 2 || !visitShown || title.name) process.exitCode = 1;
   await browser.close();
 })();

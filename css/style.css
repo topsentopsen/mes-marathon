@@ -99,3 +99,27 @@ td.spark { font-family: monospace; letter-spacing: 1px; color: #9cf; }
 .visit p { font-size: 15px; line-height: 1.35; }
 .vopts button { margin: 3px 2px; }
 .kpis { font-size: 13px; }
+
+/* v0.9: Lesbarkeit (mindestens 18 px Fließtext am PC, XAG 101), Zeilenhöhe 1,5, Schalter »Schrift: Groß« */
+#room { font-size: 18px; line-height: 1.5; }
+table { font-size: 16px; } table.xl td { font-size: 15px; }
+.small { font-size: 14px; }
+#ticker { font-size: 18px; max-height: 6em; overflow: auto; }
+#calendar { font-size: 16px; }
+.visit p { font-size: 20px; line-height: 1.5; }
+.box { font-size: 18px; line-height: 1.5; }
+.lese { font-size: 20px; line-height: 1.5; }
+button { font-size: 16px; }
+#rooms button { font-size: 15px; padding: 4px 8px; }
+ul.log { font-size: 15px; }
+.kpis { font-size: 16px; }
+h3 { font-size: 18px; }
+.floor-grp .fl { font-size: 13px; }
+.room-head .small { margin-left: auto; margin-right: 8px; }
+body.gross #room, body.gross #overlay .box, body.gross #ticker, body.gross #calendar { zoom: 1.22; }
+@media (max-width: 640px) {
+  #room { font-size: 16px; } table { font-size: 14px; } .small { font-size: 13px; }
+  #ticker { font-size: 16px; min-height: 4.4em; }
+  #calendar { font-size: 15px; } .visit p { font-size: 17px; } .box { font-size: 16px; } button { font-size: 15px; min-height: 44px; }
+  #rooms button { font-size: 14px; } ul.log { font-size: 14px; }
+}

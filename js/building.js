@@ -282,12 +282,12 @@
     const pool = here.length && Math.random() < 0.7 ? here : npcs.filter(n => SC.BUBBLES && SC.BUBBLES[n.role]);
     if (!pool.length) return;
     const n = pool[Math.floor(Math.random() * pool.length)], L = partyDay() && SC.PARTY_BUBBLES && SC.PARTY_BUBBLES[n.role] && Math.random() < 0.6 ? SC.PARTY_BUBBLES[n.role] : SC.BUBBLES[n.role];
-    bub.n = n; bub.t = L[Math.floor(Math.random() * L.length)]; bub.ttl = 3;
+    bub.n = n; bub.t = L[Math.floor(Math.random() * L.length)]; bub.ttl = 6;
   }
   function drawBubble() {
     const n = bub.n; if (!n || !bub.t) return;
-    ctx.font = 'bold 6px monospace';
-    const w = Math.ceil(ctx.measureText(bub.t).width) + 6, h = 10;
+    ctx.font = 'bold 8px monospace';
+    const w = Math.ceil(ctx.measureText(bub.t).width) + 6, h = 12;
     const x = Math.round(Math.max(BX0 + 2, Math.min(BX1 - w - 2, n.x - w / 2))), y = Math.round(floorY(n.f) - 38);
     rect(x - 1, y - 1, w + 2, h + 2, '#000'); rect(x, y, w, h, '#fffbe8');
     rect(Math.round(n.x) - 1, y + h, 3, 2, '#fffbe8'); rect(Math.round(n.x), y + h + 2, 1, 2, '#fffbe8');
