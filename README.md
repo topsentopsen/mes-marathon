@@ -4,6 +4,10 @@ Retro-Managerspiel im Browser, inspiriert von **Mad TV** (1991) und abgeleitet a
 
 **Spielen:** https://topsentopsen.github.io/mes-marathon/
 
+## v0.14.1
+
+Die mit v0.14.0 hinzugekommene dritte Figur ist wieder entfernt. Spielbar sind wie in v0.13 nur Christian und Sandra, Texte, Werte und Layout entsprechen v0.13.0. Spielstände aus 0.7 bis 0.14 laden weiter. Ein Spielstand mit der entfernten Figur lädt nicht, »Neues Spiel« führt dann zur Figurenwahl. Details: `docs/RELEASE-v0.14.1.md`.
+
 ## Neu in v0.13.0 »Breitbild«
 
 Am PC passt jetzt alles ohne Scrollen auf einen Bildschirm (geprüft bei 1366 × 768, 1440 × 900 und 1920 × 1080): Das Spiel nutzt die ganze Fensterbreite, die Raumknöpfe stehen neben dem Werk, und ein Raum zeigt links die Infos und rechts die Aktionen in Spalten. Feierabend und Spielende sind zweispaltig, die Anleitung steht in Spalten und blättert bei Bedarf mit ◀ und ▶. Auf dem Handy bleibt alles untereinander, breite Tabellen lassen sich dort seitlich schieben. Texte und Wertung unverändert. Details: `docs/RELEASE-v0.13.md`.

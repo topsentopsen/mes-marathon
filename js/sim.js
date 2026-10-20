@@ -908,8 +908,10 @@
   const SAVE = 'mesmarathon-save';
   function save(S) { try { localStorage.setItem(SAVE, JSON.stringify(S)); } catch (e) { /* */ } }
   // v0.4: alter Spielstand einer anderen Version (für einen Hinweis im Titel)
-  function oldSave() { try { const s = JSON.parse(localStorage.getItem(SAVE)); return s && s.v !== SC.VERSION && !(SC.SAVE_OK || []).includes(s.v) ? s.v : null; } catch (e) { return null; } }
-  function load() { try { const s = JSON.parse(localStorage.getItem(SAVE)); if (!s || (s.v !== SC.VERSION && !(SC.SAVE_OK || []).includes(s.v))) return null; s.v = SC.VERSION; const d = newGame(s.seed || 1); for (const k of Object.keys(d)) if (s[k] === undefined) s[k] = d[k]; for (const k of Object.keys(d.stats)) if (s.stats[k] === undefined) s.stats[k] = 0; if (!SC.FIGUREN[s.figur]) s.figur = 'christian'; s.name = SC.FIGUREN[s.figur].name; return s; } catch (e) { return null; } }
+  // v0.14.1: ein Spielstand mit einer Figur, die es nicht mehr gibt, lädt nicht (Titel meldet es, »Neues Spiel« führt zur Figurenwahl)
+  const figWeg = s => !!(s && s.figur && SC.FIGUREN && !SC.FIGUREN[s.figur]);
+  function oldSave() { try { const s = JSON.parse(localStorage.getItem(SAVE)); return s && ((s.v !== SC.VERSION && !(SC.SAVE_OK || []).includes(s.v)) || figWeg(s)) ? s.v : null; } catch (e) { return null; } }
+  function load() { try { const s = JSON.parse(localStorage.getItem(SAVE)); if (!s || (s.v !== SC.VERSION && !(SC.SAVE_OK || []).includes(s.v)) || figWeg(s)) return null; s.v = SC.VERSION; const d = newGame(s.seed || 1); for (const k of Object.keys(d)) if (s[k] === undefined) s[k] = d[k]; for (const k of Object.keys(d.stats)) if (s.stats[k] === undefined) s.stats[k] = 0; if (!SC.FIGUREN[s.figur]) s.figur = 'christian'; s.name = SC.FIGUREN[s.figur].name; return s; } catch (e) { return null; } }
   // Highscore (lokal, Top 5) wie bei Mad TV
   function addScore(S) {
     try { const k = 'mesmarathon-highscore'; const L = JSON.parse(localStorage.getItem(k) || '[]'); L.push({ score: S.result.score, win: S.result.win, day: S.day, figur: S.figur || 'christian' }); L.sort((a, b) => b.score - a.score); localStorage.setItem(k, JSON.stringify(L.slice(0, 5))); return L.slice(0, 5); } catch (e) { return []; }

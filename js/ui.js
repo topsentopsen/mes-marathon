@@ -323,7 +323,7 @@
     overlay('<h2>Wer bist du?</h2><p>Such dir aus, wer das MES diesmal wirklich einführt. Die andere Figur ist im Werk als Kollege oder Kollegin dabei.</p><div class="figuren">' + card('christian') + card('sandra') + '</div><p><button data-o="titel">Zurück</button></p>', true);
   };
   UI.newGame = function (seed, figur) {
-    figur = SC.FIGUREN[figur] ? figur : (store('mesmarathon-figur') || 'christian');
+    figur = SC.FIGUREN[figur] ? figur : SC.FIGUREN[store('mesmarathon-figur')] ? store('mesmarathon-figur') : 'christian'; // v0.14.1: gemerkte Figur, die es nicht mehr gibt, wird zu Christian
     try { localStorage.setItem('mesmarathon-hinweis', '1'); } catch (e) { /* */ }
     if (UI.room) UI.closeRoom();
     unpause(); store('mesmarathon-figur', figur); SC.S = sim().newGame(seed || (Date.now() & 0x7fffffff), figur); shown = 0; UI._siren = 0;
