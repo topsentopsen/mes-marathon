@@ -16,12 +16,9 @@
   const hm = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(Math.floor(m % 60)).padStart(2, '0');
   const T = () => SC.TUNE;
   // v0.9 Figuren: FG(S) liefert Sandras Abweichungen, für Christian null (Christian bleibt exakt wie v0.8)
-  // v0.14: allgemein je Figur (Sandra, Ivo); Christian hat keinen Eintrag und bleibt null
-  const FG = S => (S && SC.TUNE.figur[S.figur]) || null;
-  // v0.14 Ivo: Lernkurve, Faktor F.lern[id] am Tag 1, sinkt linear bis Tag F.lernBis auf 1 (eine Schwäche, gilt darum auch nach 17:00)
-  const lernF = (S, F, id) => { const l = F && F.lern && F.lern[id]; if (!l) return 1; const t = Math.max(0, (F.lernBis - S.day) / (F.lernBis - 1)); return Math.round((1 + (l - 1) * t) * 1000) / 1000; };
+  const FG = S => (S && S.figur === 'sandra' ? SC.TUNE.figur.sandra : null);
   // v0.11: mit nurBis17 gilt Sandras Zeitvorteil (Faktor < 1) nur bis Feierabend; Schwächen (Faktor > 1) gelten immer
-  const figF = (S, id) => { const F = FG(S); let f = F && F.dauer[id] || 1; if (f < 1 && F.nurBis17 && S.minute >= SC.DAY_END + (S.partyMin || 0)) f = 1; return F && F.lern ? f * lernF(S, F, id) : f; };
+  const figF = (S, id) => { const F = FG(S); const f = F && F.dauer[id] || 1; if (f < 1 && F.nurBis17 && S.minute >= SC.DAY_END + (S.partyMin || 0)) return 1; return f; };
   const SIREN = 14 * 60, HANDOVER = 14 * 60 + 20;
 
   function newModule(def, need) {
@@ -49,8 +46,7 @@
     };
     const F = FG(S); if (F) Object.assign(S, F.start);
     planDay(S);
-    if (F) say(S, figur === 'ivo' ? SC.IVO_TAG1 : SC.SANDRA_TAG1);
-    if (figur === 'ivo') S.introIvo = false; // v0.14: Einstieg für Ivo noch nicht gezeigt (die Oberfläche setzt es auf true)
+    if (F) say(S, SC.SANDRA_TAG1);
     return S;
   }
   const weekday = S => (S.day - 1) % 5;
@@ -66,9 +62,8 @@
     S.excel = false; S.coffee = 0; S.lunch = false; S.dayLog = []; S.immerToday = 0; S.partyMin = 0;
     S.uselessYesterday = S.uselessToday; S.uselessToday = 0; S.uselessMin = 0;
     // v0.9 Sandra als Kollegin bei Christian: nur eine Zeile, keine Zeitkosten, keine Würfe aus den Spielströmen
-    if (S.figur === 'ivo' && S.day === SC.TUNE.figur.ivo.lernBis) say(S, SC.IVO_LERN10);
-    if (S.figur !== 'sandra' && S.figur !== 'ivo' && S.day >= 3 && rngA(S, 33400 + S.day % 100) < 0.3) say(S, SC.SANDRA_NPC[Math.floor(rngA(S, 33500 + S.day % 100) * SC.SANDRA_NPC.length)]);
-    else if (S.figur !== 'sandra' && S.figur !== 'ivo' && S.day >= 3 && rngA(S, 34300 + S.day % 100) < 0.2) say(S, SC.SANDRA_NPC2[Math.floor(rngA(S, 34400 + S.day % 100) * SC.SANDRA_NPC2.length)]);
+    if (S.figur !== 'sandra' && S.day >= 3 && rngA(S, 33400 + S.day % 100) < 0.3) say(S, SC.SANDRA_NPC[Math.floor(rngA(S, 33500 + S.day % 100) * SC.SANDRA_NPC.length)]);
+    else if (S.figur !== 'sandra' && S.day >= 3 && rngA(S, 34300 + S.day % 100) < 0.2) say(S, SC.SANDRA_NPC2[Math.floor(rngA(S, 34400 + S.day % 100) * SC.SANDRA_NPC2.length)]);
     const big = [];
     // Großereignisse
     if (S.day >= 6 && S.sap.state === 'none') {
@@ -581,21 +576,13 @@
   const SZ_IDS = ['req', 'spec', 'impl', 'deploy', 'migrate', 'bericht', 'test', 'linie'];
   function figurNach(S, F, room, id, sch0) {
     if (S.schicht > sch0) { const roh = S.schicht - sch0, neu = Math.round(roh * F.schichtF); S.schicht = sch0 + neu; if (neu < roh && S.day <= 5) say(S, 'Neu im Werk: Das Vertrauen des Schichtleiters wächst bei dir langsamer, Schichtleiter +' + neu + ' statt +' + roh + '.'); }
-    if (id === 'abnahme' && F.abnahmeChef) { S.chef += F.abnahmeChef; if (S.day <= 10) say(S, 'Die Werkleitung kennt dich noch nicht so lange: Werkleitung +' + (8 + F.abnahmeChef) + ' statt +8.'); }
-    if (S.figur === 'ivo') { ivoNach(S, id); return; }
+    if (id === 'abnahme') { S.chef += F.abnahmeChef; if (S.day <= 10) say(S, 'Die Werkleitung kennt dich noch nicht so lange: Werkleitung +' + (8 + F.abnahmeChef) + ' statt +8.'); }
     const k = SZ_IDS.indexOf(id);
     if (k >= 0 && SC.SANDRA_SZENEN[id] && rngA(S, 33300 + ((S.day * 13 + k * 7) % 100)) < 0.35) say(S, SC.SANDRA_SZENEN[id]);
     const k2 = SZ2_IDS.indexOf(id);
     if (k2 >= 0 && SC.SANDRA_SZENEN2[id] && rngA(S, 34000 + ((S.day * 11 + k2 * 7) % 100)) < 0.3) say(S, SC.SANDRA_SZENEN2[id]);
     const k3 = SZ3_IDS.indexOf(id);
     if (k3 >= 0 && SC.SANDRA_SZENEN3[id] && rngA(S, 35000 + ((S.day * 17 + k3 * 7) % 100)) < 0.35) say(S, SC.SANDRA_SZENEN3[id]);
-  }
-  // v0.14 Ivo: eigene Szenen (Salz 36000 und 37000, nur rngA, keine Zeitkosten)
-  function ivoNach(S, id) {
-    const k = SZ_IDS.indexOf(id);
-    if (k >= 0 && SC.IVO_SZENEN[id] && rngA(S, 36000 + ((S.day * 13 + k * 7) % 100)) < 0.35) say(S, SC.IVO_SZENEN[id]);
-    const k2 = SZ2_IDS.indexOf(id);
-    if (k2 >= 0 && SC.IVO_SZENEN2[id] && rngA(S, 37000 + ((S.day * 11 + k2 * 7) % 100)) < 0.3) say(S, SC.IVO_SZENEN2[id]);
   }
   // echte Dauer einer Aktion (Gesamtprüfung v0.5: auch für die Anzeige auf den Knöpfen)
   function costOf(S, room, id, a) {
@@ -722,7 +709,7 @@
         say(S, 'Party: ' + k.msg); break; }
       case 'flur': { const o = SC.FLUR[p.k].opts[+String(opt).slice(1)] || SC.FLUR[p.k].opts[1]; S.stats.flur++; min = o.min; S.energy += o.energy || 0; S.schicht += o.schicht || 0; say(S, o.msg, (o.energy || 0) < 0 || (o.schicht || 0) < 0); break; }
       case 'christian':
-        if (opt === 'zuhoeren') { const K = (FG(S) || SC.TUNE.figur.sandra).kollege; min = K.min; S.schicht += K.schicht; say(S, (S.figur === 'ivo' ? SC.IVO_KOLLEGE : '{C} erzählt, wie die Halle wirklich tickt. Du schreibst mit.') + ' Schichtleiter +' + K.schicht + '.'); }
+        if (opt === 'zuhoeren') { const K = (FG(S) || SC.TUNE.figur.sandra).kollege; min = K.min; S.schicht += K.schicht; say(S, '{C} erzählt, wie die Halle wirklich tickt. Du schreibst mit. Schichtleiter +' + K.schicht + '.'); }
         else { min = 2; say(S, '{C} nickt: »Später ist gut. Später ist hier immer.«'); }
         break;
       case 'lieferant': S.partsUntil = Math.max(S.partsUntil, S.day + 2); say(S, 'Ersatzteile im Lager: Reparaturen kosten drei Tage lang nur 2 k€.'); break;
@@ -929,6 +916,6 @@
   }
   function highscores() { try { return JSON.parse(localStorage.getItem('mesmarathon-highscore') || '[]'); } catch (e) { return []; } }
 
-  SC.sim = { newGame, figF, lernF: (S, id) => lernF(S, FG(S), id), act, actCost, elonHeute, aufzug, handoverWait, kalender, abschluss, saison, aushang, diagramm, wochenendGag, advance, events, endDay, weekend, startDay, progress, nextMeeting, activeMeeting, actions: A, targets, hm, weekday, week, save, load, slow,
+  SC.sim = { newGame, figF, act, actCost, elonHeute, aufzug, handoverWait, kalender, abschluss, saison, aushang, diagramm, wochenendGag, advance, events, endDay, weekend, startDay, progress, nextMeeting, activeMeeting, actions: A, targets, hm, weekday, week, save, load, slow,
     choose, visitOptions, visitText, oldSave, archiv, kopfhoerer, kopfWhy, nordRatio, rngA, closeAuktion, auktionOpen, bidPrice, auditOk, rngF, rngM, prognoseBand, rahmen, kpiScore, kpiIndex, kpiPath, kpiTarget, autoWork, addScore, highscores, stationOf, stName, rng };
 })(window.SC);

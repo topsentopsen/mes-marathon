@@ -35,7 +35,7 @@ t('Excel fehlt am Abend', () => { const S = sim.newGame(5); S.minute = SC.DAY_EN
 t('Feierabend erst ab 15 Uhr', () => { const S = sim.newGame(5); clearDay(S); assert.ok(!sim.act(S, 'pforte', 'home').ok); S.minute = 15 * 60; assert.ok(sim.act(S, 'pforte', 'home').ok); });
 t('Wochenendschicht kostet Familie', () => { const S = sim.newGame(5); const f = S.family; sim.weekend(S, 2); assert.strictEqual(S.family, f - 26); });
 t('Spiel endet spätestens am Termin', () => { const S = sim.newGame(9); let g = 0; while (S.phase !== 'ende' && g++ < 40) { S.pending = null; S.minute = SC.DAY_END; sim.endDay(S); if (S.phase === 'wochenende') sim.weekend(S, 0); sim.startDay(S); } assert.strictEqual(S.phase, 'ende'); assert.ok(!S.result.win); });
-t('Speicherversion 0.9.0', () => { const store = {}; global.localStorage = { getItem: k => store[k] || null, setItem: (k, v) => { store[k] = v; } }; const S = sim.newGame(3); sim.save(S); assert.strictEqual(sim.load().v, '0.14.0'); assert.strictEqual(SC.VERSION, require('fs').readFileSync(require('path').join(__dirname, '..', 'VERSION'), 'utf8').trim()); store['mesmarathon-save'] = JSON.stringify(Object.assign({}, S, { v: '0.2.0' })); assert.strictEqual(sim.load(), null); });
+t('Speicherversion 0.9.0', () => { const store = {}; global.localStorage = { getItem: k => store[k] || null, setItem: (k, v) => { store[k] = v; } }; const S = sim.newGame(3); sim.save(S); assert.strictEqual(sim.load().v, '0.13.0'); assert.strictEqual(SC.VERSION, require('fs').readFileSync(require('path').join(__dirname, '..', 'VERSION'), 'utf8').trim()); store['mesmarathon-save'] = JSON.stringify(Object.assign({}, S, { v: '0.2.0' })); assert.strictEqual(sim.load(), null); });
 t('SAP-Chaos-Pfad: Cutover ohne Wochenendschicht, Nacharbeit sperrt ERP-Abnahme, Chaos bis sauber', () => {
   const S = sim.newGame(12); toDay(S, 10); S.minute = SC.DAY_END; S.pending = null; S.sap.pk = 1; sim.endDay(S); assert.ok(S.sap.cutover); const c = S.chef;
   const out = sim.weekend(S, 0); assert.strictEqual(S.sap.state, 'nacharbeit'); assert.ok(S.chaosUntil >= S.day + 3); assert.ok(S.chef <= c - 8 + 0.001 || S.chef === 0); assert.ok(/Nacharbeit|nachgearbeitet/.test(out.join(' ')));
@@ -248,7 +248,7 @@ t('v0.8 Wochenend-Text passt zur Spiellogik (Energie −12/−16, 4 Pakete)', ()
   const m = simSrc.match(/S\.energy -= (\d+) \+ \(kaffeeKaputt\(S\) \? (\d+) : 0\)/); assert.ok(m); const e = +m[1], k = +m[2]; assert.ok(ui.includes('Energie (−' + e + ', bei kaputtem Kaffeeautomaten −' + (e + k) + ')')); const p = simSrc.match(/const use = Math\.min\((\d+), sapRest\)/); assert.ok(p && ui.includes('bis zu ' + p[1] + ' Arbeitspakete')); });
 // v0.9
 t('v0.9 Spielstände aus 0.8.0 und 0.7.0 laden, 0.6.0 nicht; kein neues Feld in S', () => { const store = {}; global.localStorage = { getItem: k => store[k] || null, setItem: (k, v) => { store[k] = v; } }; const S = sim.newGame(900);
-  for (const v of ['0.13.0', '0.12.0', '0.11.0', '0.10.0', '0.9.0', '0.8.0', '0.7.0']) { store['mesmarathon-save'] = JSON.stringify(Object.assign({}, S, { v })); assert.strictEqual(sim.oldSave(), null, v); const L = sim.load(); assert.ok(L && L.v === SC.VERSION, v); }
+  for (const v of ['0.12.0', '0.11.0', '0.10.0', '0.9.0', '0.8.0', '0.7.0']) { store['mesmarathon-save'] = JSON.stringify(Object.assign({}, S, { v })); assert.strictEqual(sim.oldSave(), null, v); const L = sim.load(); assert.ok(L && L.v === SC.VERSION, v); }
   store['mesmarathon-save'] = JSON.stringify(Object.assign({}, S, { v: '0.6.0' })); assert.strictEqual(sim.load(), null); assert.strictEqual(sim.oldSave(), '0.6.0'); delete global.localStorage;
   assert.deepStrictEqual(Object.keys(sim.newGame(1)).sort(), KEYS); });
 t('v0.9 Tempo-Stufen: Langsam, Normal, Schnell mit 60, 40, 30 Echtsekunden pro Spielstunde, Standard zuerst', () => { assert.deepStrictEqual(SC.TEMPO.map(t => t.id), ['langsam', 'normal', 'schnell']); const sek = SC.TEMPO.map(t => 60 / (SC.MIN_PER_SEC * t.f)); assert.deepStrictEqual(sek, [60, 40, 30]); for (let i = 1; i < SC.TEMPO.length; i++) assert.ok(SC.TEMPO[i].f > SC.TEMPO[i - 1].f); assert.strictEqual(SC.MIN_PER_SEC, 2, 'Grundwert unverändert'); });
@@ -332,37 +332,4 @@ t('v0.12 Dialoge: Widersprüche behoben, Anrede für Sandra, keine abwertenden S
   const D = sim.newGame(5, 'sandra'), C = sim.newGame(5); assert.strictEqual(SC.fill(D, 'Die Werkleitung ernennt dich zum Schornsteinbeauftragten.'), 'Die Werkleitung ernennt dich zur Schornsteinbeauftragten.'); assert.strictEqual(SC.fill(C, 'zum Schornsteinbeauftragten'), 'zum Schornsteinbeauftragten');
   { const ab = [].concat(...Object.values(SC.ABSCHLUSS)); assert.ok(ab.some(t => /Viertes MES/.test(t)) && ab.some(t => /dreimal gehen sehen\. Jetzt viermal/.test(t))); }
   const dep = SC.SANDRA_SZENEN.deploy.match(/(\w+) tun dasselbe, (\w+) tun nichts, das (\w+)/); const z = { vier: 4, zwei: 2, eins: 1 }; assert.strictEqual(z[dep[1]] + z[dep[2]] + 1, 7); });
-// v0.14 Ivo: dritte Figur (Quereinsteiger aus der Werkslogistik)
-t('v0.14 Ivo: Startwerte, Einstieg, Name, Christian und Sandra unverändert', () => { const I = sim.newGame(42, 'ivo'), C = sim.newGame(42), D = sim.newGame(42, 'sandra');
-  assert.strictEqual(I.figur, 'ivo'); assert.strictEqual(I.name, 'Ivo'); assert.strictEqual(I.chef, 50); assert.strictEqual(I.schicht, 58); assert.strictEqual(I.introIvo, false);
-  assert.ok(I.msgs.some(m => m.t === SC.IVO_TAG1)); assert.ok(!I.msgs.some(m => m.t === SC.SANDRA_TAG1)); assert.ok(D.msgs.some(m => m.t === SC.SANDRA_TAG1));
-  assert.ok(!('introIvo' in C) && !('introIvo' in D)); assert.strictEqual(C.chef, 60); assert.strictEqual(C.schicht, 50); assert.strictEqual(D.chef, 55); assert.strictEqual(D.schicht, 42); });
-t('v0.14 Ivo: Lernkurve bis Tag 10, Stärken in der Halle, nach 17:00 bleibt die Lernkurve', () => { const I = sim.newGame(5, 'ivo'), F = SC.TUNE.figur.ivo;
-  assert.strictEqual(sim.figF(I, 'spec'), F.lern.spec); assert.strictEqual(sim.figF(I, 'req'), F.dauer.req); assert.strictEqual(sim.figF(I, 'coffee'), 1);
-  I.day = 5; const f5 = sim.figF(I, 'impl'); assert.ok(f5 > 1 && f5 < F.lern.impl); I.minute = SC.DAY_END + 30; assert.strictEqual(sim.figF(I, 'impl'), f5); assert.strictEqual(sim.figF(I, 'req'), F.dauer.req);
-  for (const d of [10, 11, 20]) { I.day = d; assert.strictEqual(sim.figF(I, 'spec'), 1); assert.strictEqual(sim.lernF(I, 'deploy'), 1); }
-  const C = sim.newGame(5); for (const id of ['spec', 'impl', 'deploy', 'req']) assert.strictEqual(sim.figF(C, id), 1);
-  const D = sim.newGame(5, 'sandra'); assert.strictEqual(sim.figF(D, 'spec'), SC.TUNE.figur.sandra.dauer.spec); assert.strictEqual(sim.lernF(D, 'spec'), 1);
-  const a = sim.newGame(9, 'ivo'), b = sim.newGame(9); clearDay(a); clearDay(b); assert.ok(sim.actCost(a, 'buero', 'spec') > sim.actCost(b, 'buero', 'spec')); });
-t('v0.14 Ivo: Vertrauen wächst schneller, Abnahme ohne Abzug, Tag-10-Meldung, Christian kommt als Kollege', () => { const I = sim.newGame(79, 'ivo'), C = sim.newGame(79); clearDay(I); clearDay(C);
-  const i0 = I.schicht, c0 = C.schicht; sim.act(I, 'halle', 'linie'); sim.act(C, 'halle', 'linie'); assert.strictEqual(C.schicht - c0, 4); assert.strictEqual(I.schicht - i0, Math.round(4 * SC.TUNE.figur.ivo.schichtF));
-  assert.ok(!I.msgs.some(m => /Neu im Werk/.test(m.t)));
-  let kom = 0; for (let s = 1; s < 30; s++) { const X = sim.newGame(s, 'ivo'); for (let d = 0; d < 6; d++) { sim.startDay(X); if (X.visits.some(v => v.id === 'christian')) kom++; } } assert.ok(kom > 30, 'Christian besucht Ivo');
-  const V = sim.newGame(3, 'ivo'); clearDay(V); V.pending = { id: 'christian', t: 0 }; sim.choose(V, 'zuhoeren'); const t = V.msgs.map(m => SC.fill(V, m.t)).join(' '); assert.ok(/Christian erklärt dir an der Kaffeemaschine/.test(t)); assert.ok(!/\{C\}|Ivo erklärt dir/.test(t));
-  const L = sim.newGame(11, 'ivo'); toDay(L, 10); assert.strictEqual(L.day, 10); assert.ok(L.msgs.some(m => m.t === SC.IVO_LERN10) || L.dayLog.some(x => x.includes('ohne an eine Palette'))); });
-t('v0.14 Ivo: eigene Szenen erscheinen nur bei Ivo, kosten keine Zeit, nur rngA (Salze 36000 und 37000)', () => { const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', 'sim.js'), 'utf8');
-  assert.ok(src.includes('rngA(S, 36000') && src.includes('rngA(S, 37000'));
-  const ids = new Set([].concat(...Object.values(sim.actions).map(L => L.map(a => a.id)))); for (const k of Object.keys(SC.IVO_SZENEN).concat(Object.keys(SC.IVO_SZENEN2))) assert.ok(ids.has(k), k); assert.ok(src.includes("const SZ_IDS = ['req', 'spec', 'impl', 'deploy', 'migrate', 'bericht', 'test', 'linie']")); for (const k of Object.keys(SC.IVO_SZENEN)) assert.ok(['req', 'spec', 'impl', 'deploy', 'migrate', 'bericht', 'test', 'linie'].includes(k), k); for (const k of Object.keys(SC.IVO_SZENEN2)) assert.ok(src.match(/const SZ2_IDS = \[([^\]]*)\]/)[1].includes("'" + k + "'"), k);
-  const ivoT = new Set(Object.values(SC.IVO_SZENEN).concat(Object.values(SC.IVO_SZENEN2))), sanT = new Set([].concat(Object.values(SC.SANDRA_SZENEN), Object.values(SC.SANDRA_SZENEN2), Object.values(SC.SANDRA_SZENEN3)));
-  let iv = 0, fremd = 0;
-  for (let s = 1; s < 60; s++) for (const f of ['ivo', 'christian', 'sandra']) { const S = sim.newGame(s, f); clearDay(S); S.day = 1 + s % 15;
-    for (const [room, id] of [['halle', 'linie'], ['buero', 'excel'], ['schicht', 'gespraech'], ['drucker', 'print']]) sim.act(S, room, id);
-    for (const m of S.msgs) { if (ivoT.has(m.t)) { if (f === 'ivo') iv++; else fremd++; } if (f === 'ivo' && sanT.has(m.t)) fremd++; } }
-  assert.ok(iv > 10, 'Ivo-Szenen: ' + iv); assert.strictEqual(fremd, 0);
-  const A = sim.newGame(21, 'ivo'), B = sim.newGame(21, 'ivo'); clearDay(A); clearDay(B); const keep = SC.IVO_SZENEN, keep2 = SC.IVO_SZENEN2; SC.IVO_SZENEN = {}; SC.IVO_SZENEN2 = {};
-  sim.act(B, 'halle', 'linie'); SC.IVO_SZENEN = keep; SC.IVO_SZENEN2 = keep2; sim.act(A, 'halle', 'linie'); assert.strictEqual(A.minute, B.minute); assert.strictEqual(A.rs, B.rs); });
-t('v0.14 Ivo: Speichern und Laden, Bestenliste merkt die Figur, 0.13.0 lädt', () => { const store = {}; global.localStorage = { getItem: k => store[k] || null, setItem: (k, v) => { store[k] = v; } };
-  const S = sim.newGame(77, 'ivo'); S.introIvo = true; sim.save(S); const L = sim.load(); assert.strictEqual(L.figur, 'ivo'); assert.strictEqual(L.introIvo, true); assert.strictEqual(L.name, 'Ivo');
-  store['mesmarathon-save'] = JSON.stringify(Object.assign({}, sim.newGame(5), { v: '0.13.0' })); assert.ok(sim.load()); assert.ok(SC.SAVE_OK.includes('0.13.0'));
-  assert.deepStrictEqual(SC.fill({ figur: 'ivo' }, 'Christian sagt {C}'), 'Ivo sagt Christian'); assert.strictEqual(SC.fill({ figur: 'ivo' }, 'Gar nicht, Hemd wie immer'), 'Gar nicht, Warnweste wie immer'); });
 console.log(n + ' Tests ok');

@@ -1,4 +1,4 @@
-// Namensregel: Nur Christian und Sandra haben Namen (v0.9), ab v0.14 dazu Ivo. Prüft Code, HTML, README, Tools und Tests auf alte Personennamen.
+// Namensregel: Nur Christian und Sandra haben Namen (v0.9). Prüft Code, HTML, README, Tools und Tests auf alte Personennamen.
 'use strict';
 const fs = require('fs'), path = require('path');
 const root = path.resolve(__dirname, '..');
@@ -16,22 +16,18 @@ for (const f of files) {
 // (»MES« heißt Manufacturing Execution System; die Abkürzung »MS« kommt im Spieltext nicht vor)
 global.window = global.window || {}; const SCx = require('./helper.js');
 const names = Object.values(SCx.FIGUREN).map(f => f.name).sort();
-if (JSON.stringify(names) !== JSON.stringify(['Christian', 'Ivo', 'Sandra'])) { console.log('Figurennamen falsch:', names.join(', ')); bad++; }
+if (JSON.stringify(names) !== JSON.stringify(['Christian', 'Sandra'])) { console.log('Figurennamen falsch:', names.join(', ')); bad++; }
 const HEALTH = /\bMS\b|Sklerose|Rollstuhl|Diagnose|Therapie|Medikament|Arzttermin/;
 for (const f of files.filter(f => /[\\/](js|css)[\\/]/.test(f) || /index\.html$/.test(f))) { const txt = fs.readFileSync(f, 'utf8'); if (HEALTH.test(txt)) { console.log('Gesundheitsthema gefunden in', path.relative(root, f), txt.match(HEALTH)[0]); bad++; } }
-// Neue Figurentexte: kein anderer Personenname als Christian, Sandra oder Ivo in »Name:«-artigen Anreden
-const figTxt = JSON.stringify([SCx.FIGUREN, SCx.CHRISTIAN_TIPPS, SCx.SANDRA_NPC, SCx.SANDRA_SZENEN, SCx.SANDRA_TAG1, SCx.KOLLEGE_BUBBLES, SCx.IVO_TAG1, SCx.IVO_INTRO, SCx.IVO_MERK, SCx.IVO_SZENEN, SCx.IVO_SZENEN2, SCx.IVO_KOLLEGE, SCx.IVO_LERN10]);
-for (const m of figTxt.matchAll(/\b([A-ZÄÖÜ][a-zäöüß]+), (?:die|der) (?:neue|erfahrene|Kollegin|Kollege)/g)) if (!['Christian', 'Sandra', 'Ivo'].includes(m[1])) { console.log('Unbekannter Name:', m[1]); bad++; }
+// Neue Figurentexte: kein anderer Personenname als Christian oder Sandra in »Name:«-artigen Anreden
+const figTxt = JSON.stringify([SCx.FIGUREN, SCx.CHRISTIAN_TIPPS, SCx.SANDRA_NPC, SCx.SANDRA_SZENEN, SCx.SANDRA_TAG1, SCx.KOLLEGE_BUBBLES]);
+for (const m of figTxt.matchAll(/\b([A-ZÄÖÜ][a-zäöüß]+), (?:die|der) (?:neue|erfahrene|Kollegin|Kollege)/g)) if (!['Christian', 'Sandra'].includes(m[1])) { console.log('Unbekannter Name:', m[1]); bad++; }
 // v0.11: Kein Kollege wird abwertend als untätig bezeichnet. Das Wort und seine Varianten sind überall verboten
 // (Wort zusammengesetzt, damit es auch hier nicht im Klartext steht; »fault« im Code heißt Störung und ist nicht gemeint).
 const W1 = 'f' + 'aul', W2 = 'la' + 'zy';
 const SCHMAEH = new RegExp(W1 + '(?!t)|' + W2, 'i'); // auch in Zusammensetzungen; fault, faulty, faulted bleiben erlaubt
 for (const f of files) { const txt = fs.readFileSync(f, 'utf8'); const m = txt.match(SCHMAEH); if (m) { console.log('Abwertendes Wort gefunden in', path.relative(root, f), m[0]); bad++; } if (SCHMAEH.test(path.basename(f))) { console.log('Dateiname:', f); bad++; } }
-for (const t of [].concat(...Object.values(SCx.BUBBLES), ...Object.values(SCx.VISIT_TEXT || {}).flat(), SCx.PARTY_GAESTE || '', Object.values(SCx.SANDRA_SZENEN3 || {}), Object.values(SCx.SANDRA_SZENEN2 || {}), JSON.stringify([SCx.IVO_INTRO, SCx.IVO_MERK, SCx.IVO_SZENEN, SCx.IVO_SZENEN2, SCx.IVO_TAG1, SCx.IVO_KOLLEGE, SCx.IVO_LERN10]))) if (SCHMAEH.test(String(t))) { console.log('Spieltext:', t); bad++; }
-// v0.14: Ivo ist neu, nicht dumm. Seine Texte werten ihn nicht ab und nennen keine anderen Figuren beim Namen ({C} steht für Christian)
-{ const iv = JSON.stringify([SCx.IVO_INTRO, SCx.IVO_MERK, SCx.IVO_SZENEN, SCx.IVO_SZENEN2, SCx.IVO_TAG1, SCx.IVO_KOLLEGE, SCx.IVO_LERN10, SCx.FIGUREN.ivo, SCx.KOLLEGE_BUBBLES.christianIvo]);
-  const AB = /dumm|doof|blöd|Idiot|ahnungslos|unfähig|Trottel|Depp|peinlich|Versager/i; if (AB.test(iv)) { console.log('Abwertung in Ivo-Texten:', iv.match(AB)[0]); bad++; }
-  if (/Christian|Sandra/.test(iv)) { console.log('Ivo-Texte nennen eine Figur beim Namen statt {C}'); bad++; } }
+for (const t of [].concat(...Object.values(SCx.BUBBLES), ...Object.values(SCx.VISIT_TEXT || {}).flat(), SCx.PARTY_GAESTE || '', Object.values(SCx.SANDRA_SZENEN3 || {}), Object.values(SCx.SANDRA_SZENEN2 || {}))) if (SCHMAEH.test(String(t))) { console.log('Spieltext:', t); bad++; }
 // v0.12: Das Spiel macht keine Netzwerkaufrufe (keine Telemetrie). Gilt für js/ und index.html.
 const NETZ = new RegExp('\\b(' + ['fe' + 'tch\\s*\\(', 'XMLHttp' + 'Request', 'send' + 'Beacon', 'Web' + 'Socket', 'Event' + 'Source'].join('|') + ')');
 for (const f of [path.join(root, 'index.html')].concat(fs.readdirSync(path.join(root, 'js')).map(x => path.join(root, 'js', x)))) { const m = fs.readFileSync(f, 'utf8').match(NETZ); if (m) { console.log('Netzwerkaufruf in', path.relative(root, f), m[0]); bad++; } }

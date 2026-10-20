@@ -1,5 +1,5 @@
 // Balance-Bot: spielt viele Partien mit einfachen Strategien.
-// Aufruf: node tools/bot.js [anzahl] [--check] [--figur=sandra|ivo]
+// Aufruf: node tools/bot.js [anzahl] [--check] [--figur=sandra]
 'use strict';
 const SC = require('../test/helper.js'); const sim = SC.sim;
 const WALK = 8; // Minuten je Raumwechsel (Laufen + Aufzug)
