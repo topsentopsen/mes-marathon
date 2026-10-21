@@ -69,13 +69,13 @@ function playDay(S, P) {
     if (short && P.bericht && tryAct(S, 'leitstand', 'bericht')) continue;
     if (short && P.report && S.excel && S.reported !== S.day && tryAct(S, 'chef', 'report')) continue;
     if (S.energy < 40 && S.coffee < 3 && tryAct(S, 'kantine', 'coffee')) continue;
-    // v0.5 Süßigkeitenbox: nur sichtbare Werte (Box-Inhalt, Woche); 'mit' füllt auf, wenn er ohnehin in der Kantine steht, 'extra' geht dafür hin
+    // v0.5 Süßigkeitenbox: nur sichtbare Werte (Box-Inhalt, Woche); 'mit' füllt auf, wenn er ohnehin im Büro steht (seit v0.15, vorher Kantine), 'extra' geht dafür hin
     // v0.6 Gag-Fan: Pappkamerad und Fax je dreimal, wenn er ohnehin im Raum ist
     if (P.gag && S.at === 'buero' && S.stats.pappe < 3 && tryAct(S, 'buero', 'pappe')) continue;
     if (P.gag && S.at === 'drucker' && S.stats.fax < 3 && tryAct(S, 'drucker', 'fax')) continue;
-    if (P.suess && S.box.week !== sim.week(S) && S.box.n <= 3 && (S.at === 'kantine' || P.suessWeg) && tryAct(S, 'kantine', 'box_' + P.suess)) continue;
+    if (P.suess && S.box.week !== sim.week(S) && S.box.n <= 3 && (S.at === 'buero' || P.suessWeg) && tryAct(S, 'buero', 'box_' + P.suess)) continue;
     if (!S.lunch && S.minute >= 11.5 * 60 && tryAct(S, 'kantine', 'lunch')) continue;
-    if (P.suess && S.box.week !== sim.week(S) && S.box.n <= 3 && S.at === 'kantine' && tryAct(S, 'kantine', 'box_' + P.suess)) continue;
+    if (P.suess && S.box.week !== sim.week(S) && S.box.n <= 3 && S.at === 'buero' && tryAct(S, 'buero', 'box_' + P.suess)) continue;
     if (P.tranche && S.trancheWeek !== sim.week(S) && tryAct(S, 'controlling', 'tranche')) continue;
     if (P.kredit && S.budget < 10 && tryAct(S, 'controlling', 'kredit')) continue;
     if (P.kredit && S.budget > 40 && S.kredit > 0 && tryAct(S, 'controlling', 'tilgen')) continue;
@@ -130,7 +130,7 @@ const POL = {
   melone: P({ care: true, melone: true }),
   // v0.5: Ausschreibung (bietet nach dem letzten bekannten Nord-Gebot), Konzernaudit-Jäger (Image über Markt)
   bieter: P({ care: true, auktion: 'schlau' }),
-  // v0.5 Süßigkeitenbox: naschbox füllt Schoko nach, wenn er ohnehin in der Kantine ist; lakritz nur Lakritz; naschWeg geht extra hin
+  // v0.5 Süßigkeitenbox: naschbox füllt Schoko nach, wenn er ohnehin im Büro ist (seit v0.15); lakritz nur Lakritz; naschWeg geht extra hin
   naschbox: P({ care: true, suess: 'schoko' }),
   lakritz: P({ care: true, suess: 'lakritz' }),
   naschWeg: P({ care: true, suess: 'schoko', suessWeg: true }),

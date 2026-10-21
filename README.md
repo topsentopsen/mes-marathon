@@ -4,6 +4,10 @@ Retro-Managerspiel im Browser, inspiriert von **Mad TV** (1991) und abgeleitet a
 
 **Spielen:** https://topsentopsen.github.io/mes-marathon/
 
+## Neu in v0.15.0 »Selbst aufgefüllt«
+
+Die Süßigkeitenbox füllt deine Figur (Christian oder Sandra) jetzt selbst im Büro auf, nicht mehr am Kiosk der Kantine. Im Büro steht dafür eine Zeile mit drei Knöpfen (Schoko-Mix, Gummibärchen, Lakritz), dazu der Zettel, wer was mag. Preis, Dauer (2 Min.), Wochengrenze und Wirkung bleiben gleich. Die Kantine hat weiter Kaffee, Mittagessen und den Kiosk mit Saisonware. Spielstände aus 0.7 bis 0.14.1 laden weiter. Details: `docs/RELEASE-v0.15.0.md`.
+
 ## v0.14.1
 
 Die mit v0.14.0 hinzugekommene dritte Figur ist wieder entfernt. Spielbar sind wie in v0.13 nur Christian und Sandra, Texte, Werte und Layout entsprechen v0.13.0. Spielstände aus 0.7 bis 0.14 laden weiter. Ein Spielstand mit der entfernten Figur lädt nicht, »Neues Spiel« führt dann zur Figurenwahl. Details: `docs/RELEASE-v0.14.1.md`.

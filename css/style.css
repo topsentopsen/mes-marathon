@@ -270,3 +270,5 @@ button:focus-visible, select:focus-visible, input:focus-visible, #ticker:focus-v
   .box h2 { font-size: 22px; letter-spacing: 1px; hyphens: auto; overflow-wrap: anywhere; }
   .box, #room { overflow-wrap: break-word; hyphens: auto; }
 }
+/* v0.15 Süßigkeitenbox im Büro: drei Sorten in einer Zeile */
+.acts .act.box-act button.sorte { display: inline-block; width: auto; margin: 2px 4px 2px 0; padding: 2px 8px; }

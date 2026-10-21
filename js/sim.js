@@ -419,7 +419,12 @@
       { id: 'pappe', label: 'Den Pappkameraden anschauen', cost: 3, energy: 0, check: () => null,
         run: S => { S.stats.pappe++; say(S, SC.PAPPE[(S.stats.pappe - 1) % SC.PAPPE.length]); if (S.stats.pappe >= 6) egg(S, 'pappe', SC.PAPPE_EGG); } },
       { id: 'mail', label: 'Postfach aufräumen', cost: 15, energy: 1, check: () => null,
-        run: S => { if (rng(S) < 0.3) { S.chef += 2; say(S, 'Eine Mail der Werkleitung rechtzeitig beantwortet. Pluspunkt.'); } else say(S, '43 Mails, davon 41 Einladungen vom Schichtleiter in CC.'); } }
+        run: S => { if (rng(S) < 0.3) { S.chef += 2; say(S, 'Eine Mail der Werkleitung rechtzeitig beantwortet. Pluspunkt.'); } else say(S, '43 Mails, davon 41 Einladungen vom Schichtleiter in CC.'); } },
+      // v0.5 Süßigkeitenbox, seit v0.15 füllt die Spielfigur sie direkt im Büro auf (eigener Vorrat, gleicher Preis): einmal pro Woche, 6 Stück
+      ...Object.keys(SC.SORTEN).map(k => ({ id: 'box_' + k, label: S => 'Süßigkeitenbox auffüllen: ' + SC.SORTEN[k] + ' (' + T().suess.cost[k] + ' k€' + (S && S.box && S.box.n > 1 ? ', noch ' + S.box.n + ' Stück drin' : '') + ')', cost: 2, energy: 0,
+        check: S => S.box.week === week(S) ? 'Diese Woche schon aufgefüllt. Dein Vorrat reicht nur für einmal pro Woche.' : S.budget < T().suess.cost[k] ? 'Dafür reicht das Budget nicht.' : null,
+        run: S => { const B = S.box; let t = ''; if (B.n === 1) { S.stats.suessLetztes++; t = ' Das letzte Stück isst du selbst. Endlich.'; if (S.stats.suessLetztes >= T().suess.egg) egg(S, 'letztes', SC.LETZTES_EGG); }
+          spend(S, T().suess.cost[k]); B.n = T().suess.stk; B.sorte = k; B.week = week(S); S.stats.suess++; say(S, 'Du füllst die Süßigkeitenbox im Büro auf: ' + SC.SORTEN[k] + ', ' + B.n + ' Stück.' + t + ' Wer was mag, steht auf dem Zettel an der Box.'); } }))
     ],
     leitstand: [
       { id: 'bericht', label: 'KPI-Bericht für die Werkleitung erstellen', cost: 30, energy: 4,
@@ -457,12 +462,7 @@
           if (S.coffee >= 7) egg(S, 'kaffee', 'Die Kaffeemaschine zeigt »Fehler 42: Benutzer zu wach«. Die Kantinenkraft hängt ein Foto von dir an die Pinnwand.'); } },
       { id: 'lunch', label: 'Mittagessen in der Werkskantine (11:30 bis 13:30)', cost: 30, energy: 0,
         check: S => S.lunch ? 'Schon gegessen.' : (S.minute < 11 * 60 + 30 || S.minute > 13 * 60 + 30) ? 'Die Ausgabe hat nur 11:30 bis 13:30 auf.' : null,
-        run: S => { S.lunch = true; const b = S.lunchBonus ? 10 : 0; S.lunchBonus = false; S.energy += 25 + b; say(S, (b ? 'Nudeln nach dem Rezept des italienischen Kollegen. Die Kantinenkraft hat es tatsächlich probiert! Energie +35. ' : 'Currywurst mit Pommes, dazu Fabriklärm. Energie +25. ') + pick(S, SC.TIPS)); } },
-      // v0.5 Süßigkeitenbox (steht im Büro, Nachschub gibt es am Kiosk der Kantine): einmal pro Woche, 6 Stück
-      ...Object.keys(SC.SORTEN).map(k => ({ id: 'box_' + k, label: S => 'Süßigkeitenbox auffüllen: ' + SC.SORTEN[k] + ' (' + T().suess.cost[k] + ' k€' + (S && S.box && S.box.n > 1 ? ', noch ' + S.box.n + ' Stück drin' : '') + ')', cost: 2, energy: 0,
-        check: S => S.box.week === week(S) ? 'Diese Woche schon aufgefüllt. Der Kiosk hat nur einmal pro Woche Nachschub.' : S.budget < T().suess.cost[k] ? 'Dafür reicht das Budget nicht.' : null,
-        run: S => { const B = S.box; let t = ''; if (B.n === 1) { S.stats.suessLetztes++; t = ' Das letzte Stück isst du selbst. Endlich.'; if (S.stats.suessLetztes >= T().suess.egg) egg(S, 'letztes', SC.LETZTES_EGG); }
-          spend(S, T().suess.cost[k]); B.n = T().suess.stk; B.sorte = k; B.week = week(S); S.stats.suess++; say(S, 'Süßigkeitenbox im Büro aufgefüllt: ' + SC.SORTEN[k] + ', ' + B.n + ' Stück.' + t + ' Wer was mag, steht auf dem Zettel am Kiosk.'); } }))
+        run: S => { S.lunch = true; const b = S.lunchBonus ? 10 : 0; S.lunchBonus = false; S.energy += 25 + b; say(S, (b ? 'Nudeln nach dem Rezept des italienischen Kollegen. Die Kantinenkraft hat es tatsächlich probiert! Energie +35. ' : 'Currywurst mit Pommes, dazu Fabriklärm. Energie +25. ') + pick(S, SC.TIPS)); } }
     ],
     drucker: [
       { id: 'fax', label: S => S && S.eggs && S.eggs.elon ? 'Elon-Abo per Fax kündigen' : 'Das Fax-Gerät benutzen', cost: 5, energy: 0, check: () => null,

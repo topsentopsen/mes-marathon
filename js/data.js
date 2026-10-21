@@ -3,9 +3,9 @@
 'use strict';
 window.SC = window.SC || {};
 (function (SC) {
-  SC.VERSION = '0.14.1';
+  SC.VERSION = '0.15.0';
   // v0.8: Spielstände dieser Versionen laden weiter (kein neues Feld in S)
-  SC.SAVE_OK = ['0.7.0', '0.8.0', '0.9.0', '0.10.0', '0.11.0', '0.12.0', '0.13.0', '0.14.0'];
+  SC.SAVE_OK = ['0.7.0', '0.8.0', '0.9.0', '0.10.0', '0.11.0', '0.12.0', '0.13.0', '0.14.0', '0.14.1'];
   SC.DAY_START = 7 * 60 + 30;   // 07:30 Frühschicht-Beginn im Büro
   SC.DAY_END = 17 * 60;         // 17:00 regulärer Feierabend
   SC.LATEST = 20 * 60;          // 20:00 der Pförtner schließt ab
@@ -161,7 +161,7 @@ window.SC = window.SC || {};
     audit: { from: 15, kpi: 65, image: 87, mods: 3, streak: 1, score: 700 },
     kopf: { schicht: 1, min: 2 },
     weekendFam: 13,
-    // v0.5 Süßigkeitenbox: einmal pro Woche auffüllen (Kantinen-Kiosk), 6 Stück, Verbrauch 1 bis 2 am Tag, das letzte Stück nimmt niemand
+    // v0.5 Süßigkeitenbox: einmal pro Woche auffüllen (seit v0.15 im Büro), 6 Stück, Verbrauch 1 bis 2 am Tag, das letzte Stück nimmt niemand
     suess: { from: 3, stk: 6, cost: { schoko: 3, gummi: 2, lakritz: 1 }, beschwer: 0.5, schichtGut: 1, schichtLeer: 1, chefGut: 1, zeit: 10, egg: 3 },
     elon: { thema: 8, nein: 0.2, neinMin: 4, meet: 0.25, meetMin: 3, meetEnergie: 2, egg: 8, akkuDay: 15 },
     // Überstunden: Familie −over/div; ab »frei« Minuten mindestens »min« (das Abendessen ist dann kalt)
